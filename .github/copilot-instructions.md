@@ -18,7 +18,8 @@ rentflow2.0/
 │       ├── components/
 │       ├── context/  # AuthContext (JWT stored in localStorage)
 │       └── pages/
-├── Workflows/        # GitHub Actions workflow files
+├── .github/
+│   └── workflows/    # GitHub Actions workflow files
 └── docker-compose.yml
 ```
 
