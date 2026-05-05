@@ -15,7 +15,7 @@ jobs:
             context: ./Backend
             image: thewizard2026/rentflow-backend
           - service: frontend
-            context: ./Frondend
+            context: ./Frontend
             image: thewizard2026/rentflow-frontend
 
     steps:

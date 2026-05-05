@@ -3,7 +3,7 @@
 When generating or reviewing GitHub Actions workflows for RentFlow 2.0, follow these rules:
 
 ## Context paths
-- The repository uses non-standard casing: `./Backend` and `./Frondend` — always use the exact directory names.
+- The repository directory names are `./Backend` and `./Frontend`.
 
 ## Action versions
 - `actions/checkout` → `@v4`

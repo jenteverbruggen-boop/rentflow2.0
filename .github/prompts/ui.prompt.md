@@ -3,7 +3,7 @@
 When generating or reviewing frontend code for RentFlow 2.0, follow these rules:
 
 ## Component structure
-- Each page lives in `Frondend/src/pages/` and each reusable piece in `Frondend/src/components/`.
+- Each page lives in `Frontend/src/pages/` and each reusable piece in `Frontend/src/components/`.
 - All route-protected pages must be wrapped with `<ProtectedRoute>` in `App.jsx`.
 - Use the `useAuth()` hook (from `AuthContext`) for any auth-related data — never access `localStorage` directly.
 

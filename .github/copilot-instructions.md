@@ -12,7 +12,7 @@ rentflow2.0/
 │       ├── lib/      # Shared singletons (prisma.js)
 │       ├── middleware/
 │       └── routes/
-├── Frondend/         # React + Vite + Tailwind SPA
+├── Frontend/         # React + Vite + Tailwind SPA
 │   └── src/
 │       ├── api/      # Axios client with auth interceptor
 │       ├── components/
@@ -59,6 +59,6 @@ rentflow2.0/
 - Always include a `.dockerignore` in each service directory to exclude `node_modules`, `.git`, and build artefacts.
 
 ### GitHub Actions
-- Workflow context paths must match the exact directory casing in the repository (`./Backend`, `./Frondend`).
+- Workflow context paths must match the exact directory casing in the repository (`./Backend`, `./Frontend`).
 - Always pin action versions to the latest stable major tag (e.g., `@v6`).
 - Include Docker layer caching (`cache-from`/`cache-to` with `type=gha`) to speed up builds.
