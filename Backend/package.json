@@ -1,6 +1,9 @@
 {
   "name": "rentflow-backend",
   "version": "1.0.0",
+  "prisma": {
+    "schema": "Prisma/schema.prisma"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
