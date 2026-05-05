@@ -1,5 +1,8 @@
 version: '3.8'
 
+x-buildkit:
+  DOCKER_BUILDKIT: "0"
+
 services:
   db:
     image: postgres:15
