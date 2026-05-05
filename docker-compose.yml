@@ -11,7 +11,7 @@ services:
       - rentflow-net
 
   backend:
-    image: jouwdockerhubusername/rentflow-backend:latest
+    image: TheWizard2026/rentflow-backend:latest
     restart: always
     env_file: .env
     depends_on:
@@ -20,7 +20,7 @@ services:
       - rentflow-net
 
   frontend:
-    image: jouwdockerhubusername/rentflow-frontend:latest
+    image: TheWizard2026/rentflow-frontend:latest
     restart: always
     ports:
       - "3000:80"
