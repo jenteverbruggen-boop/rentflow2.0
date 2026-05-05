@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+
+jobs:
+  frontend-compile-check:
+    name: Frontend compile check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./Frontend
+        run: npm install
+
+      - name: Compile check (vite build)
+        working-directory: ./Frontend
+        run: npm run build
+
+  backend-compile-check:
+    name: Backend compile check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./Backend
+        run: npm install
+
+      - name: Generate Prisma client (validates schema)
+        working-directory: ./Backend
+        run: npx prisma generate
+
+      - name: Syntax check all JS files
+        working-directory: ./Backend
+        run: find src -name '*.js' -exec node --check {} \;

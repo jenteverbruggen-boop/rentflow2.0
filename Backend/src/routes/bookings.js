@@ -1,96 +1,115 @@
 const express = require('express');
 const router  = express.Router();
 const auth    = require('../middleware/auth');
-const { PrismaClient } = require('@prisma/client');
-const prisma  = new PrismaClient();
+const prisma  = require('../lib/prisma');
 
-// Persoon aan project koppelen
+// Attach person to project
 router.post('/person', auth, async (req, res) => {
-  const { projectId, personId, role, startDate, endDate } = req.body;
+  try {
+    const { projectId, personId, role, startDate, endDate } = req.body;
+    if (!projectId || !personId || !startDate || !endDate)
+      return res.status(400).json({ error: 'projectId, personId, startDate and endDate are required' });
 
-  const conflict = await prisma.projectPerson.findFirst({
-    where: {
-      personId: parseInt(personId),
-      NOT: { projectId: parseInt(projectId) },
-      project: {
-        AND: [
-          { startDate: { lte: new Date(endDate) } },
-          { endDate:   { gte: new Date(startDate) } }
-        ]
-      }
-    },
-    include: { project: true }
-  });
-
-  if (conflict) {
-    return res.status(409).json({
-      error: `Deze persoon is al ingepland bij project "${conflict.project.name}" in deze periode`
+    const conflict = await prisma.projectPerson.findFirst({
+      where: {
+        personId: parseInt(personId),
+        NOT: { projectId: parseInt(projectId) },
+        project: {
+          AND: [
+            { startDate: { lte: new Date(endDate) } },
+            { endDate:   { gte: new Date(startDate) } }
+          ]
+        }
+      },
+      include: { project: true }
     });
-  }
 
-  const booking = await prisma.projectPerson.create({
-    data: {
-      projectId: parseInt(projectId),
-      personId:  parseInt(personId),
-      role,
-      startDate: startDate ? new Date(startDate) : null,
-      endDate:   endDate   ? new Date(endDate)   : null
-    },
-    include: { person: true }
-  });
-  res.json(booking);
+    if (conflict) {
+      return res.status(409).json({
+        error: `This person is already scheduled on project "${conflict.project.name}" during this period`
+      });
+    }
+
+    const booking = await prisma.projectPerson.create({
+      data: {
+        projectId: parseInt(projectId),
+        personId:  parseInt(personId),
+        role,
+        startDate: new Date(startDate),
+        endDate:   new Date(endDate)
+      },
+      include: { person: true }
+    });
+    res.json(booking);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Persoon van project verwijderen
+// Remove person from project
 router.delete('/person/:id', auth, async (req, res) => {
-  await prisma.projectPerson.delete({ where: { id: parseInt(req.params.id) } });
-  res.json({ success: true });
-});
-
-// Materiaal aan project koppelen
-router.post('/material', auth, async (req, res) => {
-  const { projectId, materialId, quantity, startDate, endDate } = req.body;
-
-  const existing = await prisma.projectMaterial.aggregate({
-    where: {
-      materialId: parseInt(materialId),
-      NOT: { projectId: parseInt(projectId) },
-      project: {
-        AND: [
-          { startDate: { lte: new Date(endDate) } },
-          { endDate:   { gte: new Date(startDate) } }
-        ]
-      }
-    },
-    _sum: { quantity: true }
-  });
-
-  const material      = await prisma.material.findUnique({ where: { id: parseInt(materialId) } });
-  const alreadyBooked = existing._sum.quantity || 0;
-
-  if (alreadyBooked + parseInt(quantity) > material.totalStock) {
-    return res.status(409).json({
-      error: `Niet genoeg beschikbaar. Voorraad: ${material.totalStock}, al geboekt: ${alreadyBooked}, beschikbaar: ${material.totalStock - alreadyBooked}`
-    });
+  try {
+    await prisma.projectPerson.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  const booking = await prisma.projectMaterial.create({
-    data: {
-      projectId:  parseInt(projectId),
-      materialId: parseInt(materialId),
-      quantity:   parseInt(quantity),
-      startDate:  startDate ? new Date(startDate) : null,
-      endDate:    endDate   ? new Date(endDate)   : null
-    },
-    include: { material: true }
-  });
-  res.json(booking);
 });
 
-// Materiaal van project verwijderen
+// Attach material to project
+router.post('/material', auth, async (req, res) => {
+  try {
+    const { projectId, materialId, quantity, startDate, endDate } = req.body;
+    if (!projectId || !materialId || !quantity || !startDate || !endDate)
+      return res.status(400).json({ error: 'projectId, materialId, quantity, startDate and endDate are required' });
+
+    const existing = await prisma.projectMaterial.aggregate({
+      where: {
+        materialId: parseInt(materialId),
+        NOT: { projectId: parseInt(projectId) },
+        project: {
+          AND: [
+            { startDate: { lte: new Date(endDate) } },
+            { endDate:   { gte: new Date(startDate) } }
+          ]
+        }
+      },
+      _sum: { quantity: true }
+    });
+
+    const material      = await prisma.material.findUnique({ where: { id: parseInt(materialId) } });
+    const alreadyBooked = existing._sum.quantity || 0;
+
+    if (alreadyBooked + parseInt(quantity) > material.totalStock) {
+      return res.status(409).json({
+        error: `Not enough stock. Total: ${material.totalStock}, already booked: ${alreadyBooked}, available: ${material.totalStock - alreadyBooked}`
+      });
+    }
+
+    const booking = await prisma.projectMaterial.create({
+      data: {
+        projectId:  parseInt(projectId),
+        materialId: parseInt(materialId),
+        quantity:   parseInt(quantity),
+        startDate:  new Date(startDate),
+        endDate:    new Date(endDate)
+      },
+      include: { material: true }
+    });
+    res.json(booking);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Remove material from project
 router.delete('/material/:id', auth, async (req, res) => {
-  await prisma.projectMaterial.delete({ where: { id: parseInt(req.params.id) } });
-  res.json({ success: true });
+  try {
+    await prisma.projectMaterial.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
