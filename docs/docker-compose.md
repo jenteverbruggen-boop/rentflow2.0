@@ -2,6 +2,8 @@
 
 This guide walks you through starting the full RentFlow stack — **PostgreSQL**, **Backend API**, and **Frontend** — with a single `docker compose up` command.
 
+The backend and frontend images are **built and published automatically by the CI/CD pipeline** (`.github/workflows/builds.yml`) every time a commit is merged to `master`. You do not need to build anything locally; Docker Compose simply pulls the latest images from Docker Hub.
+
 ---
 
 ## Prerequisites
@@ -53,7 +55,7 @@ FRONTEND_URL=http://localhost:3000
 
 ## 3. Full `docker-compose.yml` reference
 
-The `docker-compose.yml` at the root of the repository defines three services:
+The `docker-compose.yml` at the root of the repository defines three services. The `backend` and `frontend` images are the ones published to Docker Hub by the CI/CD pipeline.
 
 ```yaml
 version: '3.8'
@@ -71,6 +73,7 @@ services:
       - rentflow-net
 
   # ─── Node.js / Express backend ────────────────────────────────────────────
+  # Image is built and pushed by .github/workflows/builds.yml on every master merge.
   backend:
     image: thewizard2026/rentflow-backend:latest
     restart: always
@@ -83,6 +86,7 @@ services:
     # so the database schema is automatically applied on first boot.
 
   # ─── React / Nginx frontend ───────────────────────────────────────────────
+  # Image is built and pushed by .github/workflows/builds.yml on every master merge.
   frontend:
     image: thewizard2026/rentflow-frontend:latest
     restart: always
@@ -104,18 +108,21 @@ networks:
 
 ### Service overview
 
-| Service | Image | Internal port | Exposed port |
+| Service | Docker Hub image | Internal port | Exposed port |
 |---|---|---|---|
 | `db` | `postgres:15` | 5432 | _(none, internal only)_ |
-| `backend` | `rentflow-backend:latest` | 3001 | _(none, internal only)_ |
-| `frontend` | `rentflow-frontend:latest` | 80 | **3000** |
+| `backend` | `thewizard2026/rentflow-backend:latest` | 3001 | _(none, internal only)_ |
+| `frontend` | `thewizard2026/rentflow-frontend:latest` | 80 | **3000** |
 
 ---
 
 ## 4. Start all services
 
 ```bash
-# Pull the latest images and start in the background
+# Pull the latest CI/CD-built images from Docker Hub
+docker compose pull
+
+# Start all services in the background
 docker compose up -d
 
 # Follow logs while starting up
@@ -127,6 +134,8 @@ Once the backend prints `RentFlow backend running on port 3001`, open:
 ```
 http://localhost:3000
 ```
+
+> **Tip**: Always run `docker compose pull` before `up` to ensure you are running the images that were built from the latest `master` commit.
 
 ---
 
@@ -162,7 +171,9 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 
 | Task | Command |
 |---|---|
+| Pull latest CI/CD images | `docker compose pull` |
 | Start all services | `docker compose up -d` |
+| Pull latest images and restart | `docker compose pull && docker compose up -d` |
 | Stop all services | `docker compose down` |
 | Stop and **delete volumes** (wipe DB) | `docker compose down -v` |
 | View live logs | `docker compose logs -f` |
@@ -170,7 +181,6 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 | Restart a single service | `docker compose restart backend` |
 | Open a psql shell | `docker compose exec db psql -U rentflow -d rentflow` |
 | Run Prisma migrations manually | `docker compose exec backend npx prisma migrate deploy` |
-| Rebuild images from source | `docker compose up -d --build` |
 
 ---
 
@@ -240,3 +250,4 @@ docker compose exec db psql -U rentflow -d rentflow
 # Exit
 \q
 ```
+

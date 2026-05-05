@@ -31,3 +31,8 @@ When generating or reviewing Dockerfiles and docker-compose for RentFlow 2.0, fo
 - Always specify `restart: always` for production services.
 - Load secrets/config via `env_file: .env` — never hardcode values.
 - Connect all services on a shared named network.
+- The `docker-compose.yml` must use the Docker Hub images built by the CI/CD pipeline:
+  - Backend: `thewizard2026/rentflow-backend:latest`
+  - Frontend: `thewizard2026/rentflow-frontend:latest`
+  Never use a `build:` key in the production `docker-compose.yml`; local builds belong in a separate `docker-compose.local.yml` overlay.
+- Document `docker compose pull` as the first step before `docker compose up -d` so users always run the latest CI/CD-published image.
