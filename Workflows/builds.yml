@@ -21,11 +21,11 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: TheWizard2026/rentflow-backend:latest
+          tags: thewizard2026/rentflow-backend:latest
 
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           push: true
-          tags: TheWizard2026/rentflow-frontend:latest
+          tags: thewizard2026/rentflow-frontend:latest
