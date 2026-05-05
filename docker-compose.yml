@@ -1,8 +1,5 @@
 version: '3.8'
 
-x-buildkit:
-  DOCKER_BUILDKIT: "0"
-
 services:
   db:
     image: postgres:15
@@ -14,7 +11,7 @@ services:
       - rentflow-net
 
   backend:
-    build: ./backend
+    image: jouwdockerhubusername/rentflow-backend:latest
     restart: always
     env_file: .env
     depends_on:
@@ -23,7 +20,7 @@ services:
       - rentflow-net
 
   frontend:
-    build: ./frontend
+    image: jouwdockerhubusername/rentflow-frontend:latest
     restart: always
     ports:
       - "3000:80"
@@ -37,3 +34,4 @@ volumes:
 
 networks:
   rentflow-net:
+
