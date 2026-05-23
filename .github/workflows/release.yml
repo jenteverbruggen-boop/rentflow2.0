@@ -4,24 +4,14 @@ on:
   workflow_run:
     workflows: [CI]
     types: [completed]
-    branches: [master]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   release:
-    name: Release ${{ matrix.service }}
+    name: Tag and release Docker image
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    strategy:
-      matrix:
-        include:
-          - service: backend
-            context: ./Backend
-            image: thewizard2026/rentflow-backend
-          - service: frontend
-            context: ./Frontend
-            image: thewizard2026/rentflow-frontend
-
     steps:
       - uses: actions/checkout@v4
 
@@ -34,13 +24,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push ${{ matrix.service }}
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.context }}
+          context: .
           push: true
           tags: |
-            ${{ matrix.image }}:latest
-            ${{ matrix.image }}:${{ github.sha }}
+            thewizard2026/rentflow:latest
+            thewizard2026/rentflow:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

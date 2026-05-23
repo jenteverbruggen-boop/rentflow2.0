@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15
@@ -7,31 +5,16 @@ services:
     env_file: .env
     volumes:
       - pgdata:/var/lib/postgresql/data
-    networks:
-      - rentflow-net
 
-  backend:
-    image: thewizard2026/rentflow-backend:latest
+  app:
+    image: thewizard2026/rentflow:latest
     restart: always
+    ports:
+      - "3000:3000"
     env_file: .env
     depends_on:
       - db
-    networks:
-      - rentflow-net
-
-  frontend:
-    image: thewizard2026/rentflow-frontend:latest
-    restart: always
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-    networks:
-      - rentflow-net
 
 volumes:
   pgdata:
-
-networks:
-  rentflow-net:
 
