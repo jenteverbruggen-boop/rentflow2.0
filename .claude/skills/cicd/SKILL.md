@@ -13,11 +13,12 @@ allowed-tools: Read Bash(find *) Bash(git *)
 
 | Artifact | Value |
 |---|---|
-| Docker Hub image | `thewizard2026/rentflow` |
-| Tags on release | `:latest` + `:<sha>` |
-| Tag on build | `:<sha>` only |
+| GHCR image | `ghcr.io/jenteverbruggen-boop/rentflow2.0` |
+| Tags on semver release | `:latest` + `:<semver>` + `:sha-<sha>` |
+| Tags on non-release push | `:sha-<sha>` only |
 | Container port | `3000` |
 | Startup command | `prisma migrate deploy && node server.js` |
+| Auth for registry | `GITHUB_TOKEN` (built-in, no extra secrets needed) |
 
 ## Workflows (`/.github/workflows/`)
 
@@ -28,25 +29,28 @@ checkout → node 20 (with npm cache) → npm ci → prisma generate → tsc --n
 ```
 
 - Provides placeholder `DATABASE_URL` and `JWT_SECRET` env vars (Next.js needs them to satisfy Prisma at build time)
-- **Gate**: `builds.yml` and `release.yml` only run when this passes on `main`
+- **Gate**: `release.yml` only runs when this passes on `main`
 
-### `builds.yml` — runs when CI passes on `main`
+### `release.yml` — runs when CI passes on `main`
 
-```
-checkout → buildx → docker login → build+push :<sha>
-```
+Two jobs:
 
-- Pushes a single `thewizard2026/rentflow:<sha>` image
-- Uses `cache-from: type=gha` + `cache-to: type=gha,mode=max` for layer caching
+1. **`semver`** — runs `cycjimmy/semantic-release-action@v4` using `.releaserc.json`:
+   - Analyzes commits since last tag (conventional commits format)
+   - If a release is warranted: creates a GitHub release + git tag, outputs version + published=true
+   - If no release: outputs published=false, no GitHub release created
 
-### `release.yml` — runs when CI passes on `main`, or manually via `workflow_dispatch`
+2. **`docker`** — always runs after semver (needs: semver):
+   - Pushes `:sha-<sha>` on every main push
+   - Additionally pushes `:<version>` + `:latest` when published=true
 
-```
-checkout → buildx → docker login → build+push :latest + :<sha>
-```
+### Semantic Release (`.releaserc.json`)
 
-- Same as builds but tags `:latest` as well
-- `workflow_dispatch` allows manual release promotion without a new commit
+Uses conventional commits to determine version bumps:
+- `feat:` → minor bump
+- `fix:` → patch bump
+- `BREAKING CHANGE:` footer → major bump
+- Other types (chore, docs, style, refactor, test) → no release
 
 ## Dockerfile — multi-stage standalone
 
@@ -76,7 +80,7 @@ Local dev compose has **2 services**:
 ```yaml
 services:
   db:    # postgres:15, env_file: .env
-  app:   # thewizard2026/rentflow:latest, ports 3000:3000
+  app:   # ghcr.io/jenteverbruggen-boop/rentflow2.0:latest, ports 3000:3000
 ```
 
 - No separate backend or frontend service
@@ -97,6 +101,7 @@ For local dev, SQLite is used (no Docker needed):
 - **Always** use `cache: "npm"` in `actions/setup-node@v4` to cache the npm install layer
 - **Always** use `docker/build-push-action@v6` with GHA layer cache (`type=gha`)
 - **Never** run `npm run build` without setting `DATABASE_URL` and `JWT_SECRET` env vars — Prisma and auth code reference them at build time (even if not used at static generation time)
+- **Always** use `fetch-depth: 0` when checking out for semantic-release — it needs full git history to determine version
 - Keep workflows under 50 lines each — extract complexity into Makefile targets or npm scripts if needed
 
 ## Checklist for any CI/CD change
@@ -107,3 +112,4 @@ For local dev, SQLite is used (no Docker needed):
 - [ ] No secrets are committed or echoed in logs
 - [ ] Workflow trigger conditions (`branches`, `on`) are correct
 - [ ] Layer cache directives are present on all `build-push-action` steps
+- [ ] Commit messages follow conventional commits format for semver to work

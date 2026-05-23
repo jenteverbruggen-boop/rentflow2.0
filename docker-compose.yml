@@ -7,7 +7,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   app:
-    image: thewizard2026/rentflow:latest
+    image: ghcr.io/jenteverbruggen-boop/rentflow2.0:latest
     restart: always
     ports:
       - "3000:3000"

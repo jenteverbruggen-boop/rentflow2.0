@@ -5,7 +5,9 @@
       "Skill(code:*)",
       "Bash(npx tsc *)",
       "Bash(mkdir -p \"/Users/youri/Documents/Personal/Projects/rentflow2.0/src/app/api/users/[id]\")",
-      "Bash(ps -p 18690,83970,99559 -o pid,comm,args)"
+      "Bash(ps -p 18690,83970,99559 -o pid,comm,args)",
+      "Skill(cicd)",
+      "Skill(cicd:*)"
     ],
     "additionalDirectories": [
       "/Users/youri/Documents/Personal/Projects/rentflow2.0/src/app/api/users"
