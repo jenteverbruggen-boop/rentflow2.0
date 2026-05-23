@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { href: "/planning", label: "Planning", icon: "📅" },
   { href: "/people", label: "Personen", icon: "👥" },
   { href: "/materials", label: "Materialen", icon: "📦" },
+  { href: "/users", label: "Gebruikers", icon: "👤" },
 ] as const;
 
 export function Sidebar() {

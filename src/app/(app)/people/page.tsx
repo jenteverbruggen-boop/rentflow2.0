@@ -18,7 +18,10 @@ export default function PeoplePage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
 
-  const { data: people = [] } = useQuery({ queryKey: ["people"], queryFn: fetchPeople });
+  const { data: people = [] } = useQuery({
+    queryKey: ["people"],
+    queryFn: fetchPeople,
+  });
 
   const upsert = useMutation({
     mutationFn: async (values: Omit<Person, "id">) => {
@@ -67,14 +70,26 @@ export default function PeoplePage() {
             <CardContent className="flex justify-between items-start pt-5">
               <div>
                 <p className="font-medium">{p.name}</p>
-                {p.role && <p className="text-sm text-muted-foreground">{p.role}</p>}
-                {p.email && <p className="text-xs text-muted-foreground/70">{p.email}</p>}
+                {p.role && (
+                  <p className="text-sm text-muted-foreground">{p.role}</p>
+                )}
+                {p.email && (
+                  <p className="text-xs text-muted-foreground/70">{p.email}</p>
+                )}
               </div>
               <div className="flex gap-2 shrink-0">
-                <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>✏️</Button>
-                <Button variant="ghost" size="icon" onClick={() => {
-                  if (confirm("Persoon verwijderen?")) remove.mutate(p.id);
-                }}>🗑️</Button>
+                <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>
+                  ✏️
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    if (confirm("Persoon verwijderen?")) remove.mutate(p.id);
+                  }}
+                >
+                  🗑️
+                </Button>
               </div>
             </CardContent>
           </Card>
