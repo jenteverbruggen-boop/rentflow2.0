@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma *)",
+      "Bash(DATABASE_URL=\"file:./prisma/dev.db\" npx prisma migrate dev --name init_periods --schema=prisma/schema.dev.prisma --skip-seed)",
+      "Bash(DATABASE_URL=\"file:./prisma/dev.db\" npx prisma db push --schema=prisma/schema.dev.prisma --force-reset --skip-generate)",
+      "Bash(npx shadcn@latest add sheet tabs tooltip popover scroll-area --yes)",
+      "Edit(/.claude/skills/docs/**)",
+      "Bash(chmod +x /Users/youri/Documents/Personal/Projects/rentflow2.0/.claude/hooks/docs-trigger.sh)",
+      "Bash(/Users/youri/Documents/Personal/Projects/rentflow2.0/.claude/hooks/docs-trigger.sh)",
+      "Bash(mkdir -p \"/Users/youri/Documents/Personal/Projects/rentflow2.0/src/app/\\(app\\)/projects/[id]/costs\")",
+      "Skill(docs)",
+      "Skill(docs:*)",
+      "Bash(DATABASE_URL=\"file:./prisma/dev.db\" npx prisma db push --schema=prisma/schema.dev.prisma --skip-generate)",
+      "Bash(rm -rf src/app/\\\\\\(app\\\\\\)/projects/\\\\[id\\\\]/costs && echo \"removed\")",
+      "Bash(npx shadcn@latest add command --yes)",
+      "Bash(npx tsx *)",
+      "Bash(DATABASE_URL=\"file:./prisma/dev.db\" npx prisma db push --schema=prisma/schema.dev.prisma --skip-generate --accept-data-loss)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/api/projects)",
+      "Bash(curl -s -c /tmp/rf-cookie.txt -X POST http://localhost:3000/api/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@rentflow.dev\",\"password\":\"admin123\"}')",
+      "Bash(curl -s -b /tmp/rf-cookie.txt -X PUT http://localhost:3000/api/projects/1/prices/material/2 -H \"Content-Type: application/json\" -d '{\"dayPrice\": 7.5}')",
+      "Bash(curl -s -b /tmp/rf-cookie.txt -X DELETE http://localhost:3000/api/projects/1/prices/material/2)"
+    ],
+    "additionalDirectories": [
+      "/Users/youri/Documents/Personal/Projects/rentflow2.0/src/app/(app)/projects/[id]",
+      "/Users/youri/Documents/Personal/Projects/rentflow2.0/src/app/(app)/projects/[id]/costs"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/docs-trigger.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

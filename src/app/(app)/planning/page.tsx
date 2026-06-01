@@ -13,7 +13,6 @@ import {
 } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn, statusVariant } from "@/lib/utils";
@@ -23,6 +22,15 @@ async function fetchProjects(): Promise<Project[]> {
   const res = await fetch("/api/projects");
   if (!res.ok) throw new Error("Ophalen mislukt");
   return res.json();
+}
+
+function countAssignments(project: Project) {
+  let people = 0, materials = 0;
+  for (const period of project.periods) {
+    people += period.people.length;
+    materials += period.materials.length;
+  }
+  return { people, materials };
 }
 
 export default function PlanningPage() {
@@ -63,29 +71,29 @@ export default function PlanningPage() {
           const isToday = isSameDay(day, new Date());
 
           return (
-            <Card
-              key={day.toISOString()}
-              className={cn("min-h-32", isToday && "border-primary")}
-            >
+            <Card key={day.toISOString()} className={cn("min-h-32", isToday && "border-primary")}>
               <CardContent className="p-3">
                 <p className={cn("text-xs font-semibold mb-2", isToday ? "text-primary" : "text-muted-foreground")}>
                   {format(day, "EEE d", { locale: nl })}
                 </p>
                 <div className="space-y-1">
-                  {dayProjects.map((p) => (
-                    <div
-                      key={p.id}
-                      className={cn("rounded px-2 py-1", statusVariant(p.status))}
-                      title={`${p.name} · ${p.people.length} personen · ${p.materials.length} materialen`}
-                    >
-                      <p className="text-xs font-medium truncate">{p.name}</p>
-                      {p.location && <p className="text-xs opacity-70 truncate">{p.location}</p>}
-                      <div className="flex gap-2 mt-0.5">
-                        {p.people.length > 0 && <span className="text-xs opacity-70">👥 {p.people.length}</span>}
-                        {p.materials.length > 0 && <span className="text-xs opacity-70">📦 {p.materials.length}</span>}
+                  {dayProjects.map((p) => {
+                    const { people, materials } = countAssignments(p);
+                    return (
+                      <div
+                        key={p.id}
+                        className={cn("rounded px-2 py-1", statusVariant(p.status))}
+                        title={`${p.name} · ${people} personen · ${materials} materialen`}
+                      >
+                        <p className="text-xs font-medium truncate">{p.name}</p>
+                        {p.location && <p className="text-xs opacity-70 truncate">{p.location}</p>}
+                        <div className="flex gap-2 mt-0.5">
+                          {people > 0 && <span className="text-xs opacity-70">👥 {people}</span>}
+                          {materials > 0 && <span className="text-xs opacity-70">📦 {materials}</span>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -102,23 +110,26 @@ export default function PlanningPage() {
             <p className="text-muted-foreground text-sm">Geen projecten deze week</p>
           ) : (
             <div className="space-y-0">
-              {weekProjects.map((p, i) => (
-                <div key={p.id}>
-                  <div className="flex justify-between items-center py-3">
-                    <div>
-                      <p className="text-sm font-medium">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {[p.client, p.location].filter(Boolean).join(" · ")}
-                      </p>
+              {weekProjects.map((p, i) => {
+                const { people, materials } = countAssignments(p);
+                return (
+                  <div key={p.id}>
+                    <div className="flex justify-between items-center py-3">
+                      <div>
+                        <p className="text-sm font-medium">{p.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {[p.client, p.location].filter(Boolean).join(" · ")}
+                        </p>
+                      </div>
+                      <div className="text-xs text-muted-foreground text-right">
+                        <p>👥 {people} personen</p>
+                        <p>📦 {materials} materialen</p>
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground text-right">
-                      <p>👥 {p.people.length} personen</p>
-                      <p>📦 {p.materials.length} materialen</p>
-                    </div>
+                    {i < weekProjects.length - 1 && <Separator />}
                   </div>
-                  {i < weekProjects.length - 1 && <Separator />}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

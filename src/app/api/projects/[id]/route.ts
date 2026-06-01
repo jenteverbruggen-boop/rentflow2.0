@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, notFound, serverError } from "@/lib/api-auth";
+import { projectInclude } from "@/lib/project-include";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,10 +13,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const { id } = await params;
     const project = await prisma.project.findUnique({
       where: { id: parseInt(id) },
-      include: {
-        people: { include: { person: true } },
-        materials: { include: { material: true } },
-      },
+      include: projectInclude,
     });
     if (!project) return notFound();
     return NextResponse.json(project);

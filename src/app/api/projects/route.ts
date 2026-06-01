@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
+import { projectInclude } from "@/lib/project-include";
 
 export async function GET() {
   const user = await requireAuth().catch(() => null);
@@ -9,10 +10,7 @@ export async function GET() {
   try {
     const projects = await prisma.project.findMany({
       orderBy: { startDate: "asc" },
-      include: {
-        people: { include: { person: true } },
-        materials: { include: { material: true } },
-      },
+      include: projectInclude,
     });
     return NextResponse.json(projects);
   } catch (err) {
@@ -29,7 +27,21 @@ export async function POST(req: NextRequest) {
     if (!name || !startDate || !endDate) return badRequest("naam, startdatum en einddatum zijn verplicht");
 
     const project = await prisma.project.create({
-      data: { name, client, location, status, notes, startDate: new Date(startDate), endDate: new Date(endDate) },
+      data: {
+        name,
+        client,
+        location,
+        status,
+        notes,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        periods: {
+          create: [
+            { name: "Hoofdperiode", startDate: new Date(startDate), endDate: new Date(endDate) },
+          ],
+        },
+      },
+      include: projectInclude,
     });
     return NextResponse.json(project);
   } catch (err) {

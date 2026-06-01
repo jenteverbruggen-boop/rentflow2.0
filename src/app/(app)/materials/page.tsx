@@ -1,86 +1,103 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MaterialForm } from "@/components/material-form";
+import { MaterialDetailPane } from "@/components/material-detail-pane";
+import { MaterialsTreePane, type MaterialSort } from "@/components/materials-tree-pane";
+import { StockItemsSheet } from "@/components/stock-items-sheet";
+import { useMaterials } from "@/hooks/use-materials";
 import type { Material } from "@/types";
 
-async function fetchMaterials(): Promise<Material[]> {
-  const res = await fetch("/api/materials");
-  if (!res.ok) throw new Error("Ophalen mislukt");
-  return res.json();
-}
-
 export default function MaterialsPage() {
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Material | null>(null);
+  const { query, create } = useMaterials();
+  const materials = query.data ?? [];
 
-  const { data: materials = [] } = useQuery({ queryKey: ["materials"], queryFn: fetchMaterials });
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [sort, setSort] = useState<MaterialSort>("name-asc");
+  const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  const upsert = useMutation({
-    mutationFn: async (values: Omit<Material, "id">) => {
-      const url = editing ? `/api/materials/${editing.id}` : "/api/materials";
-      const res = await fetch(url, {
-        method: editing ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      if (!res.ok) throw new Error("Opslaan mislukt");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["materials"] });
-      setOpen(false);
-      setEditing(null);
-    },
-  });
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    materials.forEach((m) => m.category && set.add(m.category));
+    return Array.from(set).sort();
+  }, [materials]);
 
-  const remove = useMutation({
-    mutationFn: async (id: number) => {
-      await fetch(`/api/materials/${id}`, { method: "DELETE" });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["materials"] }),
-  });
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    const matches = materials.filter((m) => {
+      if (category !== "all" && m.category !== category) return false;
+      if (!q) return true;
+      return m.name.toLowerCase().includes(q) || (m.category ?? "").toLowerCase().includes(q);
+    });
 
-  function openCreate() { setEditing(null); setOpen(true); }
-  function openEdit(m: Material) { setEditing(m); setOpen(true); }
+    if (sort === "stock-desc") return matches.sort((a, b) => (b.totalStock ?? 0) - (a.totalStock ?? 0));
+    if (sort === "name-desc") return matches.sort((a, b) => b.name.localeCompare(a.name));
+    return matches.sort((a, b) => a.name.localeCompare(b.name));
+  }, [materials, search, category, sort]);
+
+  const materialsByCategory = useMemo(() => {
+    const grouped = new Map<string, Material[]>();
+    for (const material of filtered) {
+      const key = material.category ?? "Overig";
+      grouped.set(key, [...(grouped.get(key) ?? []), material]);
+    }
+    return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filtered]);
+
+  const selectedMaterial = useMemo(
+    () => materials.find((m) => m.id === selectedMaterialId) ?? null,
+    [materials, selectedMaterialId],
+  );
+
+  useEffect(() => {
+    if (selectedMaterialId && materials.some((m) => m.id === selectedMaterialId)) return;
+    setSelectedMaterialId(filtered[0]?.id ?? null);
+  }, [selectedMaterialId, materials, filtered]);
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Materialen</h2>
-        <Button onClick={openCreate}>+ Nieuw materiaal</Button>
+        <Button onClick={() => setFormOpen(true)}>+ Nieuw materiaal</Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {materials.map((m) => (
-          <Card key={m.id}>
-            <CardContent className="flex justify-between items-start pt-5">
-              <div className="space-y-1">
-                <p className="font-medium">{m.name}</p>
-                {m.category && <Badge variant="secondary">{m.category}</Badge>}
-                <p className="text-xs text-muted-foreground">Voorraad: {m.totalStock}</p>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>✏️</Button>
-                <Button variant="ghost" size="icon" onClick={() => {
-                  if (confirm("Materiaal verwijderen?")) remove.mutate(m.id);
-                }}>🗑️</Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] gap-4">
+        <MaterialsTreePane
+          materialsByCategory={materialsByCategory}
+          categories={categories}
+          search={search}
+          onSearchChange={setSearch}
+          category={category}
+          onCategoryChange={setCategory}
+          sort={sort}
+          onSortChange={setSort}
+          selectedMaterialId={selectedMaterialId}
+          onSelectMaterial={setSelectedMaterialId}
+        />
+
+        <MaterialDetailPane
+          material={selectedMaterial}
+          onManageUnits={() => selectedMaterial && setSheetOpen(true)}
+        />
       </div>
 
       <MaterialForm
-        open={open}
-        onOpenChange={setOpen}
-        defaultValues={editing}
-        onSubmit={(values) => upsert.mutate(values as Omit<Material, "id">)}
-        isPending={upsert.isPending}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        defaultValues={null}
+        onSubmit={(v) => create.mutate(v as Omit<Material, "id">)}
+        isPending={create.isPending}
+      />
+
+      <StockItemsSheet
+        material={selectedMaterial}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onMaterialDeleted={() => setSelectedMaterialId(null)}
       />
     </div>
   );

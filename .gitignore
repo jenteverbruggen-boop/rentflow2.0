@@ -13,6 +13,9 @@ out/
 prisma/dev.db
 prisma/dev.db-journal
 
+# Local seed imports
+prisma/seed-data/*.csv
+
 # Logs
 *.log
 npm-debug.log*

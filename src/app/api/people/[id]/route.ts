@@ -10,11 +10,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   try {
     const { id } = await params;
-    const { name, role, email, phone } = await req.json();
+    const { name, role, email, phone, dayPrice } = await req.json();
     if (!name) return badRequest("naam is verplicht");
     const person = await prisma.person.update({
       where: { id: parseInt(id) },
-      data: { name, role, email, phone },
+      data: { name, role, email, phone, dayPrice: Number(dayPrice) || 0 },
     });
     return NextResponse.json(person);
   } catch (err) {

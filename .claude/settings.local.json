@@ -7,7 +7,9 @@
       "Bash(mkdir -p \"/Users/youri/Documents/Personal/Projects/rentflow2.0/src/app/api/users/[id]\")",
       "Bash(ps -p 18690,83970,99559 -o pid,comm,args)",
       "Skill(cicd)",
-      "Skill(cicd:*)"
+      "Skill(cicd:*)",
+      "Bash(npm install *)",
+      "Bash(npm run *)"
     ],
     "additionalDirectories": [
       "/Users/youri/Documents/Personal/Projects/rentflow2.0/src/app/api/users"

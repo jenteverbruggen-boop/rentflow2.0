@@ -17,55 +17,109 @@ model User {
 }
 
 model Project {
-  id          Int               @id @default(autoincrement())
-  name        String
-  client      String?
-  location    String?
-  startDate   DateTime
-  endDate     DateTime
-  status      String            @default("concept")
-  notes       String?
-  createdAt   DateTime          @default(now())
-  people      ProjectPerson[]
-  materials   ProjectMaterial[]
+  id             Int                    @id @default(autoincrement())
+  name           String
+  client         String?
+  location       String?
+  startDate      DateTime
+  endDate        DateTime
+  status         String                 @default("concept")
+  notes          String?
+  createdAt      DateTime               @default(now())
+  periods        Period[]
+  materialPrices ProjectMaterialPrice[]
+  personPrices   ProjectPersonPrice[]
+}
+
+model ProjectMaterialPrice {
+  id         Int      @id @default(autoincrement())
+  projectId  Int
+  materialId Int
+  dayPrice   Float
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, materialId])
+}
+
+model ProjectPersonPrice {
+  id        Int     @id @default(autoincrement())
+  projectId Int
+  personId  Int
+  dayPrice  Float
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  person    Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, personId])
+}
+
+model Period {
+  id        Int                 @id @default(autoincrement())
+  projectId Int
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  project   Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  materials PeriodStockItem[]
+  people    PeriodPerson[]
 }
 
 model Person {
-  id       Int             @id @default(autoincrement())
-  name     String
-  role     String?
-  email    String?
-  phone    String?
-  projects ProjectPerson[]
+  id            Int                  @id @default(autoincrement())
+  name          String
+  role          String?
+  email         String?
+  phone         String?
+  dayPrice      Float                @default(0)
+  periods       PeriodPerson[]
+  projectPrices ProjectPersonPrice[]
 }
 
 model Material {
-  id         Int               @id @default(autoincrement())
-  name       String
-  category   String?
-  totalStock Int               @default(1)
-  notes      String?
-  projects   ProjectMaterial[]
+  id            Int                    @id @default(autoincrement())
+  name          String
+  category      String?
+  notes         String?
+  dayPrice      Float                  @default(0)
+  stockItems    StockItem[]
+  projectPrices ProjectMaterialPrice[]
 }
 
-model ProjectPerson {
-  id        Int       @id @default(autoincrement())
-  projectId Int
-  personId  Int
-  role      String?
-  startDate DateTime?
-  endDate   DateTime?
-  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+model StockItem {
+  id          Int               @id @default(autoincrement())
+  materialId  Int
+  unitNumber  Int
+  identifier  String?
+  notes       String?
+  material    Material          @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  assignments PeriodStockItem[]
+
+  @@unique([materialId, unitNumber])
 }
 
-model ProjectMaterial {
-  id         Int       @id @default(autoincrement())
-  projectId  Int
-  materialId Int
-  quantity   Int       @default(1)
-  startDate  DateTime?
-  endDate    DateTime?
-  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  material   Material  @relation(fields: [materialId], references: [id], onDelete: Cascade)
+model PeriodStockItem {
+  id               Int       @id @default(autoincrement())
+  periodId         Int
+  stockItemId      Int
+  dayPriceSnapshot Float
+  discountPct      Float?
+  discountAmount   Float?
+  period           Period    @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  stockItem        StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+
+  @@unique([periodId, stockItemId])
+}
+
+model PeriodPerson {
+  id               Int      @id @default(autoincrement())
+  periodId         Int
+  personId         Int
+  role             String?
+  dayPriceSnapshot Float
+  discountPct      Float?
+  discountAmount   Float?
+  period           Period   @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  person           Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([periodId, personId])
 }
