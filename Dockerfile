@@ -19,10 +19,12 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 # Prisma 7's config loader (@prisma/config) depends on `effect` and ~20 other
-# packages that are not traced by Next.js standalone. Rather than listing them
-# all (brittle), copy the full builder node_modules — the standalone traced set
-# is a subset of it, so overwriting is safe. Use the local prisma binary
-# directly instead of npx to avoid a runtime download.
+# packages not traced by Next.js standalone. Copy full builder node_modules —
+# the standalone traced set is a subset so overwriting is safe.
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh
 EXPOSE 3000
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node server.js"]
+# Entrypoint handles both fresh DBs (apply migration) and existing DBs that
+# predate migration history (baseline 0001_init then deploy).
+CMD ["./docker-entrypoint.sh"]
