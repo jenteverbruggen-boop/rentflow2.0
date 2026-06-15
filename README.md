@@ -106,7 +106,7 @@ The fastest way to run RentFlow locally. No Postgres, no Docker required.
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 
 ### Setup
 
