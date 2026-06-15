@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { type Resolver, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,7 +30,8 @@ interface Props {
 
 export function PersonForm({ open, onOpenChange, defaultValues, onSubmit, isPending }: Props) {
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    // v5 resolvers separate input/output types; cast is safe — zod coerces before submit fires
+    resolver: zodResolver(schema) as Resolver<FormValues>,
     defaultValues: { name: "", role: "", email: "", phone: "", dayPrice: 0 },
   });
 
