@@ -1,0 +1,22 @@
+# Dependencies are reinstalled in the image (deps stage); never copy host ones
+# (host binaries are the wrong platform and clobber the Alpine node_modules).
+node_modules
+
+# Build output / generated artefacts (regenerated inside the image)
+.next
+out
+src/generated
+
+# Local databases & secrets
+prisma/dev.db
+prisma/dev.db-journal
+.env
+.env.local
+
+# VCS / tooling / OS noise
+.git
+.gitignore
+*.log
+.DS_Store
+Thumbs.db
+README.md

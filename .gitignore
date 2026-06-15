@@ -9,6 +9,9 @@ out/
 .env
 .env.local
 
+# Generated Prisma Client (prisma-client generator output; regenerated on build)
+src/generated/
+
 # SQLite dev database
 prisma/dev.db
 prisma/dev.db-journal

@@ -17,7 +17,10 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Prisma 7: connection URL + schema path live in prisma.config.ts, needed by
+# `prisma migrate deploy`. The generated client (src/generated/prisma) is
+# bundled into the standalone server output, so no node_modules/.prisma copy.
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 EXPOSE 3000
 CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]

@@ -1,9 +1,17 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { PrismaClient } from "../src/generated/prisma/client";
 
-const prisma = new PrismaClient();
+// Prisma 7 connects through a driver adapter; pick it from the connection
+// string (a `file:` URL is the local SQLite dev database, else Postgres).
+const url = process.env.DATABASE_URL ?? "";
+const adapter = url.startsWith("file:")
+  ? new PrismaLibSql({ url })
+  : new PrismaPg({ connectionString: url });
+const prisma = new PrismaClient({ adapter });
 
 type ImportedMaterial = {
   code: string;

@@ -24,7 +24,7 @@ A rental-planning tool for managing **projects**, **periods**, **people**, and *
 | Framework | Next.js 16 (App Router, TypeScript) |
 | UI | shadcn/ui, Tailwind CSS v4, Radix UI primitives |
 | Data fetching | TanStack Query v5 |
-| ORM | Prisma 5 |
+| ORM | Prisma 7 |
 | Database | PostgreSQL 15 (prod) / SQLite (local dev) |
 | Auth | JWT via httpOnly cookie (`jose` + `jsonwebtoken`), bcryptjs |
 | Containerisation | Docker (multi-stage standalone build), Docker Compose |
@@ -237,8 +237,7 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `ci.yml` | Push to any branch | `npm ci` → `prisma generate` → `tsc --noEmit` → `next build` |
-| `builds.yml` | CI passes on `main` | Builds & pushes `thewizard2026/rentflow:<sha>` to Docker Hub |
-| `release.yml` | CI passes on `main` / manual | Builds & pushes `thewizard2026/rentflow:latest` + `:<sha>` |
+| `release.yml` | CI passes on `main` | Semantic-release tag → Docker build → push `ghcr.io/<repo>:latest` + `:<sha>` + `:<semver>` |
 
 ---
 
