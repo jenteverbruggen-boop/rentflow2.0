@@ -39,7 +39,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Dashboard</h2>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {stats.map((s) => (
           <Card key={s.label}>
             <CardHeader className="pb-2">
@@ -66,16 +66,16 @@ export default function DashboardPage() {
                 <Link
                   key={p.id}
                   href={`/projects/${p.id}`}
-                  className="flex items-center justify-between hover:bg-accent px-3 py-2 rounded-lg transition-colors"
+                  className="flex items-center justify-between gap-3 hover:bg-accent px-3 py-2 rounded-lg transition-colors"
                 >
-                  <div>
-                    <p className="font-medium text-sm">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{p.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
                       {[p.client, p.location].filter(Boolean).join(" · ")}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-muted-foreground hidden sm:block">
                       {format(new Date(p.startDate), "d MMM", { locale: nl })}
                     </span>
                     <Badge className={statusVariant(p.status)}>{p.status}</Badge>

@@ -108,11 +108,15 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
   return (
     <Card>
       <CardContent className="pt-5">
-        <div className="grid grid-cols-2 gap-4">
-          <section className="space-y-2">
-            <h4 className="text-xs font-semibold uppercase text-muted-foreground">Beschikbaar</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
+            <div className="bg-muted/60 px-3 py-2.5 border-b border-border md:hidden">
+              <h4 className="text-sm font-semibold">Beschikbaar</h4>
+            </div>
+            <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">Beschikbaar</h4>
+            <div className="p-3 space-y-2 md:p-0">
             <Input placeholder="Zoeken op naam of functie..." value={search} onChange={(e) => setSearch(e.target.value)} />
-            <ScrollArea className="h-[440px] pr-2">
+            <ScrollArea className="h-[400px] pr-2">
               <div className="space-y-2">
                 {byRole.map(([role, items]) => {
                   const isCollapsed = collapsedLeft.has(role);
@@ -133,7 +137,7 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
                             <div key={p.person.id} className="flex items-center gap-1.5 bg-muted/30 rounded px-2 py-1 text-xs">
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium truncate">{p.person.name}</p>
-                                <p className="text-[10px] text-muted-foreground">
+                                <p className="text-[10px] text-muted-foreground truncate">
                                   {p.isAvailable ? "Beschikbaar" : `Bezet (${p.blockingProject?.name})`} · {formatEUR(p.person.dayPrice)}/d
                                 </p>
                               </div>
@@ -158,12 +162,17 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
                 )}
               </div>
             </ScrollArea>
+            </div>
           </section>
 
-          <section className="space-y-2">
-            <h4 className="text-xs font-semibold uppercase text-muted-foreground">In "{period.name}"</h4>
-            <div className="h-9" aria-hidden />
-            <ScrollArea className="h-[440px] pr-2">
+          <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
+            <div className="bg-muted/60 px-3 py-2.5 border-b border-border md:hidden">
+              <h4 className="text-sm font-semibold">In "{period.name}"</h4>
+            </div>
+            <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">In "{period.name}"</h4>
+            <div className="hidden md:block h-9" aria-hidden />
+            <div className="p-3 md:p-0">
+            <ScrollArea className="h-[400px] pr-2">
               <div className="space-y-2">
                 {assignedByRole.map(([role, items]) => {
                   const isCollapsed = collapsedRight.has(role);
@@ -209,6 +218,7 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
                 )}
               </div>
             </ScrollArea>
+            </div>
           </section>
         </div>
       </CardContent>

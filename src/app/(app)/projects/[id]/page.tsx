@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -30,8 +30,15 @@ type TabKey = "overview" | "periods" | "persons" | "materials" | "costs";
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [tab, setTab] = useState<TabKey>("overview");
+  const searchParams = useSearchParams();
+  const tab = (searchParams.get("tab") as TabKey) ?? "overview";
   const [selectedPeriodId, setSelectedPeriodId] = useState<number | null>(null);
+
+  function setTab(next: TabKey) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", next);
+    router.replace(`?${params.toString()}`);
+  }
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
@@ -63,8 +70,8 @@ export default function ProjectDetailPage() {
 
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
                 <h2 className="text-2xl font-bold">{project.name}</h2>
                 <p className="text-muted-foreground text-sm mt-0.5">
                   {[project.client, project.location].filter(Boolean).join(" · ")}
@@ -74,8 +81,8 @@ export default function ProjectDetailPage() {
                   {format(new Date(project.endDate), "d MMM yyyy", { locale: nl })}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
+              <div className="flex items-center gap-3 shrink-0">
+                <div>
                   <p className="text-xs text-muted-foreground">Totaal</p>
                   <p className="text-xl font-semibold tabular-nums">{formatEUR(total)}</p>
                 </div>
@@ -86,13 +93,15 @@ export default function ProjectDetailPage() {
         </Card>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
-          <TabsList>
-            <TabsTrigger value="overview">Overzicht</TabsTrigger>
-            <TabsTrigger value="periods">Periodes</TabsTrigger>
-            <TabsTrigger value="persons">Personen</TabsTrigger>
-            <TabsTrigger value="materials">Materialen</TabsTrigger>
-            <TabsTrigger value="costs">Kosten</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto pb-1">
+            <TabsList className="w-max">
+              <TabsTrigger value="overview">Overzicht</TabsTrigger>
+              <TabsTrigger value="periods">Periodes</TabsTrigger>
+              <TabsTrigger value="persons">Personen</TabsTrigger>
+              <TabsTrigger value="materials">Materialen</TabsTrigger>
+              <TabsTrigger value="costs">Kosten</TabsTrigger>
+            </TabsList>
+          </div>
           <TabsContent value="overview" className="mt-4">
             <ProjectOverviewTab project={project} onJumpToPeriod={jumpToPeriod} />
           </TabsContent>

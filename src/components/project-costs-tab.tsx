@@ -83,8 +83,8 @@ export function ProjectCostsTab({ project }: Props) {
                   </div>
                   <span className="text-base font-semibold tabular-nums">{formatEUR(subtotal)}</span>
                 </div>
-                <div className="border rounded-lg overflow-hidden bg-card">
-                  <table className="w-full">
+                <div className="border rounded-lg overflow-x-auto bg-card">
+                  <table className="w-full min-w-[560px]">
                     <colgroup>
                       <col className="w-9" />
                       <col />

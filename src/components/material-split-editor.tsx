@@ -30,7 +30,6 @@ export function MaterialSplitEditor({ period, project, onWarnings, onError }: Pr
   const range = {
     from: period.startDate.slice(0, 10),
     to: period.endDate.slice(0, 10),
-    excludePeriodId: period.id,
     sameProjectId: project.id,
     projectId: project.id,
   };
@@ -41,6 +40,7 @@ export function MaterialSplitEditor({ period, project, onWarnings, onError }: Pr
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return (mats.data ?? []).filter((m) => {
+      if (m.availableCount === 0) return false;
       if (!q) return true;
       return (
         m.material.name.toLowerCase().includes(q) ||
@@ -110,11 +110,15 @@ export function MaterialSplitEditor({ period, project, onWarnings, onError }: Pr
   return (
     <Card>
       <CardContent className="pt-5">
-        <div className="grid grid-cols-2 gap-4">
-          <section className="space-y-2">
-            <h4 className="text-xs font-semibold uppercase text-muted-foreground">Beschikbaar</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
+            <div className="bg-muted/60 px-3 py-2.5 border-b border-border md:hidden">
+              <h4 className="text-sm font-semibold">Beschikbaar</h4>
+            </div>
+            <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">Beschikbaar</h4>
+            <div className="p-3 space-y-2 md:p-0">
             <Input placeholder="Zoeken op naam of categorie..." value={search} onChange={(e) => setSearch(e.target.value)} />
-            <ScrollArea className="h-[440px] pr-2">
+            <ScrollArea className="h-[400px] pr-2">
               <div className="space-y-2">
                 {byCategory.map(([cat, items]) => {
                   const isCollapsed = collapsedLeft.has(cat);
@@ -133,33 +137,33 @@ export function MaterialSplitEditor({ period, project, onWarnings, onError }: Pr
                         <div className="space-y-1 mt-1 ml-4">
                           {items.map((m) => {
                             const qty = qtyMap[m.material.id] ?? 1;
-                            const exhausted = m.availableCount === 0;
                             return (
-                              <div key={m.material.id} className="flex items-center gap-1.5 bg-muted/30 rounded px-2 py-1 text-xs">
-                                <div className="flex-1 min-w-0">
+                              <div key={m.material.id} className="flex flex-wrap items-center gap-x-1.5 gap-y-1 bg-muted/30 rounded px-2 py-1.5 text-xs">
+                                <div className="flex-1 min-w-[120px]">
                                   <p className="font-medium truncate">{m.material.name}</p>
-                                  <p className="text-[10px] text-muted-foreground">
+                                  <p className="text-[10px] text-muted-foreground truncate">
                                     {m.availableCount}/{m.totalStock} vrij · {formatEUR(m.material.dayPrice)}/d
                                   </p>
                                 </div>
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  max={m.availableCount || 1}
-                                  value={qty}
-                                  onChange={(e) => setQtyMap((q) => ({ ...q, [m.material.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
-                                  className="w-12 h-7 text-xs"
-                                  disabled={exhausted}
-                                />
-                                <Button
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  disabled={exhausted || add.isPending || qty > m.availableCount}
-                                  onClick={() => add.mutate({ materialId: m.material.id, quantity: qty })}
-                                  title="Toevoegen aan periode"
-                                >
-                                  <ArrowRight className="h-3.5 w-3.5" />
-                                </Button>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={m.availableCount}
+                                    value={qty}
+                                    onChange={(e) => setQtyMap((q) => ({ ...q, [m.material.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                                    className="w-12 h-7 text-xs"
+                                  />
+                                  <Button
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    disabled={add.isPending || qty > m.availableCount}
+                                    onClick={() => add.mutate({ materialId: m.material.id, quantity: qty })}
+                                    title="Toevoegen aan periode"
+                                  >
+                                    <ArrowRight className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
                               </div>
                             );
                           })}
@@ -173,12 +177,17 @@ export function MaterialSplitEditor({ period, project, onWarnings, onError }: Pr
                 )}
               </div>
             </ScrollArea>
+            </div>
           </section>
 
-          <section className="space-y-2">
-            <h4 className="text-xs font-semibold uppercase text-muted-foreground">In "{period.name}"</h4>
-            <div className="h-9" aria-hidden />
-            <ScrollArea className="h-[440px] pr-2">
+          <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
+            <div className="bg-muted/60 px-3 py-2.5 border-b border-border md:hidden">
+              <h4 className="text-sm font-semibold">In "{period.name}"</h4>
+            </div>
+            <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">In "{period.name}"</h4>
+            <div className="hidden md:block h-9" aria-hidden />
+            <div className="p-3 md:p-0">
+            <ScrollArea className="h-[400px] pr-2">
               <div className="space-y-2">
                 {groupsByCategory.map(([cat, items]) => {
                   const isCollapsed = collapsedRight.has(cat);
@@ -240,6 +249,7 @@ export function MaterialSplitEditor({ period, project, onWarnings, onError }: Pr
                 )}
               </div>
             </ScrollArea>
+            </div>
           </section>
         </div>
       </CardContent>

@@ -19,7 +19,7 @@ export function ProjectOverviewTab({ project, onJumpToPeriod }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Stat label="Periodes" value={String(project.periods.length)} />
         <Stat label="Totaal dagen" value={String(totalDays)} />
         <Stat label="Persoonboekingen" value={String(totalPersonBookings)} />

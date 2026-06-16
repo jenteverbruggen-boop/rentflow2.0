@@ -52,7 +52,7 @@ export function Timeline({
 
   const ticks: { date: Date; left: number }[] = [];
   const step = Math.max(1, Math.ceil(totalDays / 10));
-  for (let i = 0; i <= totalDays; i += step) {
+  for (let i = 0; i < totalDays; i += step) {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
     ticks.push({ date: d, left: pct(d, start, totalDays) });
@@ -85,7 +85,7 @@ export function Timeline({
         {showToday && todayWithinRange && (
           <div
             className="absolute top-0 bottom-0 w-px bg-primary z-10 pointer-events-none"
-            style={{ left: `calc(${labelWidth}px + ${pct(today, start, totalDays)}% * (100% - ${labelWidth}px) / 100)` }}
+            style={{ left: `calc(${labelWidth}px + ${pct(today, start, totalDays) / 100} * (100% - ${labelWidth}px))` }}
             title={`Vandaag: ${format(today, "d MMM yyyy", { locale: nl })}`}
           />
         )}

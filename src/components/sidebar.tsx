@@ -13,7 +13,7 @@ const NAV_LINKS = [
 
 export function Sidebar() {
   return (
-    <aside className="w-56 bg-sidebar flex flex-col border-r border-sidebar-border shrink-0">
+    <aside className="hidden md:flex w-56 bg-sidebar flex-col border-r border-sidebar-border shrink-0">
       <div className="p-5 border-b border-sidebar-border">
         <h1 className="text-xl font-bold text-primary">RentFlow</h1>
       </div>

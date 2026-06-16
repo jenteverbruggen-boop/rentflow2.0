@@ -78,13 +78,9 @@ export function ProjectPeriodsTab({ project, selectedPeriodId, onSelectPeriod }:
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardContent className="pt-5">
-          <Timeline rows={timelineRows} rangeStart={rangeStart} rangeEnd={rangeEnd} emptyMessage="Nog geen periodes" />
-        </CardContent>
-      </Card>
+      <Timeline rows={timelineRows} rangeStart={rangeStart} rangeEnd={rangeEnd} emptyMessage="Nog geen periodes" />
 
-      <div className="grid grid-cols-[260px_1fr] gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-4">
         <PeriodList
           periods={project.periods}
           selectedId={selectedPeriodId}
