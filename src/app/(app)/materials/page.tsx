@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { MaterialForm } from "@/components/material-form";
 import { MaterialDetailPane } from "@/components/material-detail-pane";
@@ -12,6 +13,7 @@ import type { Material } from "@/types";
 export default function MaterialsPage() {
   const { query, create } = useMaterials();
   const materials = query.data ?? [];
+  const searchParams = useSearchParams();
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
@@ -19,6 +21,14 @@ export default function MaterialsPage() {
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  useEffect(() => {
+    const paramId = searchParams.get("materialId");
+    if (paramId && materials.length > 0) {
+      const id = parseInt(paramId);
+      if (materials.some((m) => m.id === id)) setSelectedMaterialId(id);
+    }
+  }, [searchParams, materials]);
 
   const categories = useMemo(() => {
     const set = new Set<string>();

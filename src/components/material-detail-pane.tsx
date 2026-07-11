@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { formatEUR } from "@/lib/pricing";
 import { InlineEditField } from "@/components/inline-edit-field";
 import { MaterialStockList } from "@/components/material-stock-list";
+import { MaterialCodes } from "@/components/material-codes";
 import type { Material, StockItem } from "@/types";
 
 interface MaterialDetailPaneProps {
@@ -105,6 +106,10 @@ export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPa
           value={material.notes}
           onSave={(v) => saveField("notes", v)}
         />
+
+        <Separator />
+
+        <MaterialCodes material={material} />
 
         <Separator />
 
