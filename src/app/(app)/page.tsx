@@ -30,9 +30,9 @@ export default function DashboardPage() {
     .slice(0, 5);
 
   const stats = [
-    { label: "Projecten", value: projects.length, icon: "📁" },
-    { label: "Personen", value: peopleQuery.data?.length ?? 0, icon: "👥" },
-    { label: "Materialen", value: materialsQuery.data?.length ?? 0, icon: "📦" },
+    { label: "Projecten", value: projects.length, icon: "📁", href: "/projects" },
+    { label: "Personen", value: peopleQuery.data?.length ?? 0, icon: "👥", href: "/people" },
+    { label: "Materialen", value: materialsQuery.data?.length ?? 0, icon: "📦", href: "/materials" },
   ];
 
   return (
@@ -41,15 +41,17 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {stats.map((s) => (
-          <Card key={s.label}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl">{s.icon}</div>
-              <div className="text-3xl font-bold">{s.value}</div>
-            </CardContent>
-          </Card>
+          <Link key={s.label} href={s.href} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl">
+            <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl">{s.icon}</div>
+                <div className="text-3xl font-bold">{s.value}</div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
