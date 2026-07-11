@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { MaterialForm } from "@/components/material-form";
 import { MaterialDetailPane } from "@/components/material-detail-pane";
@@ -80,6 +81,7 @@ export default function MaterialsPage() {
         <h2 className="text-2xl font-bold">Materialen</h2>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setScanOpen(true)}>📷 Scan</Button>
+          <Link href="/materials/labels"><Button variant="outline">🏷️ Labels</Button></Link>
           <Button onClick={() => setFormOpen(true)}>+ Nieuw materiaal</Button>
         </div>
       </div>
