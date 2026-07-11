@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, badRequest, notFound, serverError } from "@/lib/api-auth";
+import { requireAuth, unauthorized, badRequest, notFound, conflict, serverError } from "@/lib/api-auth";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -26,14 +26,19 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   try {
     const { id } = await params;
-    const { name, category, categoryId, dayPrice, notes } = await req.json();
+    const { name, category, categoryId, code, dayPrice, notes } = await req.json();
     if (!name) return badRequest("naam is verplicht");
-    const material = await prisma.material.update({
-      where: { id: parseInt(id) },
-      data: { name, category, categoryId: categoryId ?? null, notes, dayPrice: Number(dayPrice) || 0 },
-      include: { categoryRel: true },
-    });
-    return NextResponse.json(material);
+    try {
+      const material = await prisma.material.update({
+        where: { id: parseInt(id) },
+        data: { name, category, categoryId: categoryId ?? null, code: code ?? null, notes, dayPrice: Number(dayPrice) || 0 },
+        include: { categoryRel: true },
+      });
+      return NextResponse.json(material);
+    } catch (e: unknown) {
+      if ((e as { code?: string })?.code === "P2002") return conflict("Code bestaat al");
+      throw e;
+    }
   } catch (err) {
     return serverError((err as Error).message);
   }

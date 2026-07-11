@@ -39,7 +39,7 @@ export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPa
     );
   }
 
-  async function saveField(field: "dayPrice" | "category" | "notes", rawValue: string) {
+  async function saveField(field: "dayPrice" | "category" | "code" | "notes", rawValue: string) {
     if (!material) return;
     const value = field === "dayPrice" ? Number(rawValue) : rawValue || null;
     const res = await fetch(`/api/materials/${material.id}`, {
@@ -48,6 +48,8 @@ export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPa
       body: JSON.stringify({
         name: material.name,
         category: material.category,
+        categoryId: material.categoryId,
+        code: material.code,
         notes: material.notes,
         dayPrice: material.dayPrice,
         [field]: value,
@@ -84,6 +86,13 @@ export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPa
             <p className="font-medium">{material.totalStock ?? 0} units</p>
           </div>
         </div>
+
+        <InlineEditField
+          label="Artikelcode"
+          value={material.code}
+          displayValue={material.code ?? "TEMP"}
+          onSave={(v) => saveField("code", v)}
+        />
 
         <InlineEditField
           label="Categorie"

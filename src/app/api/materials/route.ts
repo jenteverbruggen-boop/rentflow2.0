@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
+import { nextCode } from "@/lib/material-code";
 
 export async function GET() {
   const user = await requireAuth().catch(() => null);
@@ -24,10 +25,21 @@ export async function POST(req: NextRequest) {
   if (!user) return unauthorized();
 
   try {
-    const { name, category, categoryId, dayPrice, notes, initialStock } = await req.json();
+    const { name, category, categoryId, code: manualCode, dayPrice, notes, initialStock } = await req.json();
     if (!name) return badRequest("naam is verplicht");
+
+    let code: string | null = manualCode ?? null;
+    if (!code && categoryId) {
+      const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+      if (cat) {
+        const existing = await prisma.material.findMany({ where: { code: { not: null } }, select: { code: true } });
+        const codes = existing.map((m) => m.code as string);
+        try { code = nextCode(cat.prefix, codes); } catch { code = null; }
+      }
+    }
+
     const material = await prisma.material.create({
-      data: { name, category, categoryId: categoryId ?? null, notes, dayPrice: Number(dayPrice) || 0 },
+      data: { name, category, categoryId: categoryId ?? null, code, notes, dayPrice: Number(dayPrice) || 0 },
       include: { categoryRel: true },
     });
     const stock = Math.max(0, parseInt(initialStock) || 0);
