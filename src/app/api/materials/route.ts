@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const materials = await prisma.material.findMany({
       orderBy: { name: "asc" },
-      include: { _count: { select: { stockItems: true } } },
+      include: { _count: { select: { stockItems: true } }, categoryRel: true },
     });
     return NextResponse.json(
       materials.map((m) => ({ ...m, totalStock: m._count.stockItems }))
@@ -24,10 +24,11 @@ export async function POST(req: NextRequest) {
   if (!user) return unauthorized();
 
   try {
-    const { name, category, dayPrice, notes, initialStock } = await req.json();
+    const { name, category, categoryId, dayPrice, notes, initialStock } = await req.json();
     if (!name) return badRequest("naam is verplicht");
     const material = await prisma.material.create({
-      data: { name, category, notes, dayPrice: Number(dayPrice) || 0 },
+      data: { name, category, categoryId: categoryId ?? null, notes, dayPrice: Number(dayPrice) || 0 },
+      include: { categoryRel: true },
     });
     const stock = Math.max(0, parseInt(initialStock) || 0);
     if (stock > 0) {

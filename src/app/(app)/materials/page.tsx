@@ -22,16 +22,20 @@ export default function MaterialsPage() {
 
   const categories = useMemo(() => {
     const set = new Set<string>();
-    materials.forEach((m) => m.category && set.add(m.category));
+    materials.forEach((m) => {
+      const cat = m.categoryRel?.name ?? m.category;
+      if (cat) set.add(cat);
+    });
     return Array.from(set).sort();
   }, [materials]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     const matches = materials.filter((m) => {
-      if (category !== "all" && m.category !== category) return false;
+      const catName = m.categoryRel?.name ?? m.category;
+      if (category !== "all" && catName !== category) return false;
       if (!q) return true;
-      return m.name.toLowerCase().includes(q) || (m.category ?? "").toLowerCase().includes(q);
+      return m.name.toLowerCase().includes(q) || (catName ?? "").toLowerCase().includes(q);
     });
 
     if (sort === "stock-desc") return matches.sort((a, b) => (b.totalStock ?? 0) - (a.totalStock ?? 0));
@@ -42,7 +46,7 @@ export default function MaterialsPage() {
   const materialsByCategory = useMemo(() => {
     const grouped = new Map<string, Material[]>();
     for (const material of filtered) {
-      const key = material.category ?? "Overig";
+      const key = material.categoryRel?.name ?? material.category ?? "Zonder categorie";
       grouped.set(key, [...(grouped.get(key) ?? []), material]);
     }
     return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));

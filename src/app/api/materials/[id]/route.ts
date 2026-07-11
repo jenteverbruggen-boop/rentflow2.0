@@ -26,11 +26,12 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   try {
     const { id } = await params;
-    const { name, category, dayPrice, notes } = await req.json();
+    const { name, category, categoryId, dayPrice, notes } = await req.json();
     if (!name) return badRequest("naam is verplicht");
     const material = await prisma.material.update({
       where: { id: parseInt(id) },
-      data: { name, category, notes, dayPrice: Number(dayPrice) || 0 },
+      data: { name, category, categoryId: categoryId ?? null, notes, dayPrice: Number(dayPrice) || 0 },
+      include: { categoryRel: true },
     });
     return NextResponse.json(material);
   } catch (err) {

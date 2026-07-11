@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { type Resolver, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import type { Material } from "@/types";
+import { EntityCombobox } from "@/components/entity-combobox";
+import type { Category, Material } from "@/types";
 
 const schema = z.object({
   name: z.string().min(1, "Naam is verplicht"),
-  category: z.string().optional(),
+  categoryId: z.number().optional().nullable(),
   dayPrice: z.coerce.number().min(0, "Moet ≥ 0 zijn"),
   initialStock: z.coerce.number().int().min(0).optional(),
   notes: z.string().optional(),
@@ -31,38 +33,45 @@ interface Props {
 
 export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPending }: Props) {
   const form = useForm<FormValues>({
-    // v5 resolvers separate input/output types; cast is safe — zod coerces before submit fires
     resolver: zodResolver(schema) as Resolver<FormValues>,
-    defaultValues: { name: "", category: "", dayPrice: 0, initialStock: 1, notes: "" },
+    defaultValues: { name: "", categoryId: null, dayPrice: 0, initialStock: 1, notes: "" },
+  });
+  const [catId, setCatId] = useState<number | null>(null);
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ["categories"],
+    queryFn: () => fetch("/api/categories").then((r) => r.json()),
   });
 
   useEffect(() => {
     if (defaultValues) {
-      form.reset({
-        name: defaultValues.name,
-        category: defaultValues.category ?? "",
-        dayPrice: defaultValues.dayPrice,
-        notes: defaultValues.notes ?? "",
-      });
+      setCatId(defaultValues.categoryId ?? null);
+      form.reset({ name: defaultValues.name, categoryId: defaultValues.categoryId ?? null, dayPrice: defaultValues.dayPrice, notes: defaultValues.notes ?? "" });
     } else {
-      form.reset({ name: "", category: "", dayPrice: 0, initialStock: 1, notes: "" });
+      setCatId(null);
+      form.reset({ name: "", categoryId: null, dayPrice: 0, initialStock: 1, notes: "" });
     }
   }, [defaultValues, form]);
+
+  async function createCategory(name: string) {
+    const res = await fetch("/api/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, prefix: "9999" }) });
+    return res.json() as Promise<{ id: number }>;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{defaultValues ? "Materiaal bewerken" : "Nieuw materiaal"}</DialogTitle>
-        </DialogHeader>
+        <DialogHeader><DialogTitle>{defaultValues ? "Materiaal bewerken" : "Nieuw materiaal"}</DialogTitle></DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit((v) => onSubmit({ ...v, categoryId: catId }))} className="space-y-4">
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem><FormLabel>Naam *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            <FormField control={form.control} name="category" render={({ field }) => (
-              <FormItem><FormLabel>Categorie</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
+            <FormItem>
+              <FormLabel>Categorie</FormLabel>
+              <EntityCombobox items={categories} value={catId} onChange={(id) => { setCatId(id); form.setValue("categoryId", id); }}
+                onCreate={createCategory} placeholder="Selecteer categorie..." createLabel="+ Nieuwe categorie" />
+            </FormItem>
             <FormField control={form.control} name="dayPrice" render={({ field }) => (
               <FormItem><FormLabel>Dagprijs (€)</FormLabel><FormControl><Input type="number" step="0.01" min={0} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
@@ -75,12 +84,8 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
               <FormItem><FormLabel>Notities</FormLabel><FormControl><Textarea rows={2} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <div className="flex gap-3 pt-2">
-              <Button type="submit" className="flex-1" disabled={isPending}>
-                {isPending ? "Bezig..." : defaultValues ? "Opslaan" : "Aanmaken"}
-              </Button>
-              <Button type="button" variant="secondary" className="flex-1" onClick={() => onOpenChange(false)}>
-                Annuleren
-              </Button>
+              <Button type="submit" className="flex-1" disabled={isPending}>{isPending ? "Bezig..." : defaultValues ? "Opslaan" : "Aanmaken"}</Button>
+              <Button type="button" variant="secondary" className="flex-1" onClick={() => onOpenChange(false)}>Annuleren</Button>
             </div>
           </form>
         </Form>
