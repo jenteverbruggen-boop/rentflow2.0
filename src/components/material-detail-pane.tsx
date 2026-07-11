@@ -113,6 +113,14 @@ export function MaterialDetailPane({
           </div>
         ) : (
           <div className="space-y-2">
+            {material.usedInSets && material.usedInSets.length > 0 && (
+              <div className="rounded-md border border-border p-3 text-xs space-y-1">
+                <p className="font-semibold">🔗 Gedeeld — zit in {material.usedInSets.length} {material.usedInSets.length === 1 ? "set" : "sets"}</p>
+                {material.usedInSets.map((s) => (
+                  <p key={s.id} className="text-muted-foreground">{s.name} (×{s.quantity})</p>
+                ))}
+              </div>
+            )}
             <p className="text-sm font-semibold">Per item</p>
             <MaterialStockList stockItems={stockItems} />
           </div>

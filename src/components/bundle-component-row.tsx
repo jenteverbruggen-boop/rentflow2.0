@@ -9,6 +9,7 @@ import type { Material, MaterialComponent } from "@/types";
 interface BundleComponentRowProps {
   component: MaterialComponent;
   child?: Material;
+  sharedWith?: { id: number; name: string }[];
   onQuantityChange: (quantity: number) => void;
   onRemove: () => void;
 }
@@ -16,6 +17,7 @@ interface BundleComponentRowProps {
 export function BundleComponentRow({
   component,
   child,
+  sharedWith,
   onQuantityChange,
   onRemove,
 }: BundleComponentRowProps) {
@@ -29,9 +31,14 @@ export function BundleComponentRow({
 
   return (
     <div className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs">
-      <span className="min-w-0 flex-1 truncate">
-        {child?.name ?? `#${component.childId}`}
-      </span>
+      <div className="min-w-0 flex-1">
+        <span className="truncate">{child?.name ?? `#${component.childId}`}</span>
+        {sharedWith && sharedWith.length > 0 && (
+          <p className="text-[10px] text-muted-foreground truncate">
+            🔗 gedeeld — ook in: {sharedWith.map((s) => s.name).join(", ")}
+          </p>
+        )}
+      </div>
       <span className="text-muted-foreground">×</span>
       <Input
         type="number"

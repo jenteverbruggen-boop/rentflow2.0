@@ -25,12 +25,16 @@ export function BundleComponentEditor({ material }: BundleComponentEditorProps) 
     material.bundlePriceOverride != null ? String(material.bundlePriceOverride) : "",
   );
 
-  const usedInAnySet = new Set(
-    allMaterials.flatMap((m) => (m.components ?? []).map((c) => c.childId)),
-  );
   const available = allMaterials.filter(
-    (m) => !m.isBundle && m.id !== material.id && !usedInAnySet.has(m.id),
+    (m) => !m.isBundle && m.id !== material.id,
   );
+
+  const sharingHint = (childId: number): string | null => {
+    const sets = allMaterials
+      .filter((m) => m.isBundle && m.id !== material.id && (m.components ?? []).some((c) => c.childId === childId))
+      .map((m) => m.name);
+    return sets.length > 0 ? `🔗 ook in: ${sets.join(", ")}` : null;
+  };
 
   const liveSum = components.reduce((acc, c) => {
     const child = allMaterials.find((m) => m.id === c.childId);
@@ -66,17 +70,23 @@ export function BundleComponentEditor({ material }: BundleComponentEditorProps) 
         <p className="text-xs text-muted-foreground">Nog geen componenten</p>
       ) : (
         <div className="space-y-1">
-          {components.map((c) => (
-            <BundleComponentRow
-              key={`${c.id}-${c.quantity}`}
-              component={c}
-              child={allMaterials.find((m) => m.id === c.childId)}
-              onQuantityChange={(quantity) =>
-                updateQuantity.mutate({ componentId: c.id, quantity })
-              }
-              onRemove={() => removeComponent.mutate(c.id)}
-            />
-          ))}
+          {components.map((c) => {
+            const sets = allMaterials
+              .filter((m) => m.isBundle && m.id !== material.id && (m.components ?? []).some((comp) => comp.childId === c.childId))
+              .map((m) => ({ id: m.id, name: m.name }));
+            return (
+              <BundleComponentRow
+                key={`${c.id}-${c.quantity}`}
+                component={c}
+                child={allMaterials.find((m) => m.id === c.childId)}
+                sharedWith={sets.length > 0 ? sets : undefined}
+                onQuantityChange={(quantity) =>
+                  updateQuantity.mutate({ componentId: c.id, quantity })
+                }
+                onRemove={() => removeComponent.mutate(c.id)}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -88,6 +98,11 @@ export function BundleComponentEditor({ material }: BundleComponentEditorProps) 
             onChange={setSelectedChildId}
             placeholder="Component toevoegen..."
           />
+          {selectedChildId && sharingHint(selectedChildId) && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {sharingHint(selectedChildId)}
+            </p>
+          )}
         </div>
         <Input
           type="number"

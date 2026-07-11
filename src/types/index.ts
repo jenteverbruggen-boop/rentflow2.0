@@ -86,6 +86,7 @@ export interface BundleStockComponentInput {
   needPerSet: number;
   totalStock: number;
   dayPrice: number;
+  sharedWith?: { id: number; name: string }[];
 }
 
 export interface BundleStockComponent extends BundleStockComponentInput {
@@ -128,6 +129,7 @@ export interface Material {
   totalStock?: number;
   bundleStock?: BundleStock;
   setPrice?: number;
+  usedInSets?: { id: number; name: string; quantity: number }[];
 }
 
 export interface PersonDocument {
@@ -258,6 +260,7 @@ export interface MaterialAvailability {
   totalStock: number;
   availableCount: number;
   availableStockItemIds: number[];
+  sharedComponents?: string[];
 }
 
 export interface PersonAvailability {

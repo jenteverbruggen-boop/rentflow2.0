@@ -10,6 +10,7 @@ import {
   findAvailableStockItems,
   bundleAvailableCount,
 } from "@/lib/availability";
+import { computeSharingMap } from "@/lib/bundle-sharing";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
@@ -27,9 +28,22 @@ export async function GET(req: NextRequest) {
       orderBy: { name: "asc" },
       include: {
         _count: { select: { stockItems: true } },
-        components: { include: { child: { select: { dayPrice: true } } } },
+        components: {
+          include: {
+            child: { select: { dayPrice: true, name: true } },
+          },
+        },
       },
     });
+
+    const allComponents = materials.flatMap((m) =>
+      m.components.map((c) => ({
+        parentId: m.id,
+        parentName: m.name,
+        childId: c.childId,
+      })),
+    );
+    const sharingMap = computeSharingMap(allComponents);
 
     const overrides = projectId
       ? await prisma.projectMaterialPrice.findMany({
@@ -52,10 +66,15 @@ export async function GET(req: NextRequest) {
 
         let availableCount: number;
         let availableStockItemIds: number[];
+        let sharedComponents: string[] | undefined;
 
         if (m.isBundle) {
           availableCount = await bundleAvailableCount(m.id, rangeArgs);
           availableStockItemIds = [];
+          const shared = m.components
+            .filter((c) => (sharingMap.get(c.childId)?.length ?? 0) > 1)
+            .map((c) => c.child.name);
+          if (shared.length > 0) sharedComponents = shared;
         } else {
           const { available } = await findAvailableStockItems(m.id, rangeArgs);
           availableCount = available.length;
@@ -87,6 +106,7 @@ export async function GET(req: NextRequest) {
           totalStock: m._count.stockItems,
           availableCount,
           availableStockItemIds,
+          ...(sharedComponents ? { sharedComponents } : {}),
         };
       }),
     );

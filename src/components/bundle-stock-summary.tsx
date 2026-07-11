@@ -22,13 +22,24 @@ export function BundleStockSummary({ bundleStock }: BundleStockSummaryProps) {
   return (
     <div className="space-y-2">
       <div className="rounded-md border border-border p-3">
-        <p className="text-xs text-muted-foreground">Complete sets</p>
+        <p className="text-xs text-muted-foreground">Complete sets (max)</p>
         <p className="text-lg font-semibold">
           {completeSets} {completeSets === 1 ? "set" : "sets"}
         </p>
         <p className="text-xs text-muted-foreground">
-          Automatisch berekend uit de voorraad van de componenten.
+          Automatisch berekend — gedeelde componenten verlagen dit bij gelijktijdige boekingen.
         </p>
+        {bundleStock.components.some((c) => c.sharedWith && c.sharedWith.length > 0) && (
+          <div className="mt-2 space-y-0.5">
+            {bundleStock.components
+              .filter((c) => c.sharedWith && c.sharedWith.length > 0)
+              .map((c) => (
+                <p key={c.childId} className="text-[10px] text-muted-foreground">
+                  🔗 {c.name} — gedeeld met {c.sharedWith!.map((s) => s.name).join(", ")}
+                </p>
+              ))}
+          </div>
+        )}
       </div>
 
       {hasIncomplete && (

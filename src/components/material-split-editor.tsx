@@ -201,6 +201,11 @@ export function MaterialSplitEditor({
                                         : `/${m.totalStock} vrij`}{" "}
                                       · {formatEUR(m.material.dayPrice)}/d
                                     </p>
+                                    {m.material.isBundle && m.sharedComponents && m.sharedComponents.length > 0 && (
+                                      <p className="text-[10px] text-muted-foreground truncate">
+                                        🔗 deelt voorraad: {m.sharedComponents.join(", ")}
+                                      </p>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-1.5 shrink-0">
                                     {!m.material.isBundle && (

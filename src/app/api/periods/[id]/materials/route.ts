@@ -2,21 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, conflict, notFound, serverError } from "@/lib/api-auth";
 import { effectiveMaterialPrice } from "@/lib/effective-price";
+import { bookFlatMaterial, bookBundleMaterial } from "@/lib/booking";
 
 type Params = { params: Promise<{ id: string }> };
-
-async function availableForMaterial(materialId: number, from: Date, to: Date): Promise<number[]> {
-  const all = await prisma.stockItem.findMany({ where: { materialId }, orderBy: { unitNumber: "asc" }, select: { id: true } });
-  const booked = await prisma.periodStockItem.findMany({
-    where: {
-      stockItem: { materialId },
-      period: { AND: [{ startDate: { lt: to } }, { endDate: { gt: from } }] },
-    },
-    select: { stockItemId: true },
-  });
-  const bookedIds = new Set(booked.map((b) => b.stockItemId));
-  return all.filter((s) => !bookedIds.has(s.id)).map((s) => s.id);
-}
 
 export async function POST(req: NextRequest, { params }: Params) {
   const user = await requireAuth().catch(() => null);
@@ -39,142 +27,45 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (!material) return notFound();
 
     if (material.isBundle) {
-      return bookBundle(period, material, qty);
+      if (material.components.length === 0) return badRequest("Bundle heeft geen componenten");
+      const componentSum = material.components.reduce(
+        (acc, c) => acc + Number(c.child.dayPrice) * c.quantity, 0,
+      );
+      const dayPriceSnapshot = material.bundlePriceOverride != null
+        ? Number(material.bundlePriceOverride) : componentSum;
+      try {
+        const result = await bookBundleMaterial({
+          periodId, materialId: material.id, quantity: qty,
+          from: period.startDate, to: period.endDate, dayPriceSnapshot,
+          components: material.components.map((c) => ({ childId: c.childId, quantity: c.quantity })),
+        });
+        return NextResponse.json(result);
+      } catch (e: unknown) {
+        const err = e as { code?: string; message?: string };
+        if (err.code === "UNAVAIL") return conflict(err.message ?? "Onvoldoende voorraad");
+        if (err.code === "P2002") return conflict("Conflict bij gelijktijdige boeking — probeer opnieuw");
+        return serverError(err.message ?? "Onbekende fout");
+      }
     }
 
-    // Flat booking — move availability check inside transaction via create+catch
     const snapshotPrice = await effectiveMaterialPrice(period.projectId, parseInt(materialId));
     const setupSnapshot = Number(material.setupCost ?? 0);
-    const availIds = await availableForMaterial(parseInt(materialId), period.startDate, period.endDate);
-
-    if (availIds.length < qty) {
-      return conflict(`Niet genoeg vrij. Gevraagd: ${qty}, beschikbaar: ${availIds.length}`);
-    }
-
-    const chosen = availIds.slice(0, qty);
     try {
-      const created = await prisma.$transaction(
-        chosen.map((stockItemId) =>
-          prisma.periodStockItem.create({
-            data: {
-              periodId,
-              stockItemId,
-              dayPriceSnapshot: snapshotPrice,
-              setupCostSnapshot: setupSnapshot,
-              discountPct: discountPct != null ? Number(discountPct) : null,
-              discountAmount: discountAmount != null ? Number(discountAmount) : null,
-            },
-            include: { stockItem: { include: { material: { include: { categoryRel: true } } } } },
-          })
-        )
-      );
-      return NextResponse.json({ assignments: created, warnings: [] });
+      const result = await bookFlatMaterial({
+        periodId, materialId: material.id, quantity: qty,
+        from: period.startDate, to: period.endDate,
+        dayPriceSnapshot: snapshotPrice, setupCostSnapshot: setupSnapshot,
+        discountPct: discountPct != null ? Number(discountPct) : null,
+        discountAmount: discountAmount != null ? Number(discountAmount) : null,
+      });
+      return NextResponse.json(result);
     } catch (e: unknown) {
-      if ((e as { code?: string })?.code === "P2002") {
-        return conflict("Conflict bij gelijktijdige boeking — probeer opnieuw");
-      }
-      throw e;
+      const err = e as { code?: string; message?: string };
+      if (err.code === "UNAVAIL") return conflict(err.message ?? "Niet genoeg vrij");
+      if (err.code === "P2002") return conflict("Conflict bij gelijktijdige boeking — probeer opnieuw");
+      return serverError(err.message ?? "Onbekende fout");
     }
   } catch (err) {
     return serverError((err as Error).message);
-  }
-}
-
-type PrismaFullMaterial = {
-  id: number; projectId?: number;
-  components: { childId: number; quantity: number; child: { id: number; dayPrice: unknown; stockItems: { id: number }[] } }[];
-};
-
-async function bookBundle(
-  period: { id: number; projectId: number; startDate: Date; endDate: Date },
-  material: { id: number; dayPrice: unknown; bundlePriceOverride: unknown; components: { childId: number; quantity: number; child: { id: number; dayPrice: unknown; stockItems: { id: number }[] } }[] },
-  quantity: number
-): Promise<NextResponse> {
-  const components = material.components;
-  if (components.length === 0) return badRequest("Bundle heeft geen componenten");
-
-  // Compute price snapshot
-  const componentSum = components.reduce(
-    (acc, c) => acc + Number(c.child.dayPrice) * c.quantity,
-    0
-  );
-  const snapshotPrice = material.bundlePriceOverride != null
-    ? Number(material.bundlePriceOverride)
-    : componentSum;
-
-  try {
-    const booking = await prisma.$transaction(async (tx) => {
-      // Re-check availability INSIDE transaction
-      for (const comp of components) {
-        const allItems = await tx.stockItem.findMany({
-          where: { materialId: comp.childId },
-          select: { id: true },
-        });
-        const booked = await tx.periodStockItem.findMany({
-          where: {
-            stockItemId: { in: allItems.map((s) => s.id) },
-            period: {
-              AND: [
-                { startDate: { lt: period.endDate } },
-                { endDate: { gt: period.startDate } },
-              ],
-            },
-          },
-          select: { stockItemId: true },
-        });
-        const bookedIds = new Set(booked.map((b) => b.stockItemId));
-        const availCount = allItems.filter((s) => !bookedIds.has(s.id)).length;
-        const needed = comp.quantity * quantity;
-        if (availCount < needed) {
-          throw Object.assign(new Error(`Onvoldoende voorraad voor component: ${comp.childId}`), { code: "BUNDLE_UNAVAIL", childId: comp.childId });
-        }
-      }
-
-      // Create the bundle booking
-      const bBooking = await tx.periodBundleBooking.create({
-        data: { periodId: period.id, materialId: material.id, quantity, dayPriceSnapshot: snapshotPrice },
-      });
-
-      // Reserve component stock items
-      for (const comp of components) {
-        const allItems = await tx.stockItem.findMany({
-          where: { materialId: comp.childId },
-          orderBy: { unitNumber: "asc" },
-          select: { id: true },
-        });
-        const booked = await tx.periodStockItem.findMany({
-          where: {
-            stockItemId: { in: allItems.map((s) => s.id) },
-            period: {
-              AND: [
-                { startDate: { lt: period.endDate } },
-                { endDate: { gt: period.startDate } },
-              ],
-            },
-          },
-          select: { stockItemId: true },
-        });
-        const bookedSet = new Set(booked.map((b) => b.stockItemId));
-        const freeIds = allItems.filter((s) => !bookedSet.has(s.id)).slice(0, comp.quantity * quantity).map((s) => s.id);
-
-        await tx.periodStockItem.createMany({
-          data: freeIds.map((stockItemId) => ({
-            periodId: period.id,
-            stockItemId,
-            dayPriceSnapshot: 0,
-            bundleBookingId: bBooking.id,
-          })),
-        });
-      }
-
-      return bBooking;
-    });
-
-    return NextResponse.json({ bundleBooking: booking, warnings: [] });
-  } catch (e: unknown) {
-    const err = e as { code?: string; message?: string };
-    if (err.code === "BUNDLE_UNAVAIL") return conflict(err.message ?? "Onvoldoende voorraad");
-    if (err.code === "P2002") return conflict("Conflict bij gelijktijdige boeking — probeer opnieuw");
-    return serverError(err.message ?? "Onbekende fout");
   }
 }

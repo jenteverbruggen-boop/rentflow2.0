@@ -51,16 +51,6 @@ export async function POST(req: NextRequest, { params }: Params) {
       return badRequest("Een set kan geen andere set als component bevatten");
     }
 
-    const alreadyUsed = await prisma.materialComponent.findFirst({
-      where: { childId },
-      include: { parent: { select: { name: true } } },
-    });
-    if (alreadyUsed) {
-      return badRequest(
-        `Dit onderdeel zit al in de set "${alreadyUsed.parent.name}" — een onderdeel kan maar in één set zitten`,
-      );
-    }
-
     const component = await prisma.materialComponent.create({
       data: { parentId, childId, quantity },
       include: { child: true },

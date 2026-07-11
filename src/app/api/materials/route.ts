@@ -8,6 +8,7 @@ import {
 } from "@/lib/api-auth";
 import { nextCode } from "@/lib/material-code";
 import { computeBundleStock } from "@/lib/bundle-stock";
+import { computeSharingMap } from "@/lib/bundle-sharing";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
@@ -34,12 +35,29 @@ export async function GET(req: NextRequest) {
             },
           },
         },
+        usedInBundles: {
+          include: { parent: { select: { id: true, name: true } } },
+        },
       },
     });
 
+    const allComponents = materials.flatMap((m) =>
+      m.components.map((c) => ({
+        parentId: m.id,
+        parentName: m.name,
+        childId: c.childId,
+      })),
+    );
+    const sharingMap = computeSharingMap(allComponents);
+
     return NextResponse.json(
       materials.map((m) => {
-        const base = { ...m, totalStock: m._count.stockItems };
+        const usedInSets = (m.usedInBundles ?? []).map((u) => ({
+          id: u.parent.id,
+          name: u.parent.name,
+          quantity: u.quantity,
+        }));
+        const base = { ...m, totalStock: m._count.stockItems, usedInSets };
         if (!m.isBundle) return base;
         const bundleStock = computeBundleStock(
           m.components.map((c) => ({
@@ -49,6 +67,7 @@ export async function GET(req: NextRequest) {
             needPerSet: c.quantity,
             totalStock: c.child._count.stockItems,
             dayPrice: Number(c.child.dayPrice),
+            sharedWith: sharingMap.get(c.childId)?.filter((s) => s.id !== m.id) ?? [],
           })),
         );
         const setPrice =

@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma";
+import { prisma as defaultPrisma } from "@/lib/prisma";
+import type { PrismaClient } from "@/generated/prisma/client";
 
 interface RangeArgs {
   from: Date;
@@ -13,11 +14,11 @@ export async function findAvailableStockItems(
   available: { id: number; unitNumber: number; identifier: string | null }[];
   bookedElsewhere: number[];
 }> {
-  const stockItems = await prisma.stockItem.findMany({
+  const stockItems = await defaultPrisma.stockItem.findMany({
     where: { materialId },
     orderBy: { unitNumber: "asc" },
   });
-  const overlapping = await prisma.periodStockItem.findMany({
+  const overlapping = await defaultPrisma.periodStockItem.findMany({
     where: {
       stockItem: { materialId },
       ...(args.excludePeriodId != null
@@ -43,8 +44,9 @@ export async function findAvailableStockItems(
 export async function bundleAvailableCount(
   bundleMaterialId: number,
   args: RangeArgs,
+  client: PrismaClient = defaultPrisma,
 ): Promise<number> {
-  const components = await prisma.materialComponent.findMany({
+  const components = await client.materialComponent.findMany({
     where: { parentId: bundleMaterialId },
     include: { child: { include: { stockItems: { select: { id: true } } } } },
   });
@@ -53,7 +55,7 @@ export async function bundleAvailableCount(
   let min = Infinity;
   for (const comp of components) {
     const allIds = comp.child.stockItems.map((s) => s.id);
-    const booked = await prisma.periodStockItem.findMany({
+    const booked = await client.periodStockItem.findMany({
       where: {
         stockItemId: { in: allIds },
         ...(args.excludePeriodId != null
@@ -80,7 +82,7 @@ export async function checkPersonAvailability(
   blockingProject?: { id: number; name: string };
   sameProjectWarning?: { projectId: number; projectName: string };
 }> {
-  const conflict = await prisma.periodPerson.findFirst({
+  const conflict = await defaultPrisma.periodPerson.findFirst({
     where: {
       personId,
       ...(args.excludePeriodId != null
@@ -112,7 +114,7 @@ export async function checkStockItemSameProject(
   },
 ): Promise<{ warnings: string[] }> {
   if (stockItemIds.length === 0) return { warnings: [] };
-  const conflicts = await prisma.periodStockItem.findMany({
+  const conflicts = await defaultPrisma.periodStockItem.findMany({
     where: {
       stockItemId: { in: stockItemIds },
       ...(args.excludePeriodId != null

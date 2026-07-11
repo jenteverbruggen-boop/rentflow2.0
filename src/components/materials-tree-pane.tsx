@@ -15,7 +15,8 @@ function stockLabel(m: Material): string {
   if (!m.isBundle) return `Voorraad: ${m.totalStock ?? 0}`;
   const sets = m.bundleStock?.completeSets ?? 0;
   const warn = m.bundleStock?.hasIncomplete ? " ⚠️" : "";
-  return `${sets} sets${warn}`;
+  const shared = m.bundleStock?.components.some((c) => c.sharedWith && c.sharedWith.length > 0) ? " 🔗" : "";
+  return `${sets} sets${warn}${shared}`;
 }
 
 interface MaterialTreePaneProps {
