@@ -12,10 +12,12 @@ import {
   isSameDay,
 } from "date-fns";
 import { nl } from "date-fns/locale";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { cn, statusVariant } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { PlanningCalendarItem } from "@/components/planning-calendar-item";
 import type { Project } from "@/types";
 
 async function fetchProjects(): Promise<Project[]> {
@@ -69,7 +71,6 @@ export default function PlanningPage() {
         {days.map((day) => {
           const dayProjects = projectsOnDay(day);
           const isToday = isSameDay(day, new Date());
-
           return (
             <Card key={day.toISOString()} className={cn("min-h-32", isToday && "border-primary")}>
               <CardContent className="p-3">
@@ -79,20 +80,7 @@ export default function PlanningPage() {
                 <div className="space-y-1">
                   {dayProjects.map((p) => {
                     const { people, materials } = countAssignments(p);
-                    return (
-                      <div
-                        key={p.id}
-                        className={cn("rounded px-2 py-1", statusVariant(p.status))}
-                        title={`${p.name} · ${people} personen · ${materials} materialen`}
-                      >
-                        <p className="text-xs font-medium truncate">{p.name}</p>
-                        {p.location && <p className="text-xs opacity-70 truncate">{p.location}</p>}
-                        <div className="flex gap-2 mt-0.5">
-                          {people > 0 && <span className="text-xs opacity-70">👥 {people}</span>}
-                          {materials > 0 && <span className="text-xs opacity-70">📦 {materials}</span>}
-                        </div>
-                      </div>
-                    );
+                    return <PlanningCalendarItem key={p.id} project={p} people={people} materials={materials} />;
                   })}
                 </div>
               </CardContent>
@@ -114,7 +102,7 @@ export default function PlanningPage() {
                 const { people, materials } = countAssignments(p);
                 return (
                   <div key={p.id}>
-                    <div className="flex justify-between items-center py-3">
+                    <Link href={`/projects/${p.id}`} className="flex justify-between items-center py-3 hover:bg-accent px-2 rounded-lg transition-colors">
                       <div>
                         <p className="text-sm font-medium">{p.name}</p>
                         <p className="text-xs text-muted-foreground">
@@ -125,7 +113,7 @@ export default function PlanningPage() {
                         <p>👥 {people} personen</p>
                         <p>📦 {materials} materialen</p>
                       </div>
-                    </div>
+                    </Link>
                     {i < weekProjects.length - 1 && <Separator />}
                   </div>
                 );
