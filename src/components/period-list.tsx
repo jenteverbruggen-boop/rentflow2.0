@@ -63,8 +63,8 @@ export function PeriodList({ periods, selectedId, onSelect, onAdd, onEdit, onDel
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {format(new Date(p.startDate), "d MMM", { locale: nl })} –{" "}
-                  {format(new Date(p.endDate), "d MMM yyyy", { locale: nl })} · {periodDays(p)} d
+                  {format(new Date(p.startDate), "d MMM HH:mm", { locale: nl })} –{" "}
+                  {format(new Date(p.endDate), "d MMM yyyy HH:mm", { locale: nl })} · {periodDays(p)} d
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   👥 {p.people.length} · 📦 {p.materials.length}

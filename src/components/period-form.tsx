@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { format, endOfDay } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -31,25 +32,33 @@ interface Props {
   isPending: boolean;
 }
 
-function toDateInput(iso: string): string {
-  return new Date(iso).toISOString().slice(0, 10);
+function toDateTimeLocal(iso: string): string {
+  return format(new Date(iso), "yyyy-MM-dd'T'HH:mm");
 }
 
 export function PeriodForm({ open, onOpenChange, defaultValues, project, onSubmit, isPending }: Props) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", startDate: toDateInput(project.startDate), endDate: toDateInput(project.endDate) },
+    defaultValues: {
+      name: "",
+      startDate: toDateTimeLocal(project.startDate),
+      endDate: toDateTimeLocal(project.endDate),
+    },
   });
 
   useEffect(() => {
     if (defaultValues) {
       form.reset({
         name: defaultValues.name,
-        startDate: toDateInput(defaultValues.startDate),
-        endDate: toDateInput(defaultValues.endDate),
+        startDate: toDateTimeLocal(defaultValues.startDate),
+        endDate: toDateTimeLocal(defaultValues.endDate),
       });
     } else {
-      form.reset({ name: "", startDate: toDateInput(project.startDate), endDate: toDateInput(project.endDate) });
+      form.reset({
+        name: "",
+        startDate: format(new Date(project.startDate), "yyyy-MM-dd") + "T08:00",
+        endDate: format(new Date(project.endDate), "yyyy-MM-dd") + "T17:00",
+      });
     }
   }, [defaultValues, project, form]);
 
@@ -57,7 +66,16 @@ export function PeriodForm({ open, onOpenChange, defaultValues, project, onSubmi
   const end = form.watch("endDate");
   const outOfRange =
     start && end &&
-    (new Date(start) < new Date(project.startDate) || new Date(end) > new Date(project.endDate));
+    (new Date(start) < new Date(project.startDate) ||
+      new Date(end) > endOfDay(new Date(project.endDate)));
+
+  function handleSubmit(values: FormValues) {
+    onSubmit({
+      ...values,
+      startDate: new Date(values.startDate).toISOString(),
+      endDate: new Date(values.endDate).toISOString(),
+    });
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -66,22 +84,22 @@ export function PeriodForm({ open, onOpenChange, defaultValues, project, onSubmi
           <DialogTitle>{defaultValues ? "Periode bewerken" : "Nieuwe periode"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem><FormLabel>Naam *</FormLabel><FormControl><Input placeholder="bv. Voorbereiding" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <div className="grid grid-cols-2 gap-3">
               <FormField control={form.control} name="startDate" render={({ field }) => (
-                <FormItem><FormLabel>Van *</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Van *</FormLabel><FormControl><Input type="datetime-local" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="endDate" render={({ field }) => (
-                <FormItem><FormLabel>Tot *</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Tot *</FormLabel><FormControl><Input type="datetime-local" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
             {outOfRange && (
               <Alert>
                 <AlertDescription className="text-amber-600">
-                  ⚠ Deze periode valt buiten de projectperiode ({toDateInput(project.startDate)} – {toDateInput(project.endDate)})
+                  ⚠ Deze periode valt buiten de projectperiode
                 </AlertDescription>
               </Alert>
             )}

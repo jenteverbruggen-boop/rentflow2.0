@@ -10,6 +10,8 @@ import {
   addWeeks,
   subWeeks,
   isSameDay,
+  startOfDay,
+  endOfDay,
 } from "date-fns";
 import { nl } from "date-fns/locale";
 import Link from "next/link";
@@ -49,7 +51,11 @@ export default function PlanningPage() {
   });
 
   const projectsOnDay = (day: Date) =>
-    projects.filter((p) => new Date(p.startDate) <= day && new Date(p.endDate) >= day);
+    projects.filter((p) => {
+      const dayStart = startOfDay(day);
+      const dayEnd = endOfDay(day);
+      return new Date(p.startDate) <= dayEnd && new Date(p.endDate) >= dayStart;
+    });
 
   const weekProjects = [...new Map(days.flatMap(projectsOnDay).map((p) => [p.id, p])).values()];
 

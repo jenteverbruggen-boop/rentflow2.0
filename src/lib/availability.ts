@@ -20,8 +20,8 @@ export async function findAvailableStockItems(
       ...(args.excludePeriodId != null ? { NOT: { periodId: args.excludePeriodId } } : {}),
       period: {
         AND: [
-          { startDate: { lte: args.to } },
-          { endDate: { gte: args.from } },
+          { startDate: { lt: args.to } },
+          { endDate: { gt: args.from } },
         ],
       },
     },
@@ -44,8 +44,8 @@ export async function checkPersonAvailability(
       ...(args.excludePeriodId != null ? { NOT: { periodId: args.excludePeriodId } } : {}),
       period: {
         AND: [
-          { startDate: { lte: args.to } },
-          { endDate: { gte: args.from } },
+          { startDate: { lt: args.to } },
+          { endDate: { gt: args.from } },
         ],
       },
     },
@@ -71,8 +71,8 @@ export async function checkStockItemSameProject(
       period: {
         projectId: args.sameProjectId,
         AND: [
-          { startDate: { lte: args.to } },
-          { endDate: { gte: args.from } },
+          { startDate: { lt: args.to } },
+          { endDate: { gt: args.from } },
         ],
       },
     },
