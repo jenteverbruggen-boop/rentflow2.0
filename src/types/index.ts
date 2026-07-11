@@ -79,6 +79,29 @@ export interface MaterialComponent {
   child?: Material;
 }
 
+export interface BundleStockComponentInput {
+  childId: number;
+  name: string;
+  code: string | null;
+  needPerSet: number;
+  totalStock: number;
+  dayPrice: number;
+}
+
+export interface BundleStockComponent extends BundleStockComponentInput {
+  usedInComplete: number;
+  remaining: number;
+  haveForNext: number;
+  missingForNext: number;
+}
+
+export interface BundleStock {
+  completeSets: number;
+  hasIncomplete: boolean;
+  componentSum: number;
+  components: BundleStockComponent[];
+}
+
 export interface PeriodBundleBooking {
   id: number;
   periodId: number;
@@ -102,6 +125,8 @@ export interface Material {
   components?: MaterialComponent[];
   stockItems?: StockItem[];
   totalStock?: number;
+  bundleStock?: BundleStock;
+  setPrice?: number;
 }
 
 export interface PersonDocument {
@@ -214,7 +239,11 @@ export interface Project {
 }
 
 export interface MaterialAvailability {
-  material: Material & { basePrice: number; hasOverride: boolean; isBundle?: boolean };
+  material: Material & {
+    basePrice: number;
+    hasOverride: boolean;
+    isBundle?: boolean;
+  };
   totalStock: number;
   availableCount: number;
   availableStockItemIds: number[];

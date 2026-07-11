@@ -1,6 +1,6 @@
 # RentFlow 2.0
 
-A rental-planning tool for managing **projects**, **periods**, **people**, and **materials**. Each project contains one or more named **periods** (date ranges that may overlap); bookings live on a period. Materials are split into individually traceable **stock items** so units assigned to a project can be tracked. People and materials each have a day price; a project can override that price for any material or person to negotiate project-specific rates. Projects produce an itemised cost overview with optional per-booking discounts. The project detail page is tab-based — `Overzicht`, `Periodes` (with a Gantt-style timeline), `Personen`, `Materialen`, and `Kosten`. RentFlow rejects cross-project double-bookings and warns on same-project overlaps.
+A rental-planning tool for managing **projects**, **periods**, **people**, and **materials**. Each project contains one or more named **periods** (date ranges that may overlap); bookings live on a period. Materials are split into individually traceable **stock items** so units assigned to a project can be tracked. People and materials each have a day price; a project can override that price for any material or person to negotiate project-specific rates. Projects produce an itemised cost overview with optional per-booking discounts. Materials can also be grouped into **sets** (bundles): a set owns no stock itself but has a recipe of component materials, the number of complete sets is auto-calculated from component stock (with a warning for the leftover incomplete set), and booking a set reserves its components atomically. The project detail page is tab-based — `Overzicht`, `Periodes` (with a Gantt-style timeline), `Personen`, `Materialen`, and `Kosten`. RentFlow rejects cross-project double-bookings and warns on same-project overlaps.
 
 ---
 
@@ -214,12 +214,16 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | `POST` | `/api/periods/:id/people` | Book `{ personId, role?, discountPct?, discountAmount? }` — snapshots the effective day price (project override if set, otherwise the person's `dayPrice`), returns `{ assignment, warnings }`. Returns `409` if the person is already assigned to this period or is blocked by an overlapping booking on another project. A DB unique constraint on `(periodId, personId)` enforces the per-period uniqueness |
 | `PATCH` | `/api/periods/:id/people/:assignmentId` | Update role, discount, or re-snapshot price |
 | `DELETE` | `/api/periods/:id/people/:assignmentId` | Remove a person booking |
-| `GET` | `/api/materials` | List materials (includes `totalStock` count derived from stock items) |
+| `GET` | `/api/materials` | List materials (includes `totalStock` count derived from stock items). For a set (`isBundle`), also returns `setPrice` (the price override, or the live sum of component day-prices) and `bundleStock` — `{ completeSets, hasIncomplete, componentSum, components[] }`, the number of complete sets buildable from component stock plus a per-component breakdown of the leftover incomplete set |
 | `POST` | `/api/materials` | Add a material — body includes `dayPrice` and optional `initialStock` |
 | `GET` | `/api/materials/:id` | Get a material with its stock items |
-| `PUT` | `/api/materials/:id` | Update a material (name, category, dayPrice, notes) |
+| `PUT` | `/api/materials/:id` | Update a material (name, category, dayPrice, notes, `isBundle`, `bundlePriceOverride` — a fixed set price, or `null` for the automatic component sum) |
 | `DELETE` | `/api/materials/:id` | Delete a material (cascades stock items + bookings) |
-| `GET` | `/api/materials/available?from&to&excludePeriodId&projectId` | Per-material `{ availableCount, totalStock, availableStockItemIds }` for a date range. When `projectId` is supplied, `material.dayPrice` is the effective price for that project and `material.basePrice` + `material.hasOverride` are also returned |
+| `GET` | `/api/materials/available?from&to&excludePeriodId&projectId` | Per-material `{ availableCount, totalStock, availableStockItemIds }` for a date range. When `projectId` is supplied, `material.dayPrice` is the effective price for that project and `material.basePrice` + `material.hasOverride` are also returned. For a set, `availableCount` is the number of complete sets bookable in the range (min over components of `floor(freeUnits / perSetQty)`) and `basePrice` is the price override or the live component sum |
+| `GET` | `/api/materials/:id/components` | List a set's components (`{ childId, quantity, child }[]`) |
+| `POST` | `/api/materials/:id/components` | Add a component `{ childId, quantity }` to a set. Rejects a self-reference, a child that is itself a set (no nesting), a duplicate, or a child already used in another set — a stock item can belong to at most one set |
+| `PATCH` | `/api/materials/:id/components/:componentId` | Change a component's per-set quantity |
+| `DELETE` | `/api/materials/:id/components/:componentId` | Remove a component from a set |
 | `GET` | `/api/materials/:id/stock-items` | List individual units of a material |
 | `POST` | `/api/materials/:id/stock-items` | Add a unit — `unitNumber` auto-assigned, `identifier` optional |
 | `PATCH` | `/api/stock-items/:id` | Edit a unit's identifier or notes |

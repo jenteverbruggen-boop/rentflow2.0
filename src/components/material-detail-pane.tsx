@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -9,6 +9,8 @@ import { InlineEditField } from "@/components/inline-edit-field";
 import { MaterialStockList } from "@/components/material-stock-list";
 import { MaterialCodes } from "@/components/material-codes";
 import { BundleComponentEditor } from "@/components/bundle-component-editor";
+import { BundleStockSummary } from "@/components/bundle-stock-summary";
+import { useMaterialUpdate } from "@/hooks/use-material-update";
 import type { Material, StockItem } from "@/types";
 
 interface MaterialDetailPaneProps {
@@ -22,8 +24,11 @@ async function fetchStockItems(materialId: number): Promise<StockItem[]> {
   return res.json() as Promise<StockItem[]>;
 }
 
-export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPaneProps) {
-  const queryClient = useQueryClient();
+export function MaterialDetailPane({
+  material,
+  onManageUnits,
+}: MaterialDetailPaneProps) {
+  const saveField = useMaterialUpdate(material);
 
   const { data: stockItems = [] } = useQuery({
     queryKey: ["material", material?.id, "stock-items"],
@@ -41,40 +46,18 @@ export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPa
     );
   }
 
-  async function saveField(field: "dayPrice" | "category" | "code" | "notes" | "isBundle", rawValue: string) {
-    if (!material) return;
-    const value = field === "dayPrice" ? Number(rawValue)
-      : field === "isBundle" ? rawValue === "true"
-      : rawValue || null;
-    const res = await fetch(`/api/materials/${material.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: material.name,
-        category: material.category,
-        categoryId: material.categoryId,
-        code: material.code,
-        notes: material.notes,
-        dayPrice: material.dayPrice,
-        isBundle: material.isBundle,
-        [field]: value,
-      }),
-    });
-    if (!res.ok) throw new Error("Opslaan mislukt");
-    const updated = await res.json();
-    queryClient.setQueryData<Material[]>(["materials"], (old) =>
-      old?.map((m) => (m.id === material.id ? { ...m, ...updated } : m))
-    );
-    queryClient.invalidateQueries({ queryKey: ["materials"] });
-  }
-
   return (
     <Card className="h-full">
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle>{material.name}</CardTitle>
-            {material.isBundle && <span className="text-xs text-muted-foreground">Bundel / set</span>}
+            <CardTitle>
+              {material.isBundle && "🎁 "}
+              {material.name}
+            </CardTitle>
+            {material.isBundle && (
+              <span className="text-xs text-muted-foreground">Set / bundel</span>
+            )}
           </div>
           <div className="flex gap-2">
             <Button
@@ -84,23 +67,42 @@ export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPa
             >
               {material.isBundle ? "🎁 Set" : "Markeer als set"}
             </Button>
-            {!material.isBundle && <Button size="sm" variant="outline" onClick={onManageUnits}>Beheer units</Button>}
+            {!material.isBundle && (
+              <Button size="sm" variant="outline" onClick={onManageUnits}>
+                Beheer units
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <InlineEditField
-            label="Dagprijs"
-            value={material.dayPrice}
-            displayValue={formatEUR(material.dayPrice)}
-            type="number"
-            onSave={(v) => saveField("dayPrice", v)}
-          />
+          {material.isBundle ? (
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs text-muted-foreground">
+                Setprijs {material.bundlePriceOverride == null && "(automatisch)"}
+              </p>
+              <p className="font-medium">{formatEUR(material.setPrice ?? 0)}/d</p>
+            </div>
+          ) : (
+            <InlineEditField
+              label="Dagprijs"
+              value={material.dayPrice}
+              displayValue={formatEUR(material.dayPrice)}
+              type="number"
+              onSave={(v) => saveField("dayPrice", v)}
+            />
+          )}
           <div className="rounded-md border border-border p-3">
-            <p className="text-xs text-muted-foreground">Totale voorraad</p>
-            <p className="font-medium">{material.totalStock ?? 0} units</p>
+            <p className="text-xs text-muted-foreground">
+              {material.isBundle ? "Complete sets" : "Totale voorraad"}
+            </p>
+            <p className="font-medium">
+              {material.isBundle
+                ? `${material.bundleStock?.completeSets ?? 0} sets`
+                : `${material.totalStock ?? 0} units`}
+            </p>
           </div>
         </div>
 
@@ -130,7 +132,12 @@ export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPa
         <Separator />
 
         {material.isBundle ? (
-          <BundleComponentEditor material={material} />
+          <div className="space-y-4">
+            {material.bundleStock && (
+              <BundleStockSummary bundleStock={material.bundleStock} />
+            )}
+            <BundleComponentEditor key={material.id} material={material} />
+          </div>
         ) : (
           <div className="space-y-2">
             <p className="text-sm font-semibold">Per item</p>

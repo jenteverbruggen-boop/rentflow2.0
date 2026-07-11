@@ -1,59 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EntityCombobox } from "@/components/entity-combobox";
+import { BundleComponentRow } from "@/components/bundle-component-row";
+import { useBundleEditor } from "@/hooks/use-bundle-editor";
+import { useMaterialUpdate } from "@/hooks/use-material-update";
 import { formatEUR } from "@/lib/pricing";
-import type { Material, MaterialComponent } from "@/types";
+import type { Material } from "@/types";
 
 interface BundleComponentEditorProps {
   material: Material;
 }
 
 export function BundleComponentEditor({ material }: BundleComponentEditorProps) {
-  const queryClient = useQueryClient();
+  const { allMaterials, components, addComponent, updateQuantity, removeComponent } =
+    useBundleEditor(material.id);
+  const saveField = useMaterialUpdate(material);
+
   const [selectedChildId, setSelectedChildId] = useState<number | null>(null);
   const [qty, setQty] = useState(1);
+  const [override, setOverride] = useState(
+    material.bundlePriceOverride != null ? String(material.bundlePriceOverride) : "",
+  );
 
-  const { data: allMaterials = [] } = useQuery<Material[]>({
-    queryKey: ["materials"],
-    queryFn: () => fetch("/api/materials").then((r) => r.json()),
-  });
-
-  const { data: components = [] } = useQuery<MaterialComponent[]>({
-    queryKey: ["material-components", material.id],
-    queryFn: () => fetch(`/api/materials/${material.id}/components`).then((r) => r.json()),
-  });
-
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["material-components", material.id] });
-    queryClient.invalidateQueries({ queryKey: ["materials"] });
-  };
-
-  const addComponent = useMutation({
-    mutationFn: async () => {
-      if (!selectedChildId) return;
-      const res = await fetch(`/api/materials/${material.id}/components`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ childId: selectedChildId, quantity: qty }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error ?? "Mislukt");
-    },
-    onSuccess: () => { invalidate(); setSelectedChildId(null); setQty(1); },
-  });
-
-  const removeComponent = useMutation({
-    mutationFn: (componentId: number) =>
-      fetch(`/api/materials/${material.id}/components/${componentId}`, { method: "DELETE" }),
-    onSuccess: invalidate,
-  });
-
-  const nonBundles = allMaterials.filter((m) => !m.isBundle && m.id !== material.id);
-  const usedIds = new Set(components.map((c) => c.childId));
-  const available = nonBundles.filter((m) => !usedIds.has(m.id));
+  const usedInAnySet = new Set(
+    allMaterials.flatMap((m) => (m.components ?? []).map((c) => c.childId)),
+  );
+  const available = allMaterials.filter(
+    (m) => !m.isBundle && m.id !== material.id && !usedInAnySet.has(m.id),
+  );
 
   const liveSum = components.reduce((acc, c) => {
     const child = allMaterials.find((m) => m.id === c.childId);
@@ -62,27 +39,44 @@ export function BundleComponentEditor({ material }: BundleComponentEditorProps) 
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold">Componenten</p>
-        <p className="text-xs text-muted-foreground">
-          {material.bundlePriceOverride != null ? formatEUR(material.bundlePriceOverride) : `${formatEUR(liveSum)} (automatisch)`}/d
-        </p>
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="text-muted-foreground">Setprijs</span>
+          <Input
+            type="number"
+            min={0}
+            value={override}
+            placeholder={liveSum.toFixed(2)}
+            onChange={(e) => setOverride(e.target.value)}
+            onBlur={() => saveField("bundlePriceOverride", override)}
+            className="h-7 w-24 text-xs"
+            aria-label="Vaste setprijs (leeg = automatisch)"
+          />
+          <span className="text-muted-foreground">/d</span>
+        </div>
       </div>
+      <p className="text-xs text-muted-foreground">
+        {override.trim() === ""
+          ? `Automatisch: ${formatEUR(liveSum)}/d (som van componenten)`
+          : `Vaste prijs — leeg maken voor automatisch (${formatEUR(liveSum)}/d)`}
+      </p>
 
       {components.length === 0 ? (
         <p className="text-xs text-muted-foreground">Nog geen componenten</p>
       ) : (
         <div className="space-y-1">
-          {components.map((c) => {
-            const child = allMaterials.find((m) => m.id === c.childId);
-            return (
-              <div key={c.id} className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs">
-                <span className="flex-1">{child?.name ?? `#${c.childId}`} × {c.quantity}</span>
-                {child && <span className="text-muted-foreground">{formatEUR(child.dayPrice * c.quantity)}/d</span>}
-                <Button size="icon" variant="ghost" className="h-6 w-6 hover:text-destructive" onClick={() => removeComponent.mutate(c.id)}>✕</Button>
-              </div>
-            );
-          })}
+          {components.map((c) => (
+            <BundleComponentRow
+              key={`${c.id}-${c.quantity}`}
+              component={c}
+              child={allMaterials.find((m) => m.id === c.childId)}
+              onQuantityChange={(quantity) =>
+                updateQuantity.mutate({ componentId: c.id, quantity })
+              }
+              onRemove={() => removeComponent.mutate(c.id)}
+            />
+          ))}
         </div>
       )}
 
@@ -95,8 +89,33 @@ export function BundleComponentEditor({ material }: BundleComponentEditorProps) 
             placeholder="Component toevoegen..."
           />
         </div>
-        <Input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))} className="w-16 h-9 text-sm" />
-        <Button size="sm" disabled={!selectedChildId || addComponent.isPending} onClick={() => addComponent.mutate()}>+</Button>
+        <Input
+          type="number"
+          min={1}
+          value={qty}
+          onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
+          className="w-16 h-9 text-sm"
+          aria-label="Aantal per set"
+        />
+        <Button
+          size="sm"
+          disabled={!selectedChildId || addComponent.isPending}
+          onClick={() => {
+            if (selectedChildId) {
+              addComponent.mutate(
+                { childId: selectedChildId, quantity: qty },
+                {
+                  onSuccess: () => {
+                    setSelectedChildId(null);
+                    setQty(1);
+                  },
+                },
+              );
+            }
+          }}
+        >
+          +
+        </Button>
       </div>
     </div>
   );

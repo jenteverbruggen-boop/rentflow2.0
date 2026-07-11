@@ -6,10 +6,15 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { MaterialForm } from "@/components/material-form";
 import { MaterialDetailPane } from "@/components/material-detail-pane";
-import { MaterialsTreePane, type MaterialSort } from "@/components/materials-tree-pane";
+import {
+  MaterialsTreePane,
+  type MaterialSort,
+  type MaterialTypeFilter,
+} from "@/components/materials-tree-pane";
 import { StockItemsSheet } from "@/components/stock-items-sheet";
 import { CameraScanner } from "@/components/camera-scanner";
 import { useMaterials } from "@/hooks/use-materials";
+import { useMaterialFilters } from "@/hooks/use-material-filters";
 import type { Material } from "@/types";
 
 export default function MaterialsPage() {
@@ -20,7 +25,10 @@ export default function MaterialsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState<MaterialSort>("name-asc");
-  const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(null);
+  const [typeFilter, setTypeFilter] = useState<MaterialTypeFilter>("all");
+  const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(
+    null,
+  );
   const [formOpen, setFormOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -33,37 +41,13 @@ export default function MaterialsPage() {
     }
   }, [searchParams, materials]);
 
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    materials.forEach((m) => {
-      const cat = m.categoryRel?.name ?? m.category;
-      if (cat) set.add(cat);
-    });
-    return Array.from(set).sort();
-  }, [materials]);
-
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    const matches = materials.filter((m) => {
-      const catName = m.categoryRel?.name ?? m.category;
-      if (category !== "all" && catName !== category) return false;
-      if (!q) return true;
-      return m.name.toLowerCase().includes(q) || (catName ?? "").toLowerCase().includes(q);
-    });
-
-    if (sort === "stock-desc") return matches.sort((a, b) => (b.totalStock ?? 0) - (a.totalStock ?? 0));
-    if (sort === "name-desc") return matches.sort((a, b) => b.name.localeCompare(a.name));
-    return matches.sort((a, b) => a.name.localeCompare(b.name));
-  }, [materials, search, category, sort]);
-
-  const materialsByCategory = useMemo(() => {
-    const grouped = new Map<string, Material[]>();
-    for (const material of filtered) {
-      const key = material.categoryRel?.name ?? material.category ?? "Zonder categorie";
-      grouped.set(key, [...(grouped.get(key) ?? []), material]);
-    }
-    return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filtered]);
+  const { categories, filtered, materialsByCategory } = useMaterialFilters({
+    materials,
+    search,
+    category,
+    sort,
+    typeFilter,
+  });
 
   const selectedMaterial = useMemo(
     () => materials.find((m) => m.id === selectedMaterialId) ?? null,
@@ -71,7 +55,11 @@ export default function MaterialsPage() {
   );
 
   useEffect(() => {
-    if (selectedMaterialId && materials.some((m) => m.id === selectedMaterialId)) return;
+    if (
+      selectedMaterialId &&
+      materials.some((m) => m.id === selectedMaterialId)
+    )
+      return;
     setSelectedMaterialId(filtered[0]?.id ?? null);
   }, [selectedMaterialId, materials, filtered]);
 
@@ -80,8 +68,12 @@ export default function MaterialsPage() {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Materialen</h2>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setScanOpen(true)}>📷 Scan</Button>
-          <Link href="/materials/labels"><Button variant="outline">🏷️ Labels</Button></Link>
+          <Button variant="outline" onClick={() => setScanOpen(true)}>
+            📷 Scan
+          </Button>
+          <Link href="/materials/labels">
+            <Button variant="outline">🏷️ Labels</Button>
+          </Link>
           <Button onClick={() => setFormOpen(true)}>+ Nieuw materiaal</Button>
         </div>
       </div>
@@ -96,6 +88,8 @@ export default function MaterialsPage() {
           onCategoryChange={setCategory}
           sort={sort}
           onSortChange={setSort}
+          typeFilter={typeFilter}
+          onTypeFilterChange={setTypeFilter}
           selectedMaterialId={selectedMaterialId}
           onSelectMaterial={setSelectedMaterialId}
         />

@@ -2,8 +2,18 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface EntityComboboxProps {
   items: { id: number; name: string }[];
@@ -15,13 +25,23 @@ interface EntityComboboxProps {
   disabled?: boolean;
 }
 
-export function EntityCombobox({ items, value, onChange, onCreate, placeholder = "Selecteer...", createLabel = "+ Nieuw aanmaken", disabled }: EntityComboboxProps) {
+export function EntityCombobox({
+  items,
+  value,
+  onChange,
+  onCreate,
+  placeholder = "Selecteer...",
+  createLabel = "+ Nieuw aanmaken",
+  disabled,
+}: EntityComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
 
   const selected = items.find((i) => i.id === value);
-  const filtered = items.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = items.filter((i) =>
+    i.name.toLowerCase().includes(search.toLowerCase()),
+  );
 
   async function handleCreate() {
     if (!onCreate || !search.trim()) return;
@@ -39,14 +59,23 @@ export function EntityCombobox({ items, value, onChange, onCreate, placeholder =
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full justify-between font-normal" disabled={disabled} type="button">
+        <Button
+          variant="outline"
+          className="w-full justify-between font-normal"
+          disabled={disabled}
+          type="button"
+        >
           <span className="truncate">{selected?.name ?? placeholder}</span>
           <span className="opacity-50 ml-2">▾</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="start">
         <Command>
-          <CommandInput placeholder="Zoeken..." value={search} onValueChange={setSearch} />
+          <CommandInput
+            placeholder="Zoeken..."
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandEmpty>
             {onCreate && search.trim() ? (
               <button
@@ -57,12 +86,20 @@ export function EntityCombobox({ items, value, onChange, onCreate, placeholder =
                 {creating ? "Aanmaken..." : `${createLabel}: "${search}"`}
               </button>
             ) : (
-              <p className="py-2 px-3 text-sm text-muted-foreground">Geen resultaten</p>
+              <p className="py-2 px-3 text-sm text-muted-foreground">
+                Geen resultaten
+              </p>
             )}
           </CommandEmpty>
-          <CommandGroup>
+          <CommandGroup className="max-h-64 overflow-y-auto">
             {value != null && (
-              <CommandItem onSelect={() => { onChange(null); setOpen(false); }} className="text-muted-foreground">
+              <CommandItem
+                onSelect={() => {
+                  onChange(null);
+                  setOpen(false);
+                }}
+                className="text-muted-foreground"
+              >
                 — Geen selectie
               </CommandItem>
             )}
@@ -70,13 +107,21 @@ export function EntityCombobox({ items, value, onChange, onCreate, placeholder =
               <CommandItem
                 key={item.id}
                 value={item.name}
-                onSelect={() => { onChange(item.id); setOpen(false); setSearch(""); }}
+                onSelect={() => {
+                  onChange(item.id);
+                  setOpen(false);
+                  setSearch("");
+                }}
               >
                 {item.name}
               </CommandItem>
             ))}
             {onCreate && search.trim() && filtered.length > 0 && (
-              <CommandItem onSelect={handleCreate} disabled={creating} className="text-primary">
+              <CommandItem
+                onSelect={handleCreate}
+                disabled={creating}
+                className="text-primary"
+              >
                 {creating ? "Aanmaken..." : `${createLabel}: "${search}"`}
               </CommandItem>
             )}

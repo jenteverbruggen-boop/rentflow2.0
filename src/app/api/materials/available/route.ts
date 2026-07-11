@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
-import { findAvailableStockItems, bundleAvailableCount } from "@/lib/availability";
+import {
+  requireAuth,
+  unauthorized,
+  badRequest,
+  serverError,
+} from "@/lib/api-auth";
+import {
+  findAvailableStockItems,
+  bundleAvailableCount,
+} from "@/lib/availability";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
@@ -17,20 +25,29 @@ export async function GET(req: NextRequest) {
 
     const materials = await prisma.material.findMany({
       orderBy: { name: "asc" },
-      include: { _count: { select: { stockItems: true } } },
+      include: {
+        _count: { select: { stockItems: true } },
+        components: { include: { child: { select: { dayPrice: true } } } },
+      },
     });
 
     const overrides = projectId
-      ? await prisma.projectMaterialPrice.findMany({ where: { projectId: parseInt(projectId) } })
+      ? await prisma.projectMaterialPrice.findMany({
+          where: { projectId: parseInt(projectId) },
+        })
       : [];
-    const overrideMap = new Map(overrides.map((o) => [o.materialId, Number(o.dayPrice)]));
+    const overrideMap = new Map(
+      overrides.map((o) => [o.materialId, Number(o.dayPrice)]),
+    );
 
     const results = await Promise.all(
       materials.map(async (m) => {
         const rangeArgs = {
           from: new Date(from),
           to: new Date(to),
-          excludePeriodId: excludePeriodId ? parseInt(excludePeriodId) : undefined,
+          excludePeriodId: excludePeriodId
+            ? parseInt(excludePeriodId)
+            : undefined,
         };
 
         let availableCount: number;
@@ -45,9 +62,15 @@ export async function GET(req: NextRequest) {
           availableStockItemIds = available.map((a) => a.id);
         }
 
-        const basePrice = m.isBundle
-          ? (m.bundlePriceOverride != null ? Number(m.bundlePriceOverride) : Number(m.dayPrice))
-          : Number(m.dayPrice);
+        const componentSum = m.components.reduce(
+          (sum, c) => sum + Number(c.child.dayPrice) * c.quantity,
+          0,
+        );
+        const bundlePrice =
+          m.bundlePriceOverride == null
+            ? componentSum
+            : Number(m.bundlePriceOverride);
+        const basePrice = m.isBundle ? bundlePrice : Number(m.dayPrice);
         const effectivePrice = overrideMap.get(m.id) ?? basePrice;
         return {
           material: {
@@ -65,7 +88,7 @@ export async function GET(req: NextRequest) {
           availableCount,
           availableStockItemIds,
         };
-      })
+      }),
     );
 
     return NextResponse.json(results);

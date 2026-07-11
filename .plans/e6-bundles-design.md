@@ -177,3 +177,44 @@ Two new Postgres migration steps:
 - Bundle availability across multiple quantities in one booking UI
 - Changing component prices retroactively on existing bookings
 - Nested pakbon rendering (B4b — phase 5, after this is approved)
+
+---
+
+## E6.1 — Set stock, incomplete sets & catalog UI (follow-up, implemented)
+
+Follow-up after the booking side landed. The recipe/booking model above is unchanged; this only adds a **catalog-side view** of set stock and fixes a price-display bug.
+
+### Set stock (owned, not date-ranged)
+
+Pure helper `computeBundleStock(components)` in `src/lib/bundle-stock.ts` (unit-tested):
+
+```
+completeSets   = min over components of floor(totalStock / perSetQty)
+componentSum   = SUM(child.dayPrice * perSetQty)          // live price of one set
+per component:
+  usedInComplete = completeSets * perSetQty
+  remaining      = totalStock - usedInComplete
+  haveForNext    = min(remaining, perSetQty)
+  missingForNext = max(0, perSetQty - remaining)
+hasIncomplete  = any component has remaining > 0
+```
+
+`/api/materials` GET now returns `bundleStock` + `setPrice` (`bundlePriceOverride ?? componentSum`) for every set. This is the **owned-stock** view (ignores bookings) — distinct from `bundleAvailableCount` which stays the **date-range** view used by the booking picker.
+
+Worked example (recipe: 1 doos + 24 glazen; stock 3 dozen + 50 glazen): `completeSets = min(3, floor(50/24)) = 2`; leftover 1 doos + 2 glazen ⇒ 1 incomplete set, `glazen 2/24 (mist 22)`.
+
+### Bug fix
+
+`/api/materials/available` previously showed a set's `basePrice` as its raw `dayPrice` (0) when no override was set, while booking charged the component sum. Now both use `override ?? componentSum`.
+
+### Catalog UI
+
+- **Detail pane**: sets show `Setprijs` + `Complete sets` (instead of Dagprijs/units) and a `BundleStockSummary` card — complete-set count plus a ⚠️ incomplete-set breakdown listing each component `have/need (mist X)`.
+- **List**: `🎁` icon + `"N sets"` (⚠️ if incomplete) per set row; a segmented **Alle / 🎁 Sets / Losse** type filter.
+- **Component editing**: each component row has an inline quantity input (`PATCH /components/:componentId`) to correct mistypes; the set price has an override input (empty = automatic component sum) that PUTs `bundlePriceOverride`. A table+cover set can thus be priced cheaper than its parts.
+- **Override-wipe fix**: `useMaterialUpdate` now always sends `bundlePriceOverride` in the PUT body, so editing any other field (notes, code…) no longer silently clears a set's override.
+- **Picker overflow**: `EntityCombobox` list capped at `max-h-64 overflow-y-auto` so long component lists scroll instead of running off-screen.
+
+### New constraints (tightened vs original)
+
+- A component's child may **not** itself be a set (no nesting) and may **not** be used in more than one set — enforced in `POST /api/materials/:id/components` and reflected in the component picker (filters out already-used materials).
