@@ -4,12 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { formatEUR } from "@/lib/pricing";
 import { InlineEditField } from "@/components/inline-edit-field";
 import { MaterialStockList } from "@/components/material-stock-list";
 import { MaterialCodes } from "@/components/material-codes";
 import { BundleComponentEditor } from "@/components/bundle-component-editor";
 import { BundleStockSummary } from "@/components/bundle-stock-summary";
+import { MaterialSummaryGrid } from "@/components/material-summary-grid";
 import { useMaterialUpdate } from "@/hooks/use-material-update";
 import type { Material, StockItem } from "@/types";
 
@@ -77,34 +77,7 @@ export function MaterialDetailPane({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          {material.isBundle ? (
-            <div className="rounded-md border border-border p-3">
-              <p className="text-xs text-muted-foreground">
-                Setprijs {material.bundlePriceOverride == null && "(automatisch)"}
-              </p>
-              <p className="font-medium">{formatEUR(material.setPrice ?? 0)}/d</p>
-            </div>
-          ) : (
-            <InlineEditField
-              label="Dagprijs"
-              value={material.dayPrice}
-              displayValue={formatEUR(material.dayPrice)}
-              type="number"
-              onSave={(v) => saveField("dayPrice", v)}
-            />
-          )}
-          <div className="rounded-md border border-border p-3">
-            <p className="text-xs text-muted-foreground">
-              {material.isBundle ? "Complete sets" : "Totale voorraad"}
-            </p>
-            <p className="font-medium">
-              {material.isBundle
-                ? `${material.bundleStock?.completeSets ?? 0} sets`
-                : `${material.totalStock ?? 0} units`}
-            </p>
-          </div>
-        </div>
+        <MaterialSummaryGrid material={material} onSave={saveField} />
 
         <InlineEditField
           label="Artikelcode"

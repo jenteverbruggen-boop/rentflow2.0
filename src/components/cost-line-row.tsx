@@ -64,7 +64,11 @@ export function PersonCostRow({ line, days, cost, periodId, project }: PersonRow
 
 export function MaterialGroupCostRow({ group, days, periodId, project }: MaterialGroupRowProps) {
   const perUnit = lineCost(group.dayPriceSnapshot, days, group);
-  const total = perUnit * group.units;
+  const setup = group.assignments.reduce(
+    (s, a) => s + (a.setupCostSnapshot ?? 0),
+    0,
+  );
+  const total = perUnit * group.units + setup;
   const override = project.materialPrices.find((p) => p.materialId === group.material.id);
   return (
     <tr className="border-b last:border-0">
@@ -82,6 +86,7 @@ export function MaterialGroupCostRow({ group, days, periodId, project }: Materia
       </td>
       <td className="py-2 pr-4 text-xs text-muted-foreground tabular-nums whitespace-nowrap align-middle">
         {group.units} × {days} × {formatEUR(group.dayPriceSnapshot)}
+        {setup > 0 && ` + ${formatEUR(setup)} op-/afbouw`}
       </td>
       <td className="py-2 pr-3 align-middle">
         <BookingDiscountPopover

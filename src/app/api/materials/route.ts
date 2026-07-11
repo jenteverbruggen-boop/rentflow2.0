@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
       categoryId,
       code: manualCode,
       dayPrice,
+      setupCost,
       notes,
       initialStock,
     } = await req.json();
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
         code,
         notes,
         dayPrice: Number(dayPrice) || 0,
+        setupCost: setupCost != null ? Number(setupCost) : null,
       },
       include: { categoryRel: true },
     });

@@ -7,24 +7,59 @@ import {
   periodTotal,
   periodPeopleCost,
   periodMaterialsCost,
+  periodTravelCost,
   projectCostSummary,
 } from "@/lib/pricing";
 import type { Period, PeriodStockItem, PeriodPerson } from "@/types";
 
-function makeStockItem(snapshot: number, opts?: { discountPct?: number; discountAmount?: number; bundleBookingId?: number }): PeriodStockItem {
+function makeStockItem(
+  snapshot: number,
+  opts?: {
+    discountPct?: number;
+    discountAmount?: number;
+    bundleBookingId?: number;
+    setupCostSnapshot?: number;
+  },
+): PeriodStockItem {
   return {
     id: 1,
     periodId: 1,
     stockItemId: 1,
     dayPriceSnapshot: snapshot,
+    setupCostSnapshot: opts?.setupCostSnapshot ?? 0,
     discountPct: opts?.discountPct ?? null,
     discountAmount: opts?.discountAmount ?? null,
     bundleBookingId: opts?.bundleBookingId ?? null,
-    stockItem: { id: 1, materialId: 1, unitNumber: 1, identifier: null, notes: null, material: { id: 1, name: "Test", category: null, categoryId: null, code: null, notes: null, dayPrice: snapshot, isBundle: false, bundlePriceOverride: null } },
+    stockItem: {
+      id: 1,
+      materialId: 1,
+      unitNumber: 1,
+      identifier: null,
+      notes: null,
+      material: {
+        id: 1,
+        name: "Test",
+        category: null,
+        categoryId: null,
+        code: null,
+        notes: null,
+        dayPrice: snapshot,
+        setupCost: null,
+        isBundle: false,
+        bundlePriceOverride: null,
+      },
+    },
   };
 }
 
-function makePerson(snapshot: number, opts?: { discountPct?: number; discountAmount?: number }): PeriodPerson {
+function makePerson(
+  snapshot: number,
+  opts?: {
+    discountPct?: number;
+    discountAmount?: number;
+    travelCosts?: { unitCost: number; quantity: number }[];
+  },
+): PeriodPerson {
   return {
     id: 1,
     periodId: 1,
@@ -33,11 +68,43 @@ function makePerson(snapshot: number, opts?: { discountPct?: number; discountAmo
     dayPriceSnapshot: snapshot,
     discountPct: opts?.discountPct ?? null,
     discountAmount: opts?.discountAmount ?? null,
-    person: { id: 1, name: "Test", role: null, email: null, phone: null, address: null, postalCode: null, city: null, country: null, dayPrice: snapshot },  };
+    travelCosts: (opts?.travelCosts ?? []).map((t, i) => ({
+      id: i + 1,
+      periodPersonId: 1,
+      label: null,
+      unitCost: t.unitCost,
+      quantity: t.quantity,
+    })),
+    person: {
+      id: 1,
+      name: "Test",
+      role: null,
+      email: null,
+      phone: null,
+      address: null,
+      postalCode: null,
+      city: null,
+      country: null,
+      dayPrice: snapshot,
+    },
+  };
 }
 
-function makePeriod(start: string, end: string, materials: PeriodStockItem[] = [], people: PeriodPerson[] = []): Period {
-  return { id: 1, projectId: 1, name: "Test", startDate: start, endDate: end, materials, people };
+function makePeriod(
+  start: string,
+  end: string,
+  materials: PeriodStockItem[] = [],
+  people: PeriodPerson[] = [],
+): Period {
+  return {
+    id: 1,
+    projectId: 1,
+    name: "Test",
+    startDate: start,
+    endDate: end,
+    materials,
+    people,
+  };
 }
 
 describe("periodDays", () => {
@@ -77,6 +144,20 @@ describe("materialLineCost", () => {
     const line = makeStockItem(50);
     expect(materialLineCost(line, 4)).toBe(200);
   });
+
+  it("adds setup/teardown cost once, not multiplied by days", () => {
+    const line = makeStockItem(50, { setupCostSnapshot: 85 });
+    expect(materialLineCost(line, 5)).toBe(50 * 5 + 85);
+    // same setup regardless of duration
+    expect(materialLineCost(makeStockItem(50, { setupCostSnapshot: 85 }), 1)).toBe(
+      50 + 85,
+    );
+  });
+
+  it("setup applies on top of a discounted rental", () => {
+    const line = makeStockItem(100, { discountPct: 10, setupCostSnapshot: 20 });
+    expect(materialLineCost(line, 2)).toBe(100 * 2 * 0.9 + 20);
+  });
 });
 
 describe("personLineCost", () => {
@@ -93,14 +174,28 @@ describe("periodTotal", () => {
   });
 
   it("sums materials and people", () => {
-    const period = makePeriod("2026-05-01", "2026-05-02", [makeStockItem(100)], [makePerson(200)]);
+    const period = makePeriod(
+      "2026-05-01",
+      "2026-05-02",
+      [makeStockItem(100)],
+      [makePerson(200)],
+    );
     expect(periodTotal(period)).toBe(600);
   });
 
   it("bundle booking counted separately, component PeriodStockItem (bundleBookingId set) excluded", () => {
     const flatItem = makeStockItem(100);
-    const bundleItem: typeof flatItem = { ...makeStockItem(0), bundleBookingId: 99 };
-    const bundleBooking = { id: 99, periodId: 1, materialId: 1, quantity: 1, dayPriceSnapshot: 50 };
+    const bundleItem: typeof flatItem = {
+      ...makeStockItem(0),
+      bundleBookingId: 99,
+    };
+    const bundleBooking = {
+      id: 99,
+      periodId: 1,
+      materialId: 1,
+      quantity: 1,
+      dayPriceSnapshot: 50,
+    };
     const period = {
       ...makePeriod("2026-05-01", "2026-05-01", [flatItem, bundleItem], []),
       bundleBookings: [bundleBooking],
@@ -111,28 +206,76 @@ describe("periodTotal", () => {
 
 describe("B6 cost split", () => {
   it("only-people period", () => {
-    const period = makePeriod("2026-05-01", "2026-05-01", [], [makePerson(100)]);
+    const period = makePeriod(
+      "2026-05-01",
+      "2026-05-01",
+      [],
+      [makePerson(100)],
+    );
     expect(periodPeopleCost(period)).toBe(100);
     expect(periodMaterialsCost(period)).toBe(0);
   });
 
   it("only-materials period", () => {
-    const period = makePeriod("2026-05-01", "2026-05-01", [makeStockItem(50)], []);
+    const period = makePeriod(
+      "2026-05-01",
+      "2026-05-01",
+      [makeStockItem(50)],
+      [],
+    );
     expect(periodPeopleCost(period)).toBe(0);
     expect(periodMaterialsCost(period)).toBe(50);
   });
 
   it("mixed period sums equal periodTotal", () => {
-    const period = makePeriod("2026-05-01", "2026-05-02", [makeStockItem(100)], [makePerson(200)]);
-    expect(periodPeopleCost(period) + periodMaterialsCost(period)).toBe(periodTotal(period));
+    const period = makePeriod(
+      "2026-05-01",
+      "2026-05-02",
+      [makeStockItem(100)],
+      [makePerson(200)],
+    );
+    expect(periodPeopleCost(period) + periodMaterialsCost(period)).toBe(
+      periodTotal(period),
+    );
   });
 
   it("projectCostSummary totals equal sum of periods", () => {
-    const p1 = makePeriod("2026-05-01", "2026-05-01", [makeStockItem(50)], [makePerson(100)]);
+    const p1 = makePeriod(
+      "2026-05-01",
+      "2026-05-01",
+      [makeStockItem(50)],
+      [makePerson(100)],
+    );
     const p2 = makePeriod("2026-05-02", "2026-05-02", [], [makePerson(200)]);
     const summary = projectCostSummary([p1, p2]);
     expect(summary.total).toBe(periodTotal(p1) + periodTotal(p2));
     expect(summary.people).toBe(100 + 200);
     expect(summary.materials).toBe(50);
+  });
+});
+
+describe("travel costs", () => {
+  it("sums unitCost × quantity across a person's travel lines", () => {
+    const person = makePerson(0, {
+      travelCosts: [
+        { unitCost: 30, quantity: 4 },
+        { unitCost: 80, quantity: 2 },
+      ],
+    });
+    const period = makePeriod("2026-05-01", "2026-05-01", [], [person]);
+    expect(periodTravelCost(period)).toBe(30 * 4 + 80 * 2);
+  });
+
+  it("periodTotal and projectCostSummary include travel as its own bucket", () => {
+    const person = makePerson(100, {
+      travelCosts: [{ unitCost: 50, quantity: 3 }],
+    });
+    const period = makePeriod("2026-05-01", "2026-05-02", [], [person]);
+    // 100 × 2 days + 50 × 3 trips = 350
+    expect(periodTotal(period)).toBe(350);
+    const summary = projectCostSummary([period]);
+    expect(summary.travel).toBe(150);
+    expect(summary.people).toBe(200);
+    expect(summary.total).toBe(350);
   });
 });

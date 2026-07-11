@@ -44,6 +44,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     // Flat booking — move availability check inside transaction via create+catch
     const snapshotPrice = await effectiveMaterialPrice(period.projectId, parseInt(materialId));
+    const setupSnapshot = Number(material.setupCost ?? 0);
     const availIds = await availableForMaterial(parseInt(materialId), period.startDate, period.endDate);
 
     if (availIds.length < qty) {
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest, { params }: Params) {
               periodId,
               stockItemId,
               dayPriceSnapshot: snapshotPrice,
+              setupCostSnapshot: setupSnapshot,
               discountPct: discountPct != null ? Number(discountPct) : null,
               discountAmount: discountAmount != null ? Number(discountAmount) : null,
             },

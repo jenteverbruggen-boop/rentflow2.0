@@ -7,11 +7,15 @@ export const projectInclude = {
     orderBy: { startDate: "asc" },
     include: {
       materials: {
-        include: { stockItem: { include: { material: { include: { categoryRel: true } } } } },
+        include: {
+          stockItem: {
+            include: { material: { include: { categoryRel: true } } },
+          },
+        },
         orderBy: { id: "asc" },
       },
       people: {
-        include: { person: true },
+        include: { person: true, travelCosts: { orderBy: { id: "asc" } } },
         orderBy: { id: "asc" },
       },
       bundleBookings: {

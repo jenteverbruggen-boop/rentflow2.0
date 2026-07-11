@@ -120,6 +120,7 @@ export interface Material {
   code: string | null;
   notes: string | null;
   dayPrice: number;
+  setupCost: number | null;
   isBundle: boolean;
   bundlePriceOverride: number | null;
   components?: MaterialComponent[];
@@ -175,10 +176,19 @@ export interface PeriodStockItem {
   periodId: number;
   stockItemId: number;
   dayPriceSnapshot: number;
+  setupCostSnapshot: number;
   discountPct: number | null;
   discountAmount: number | null;
   bundleBookingId: number | null;
   stockItem: StockItem & { material: Material };
+}
+
+export interface PersonTravelCost {
+  id: number;
+  periodPersonId: number;
+  label: string | null;
+  unitCost: number;
+  quantity: number;
 }
 
 export interface PeriodPerson {
@@ -190,6 +200,7 @@ export interface PeriodPerson {
   discountPct: number | null;
   discountAmount: number | null;
   person: Person;
+  travelCosts?: PersonTravelCost[];
 }
 
 export interface Period {

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LinePricePopover } from "@/components/line-price-popover";
+import { PersonTravelEditor } from "@/components/person-travel-editor";
 import { formatEUR, periodDays, lineCost, personLineCost } from "@/lib/pricing";
 import { groupMaterialAssignments } from "@/lib/grouping";
 import type { Period, Project } from "@/types";
@@ -44,33 +45,41 @@ export function PeriodBookings({ period, project }: Props) {
               {period.people.map((pp) => {
                 const override = project.personPrices.find((p) => p.personId === pp.personId);
                 return (
-                  <div key={pp.id} className="flex items-center gap-2 bg-muted/40 rounded-md px-3 py-1.5 text-sm">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{pp.person.name}</p>
-                      <p className="text-xs text-muted-foreground">{pp.role ?? pp.person.role}</p>
+                  <div key={pp.id} className="rounded-md bg-muted/40 px-3 py-1.5">
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{pp.person.name}</p>
+                        <p className="text-xs text-muted-foreground">{pp.role ?? pp.person.role}</p>
+                      </div>
+                      <LinePricePopover
+                        snapshot={pp.dayPriceSnapshot}
+                        basePrice={pp.person.dayPrice}
+                        override={override ? override.dayPrice : null}
+                        resnapshotUrl={`/api/periods/${period.id}/people/${pp.id}`}
+                        projectId={project.id}
+                        kind="person"
+                        entityId={pp.personId}
+                        entityName={pp.person.name}
+                        invalidateKey={projectKey}
+                      />
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {formatEUR(personLineCost(pp, days))}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:text-destructive"
+                        onClick={() => removePerson.mutate(pp.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
                     </div>
-                    <LinePricePopover
-                      snapshot={pp.dayPriceSnapshot}
-                      basePrice={pp.person.dayPrice}
-                      override={override ? override.dayPrice : null}
-                      resnapshotUrl={`/api/periods/${period.id}/people/${pp.id}`}
-                      projectId={project.id}
-                      kind="person"
-                      entityId={pp.personId}
-                      entityName={pp.person.name}
+                    <PersonTravelEditor
+                      periodId={period.id}
+                      assignmentId={pp.id}
+                      travelCosts={pp.travelCosts ?? []}
                       invalidateKey={projectKey}
                     />
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      {formatEUR(personLineCost(pp, days))}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 hover:text-destructive"
-                      onClick={() => removePerson.mutate(pp.id)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
                   </div>
                 );
               })}
@@ -87,10 +96,11 @@ export function PeriodBookings({ period, project }: Props) {
           ) : (
             <div className="space-y-1.5">
               {groups.map((g) => {
+                const setup = g.assignments.reduce((s, a) => s + (a.setupCostSnapshot ?? 0), 0);
                 const groupCost = lineCost(g.dayPriceSnapshot, days, {
                   discountPct: g.discountPct,
                   discountAmount: g.discountAmount,
-                }) * g.units;
+                }) * g.units + setup;
                 const override = project.materialPrices.find((p) => p.materialId === g.material.id);
                 return (
                   <div key={g.key} className="flex items-center gap-2 bg-muted/40 rounded-md px-3 py-1.5 text-sm">

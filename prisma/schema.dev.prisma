@@ -150,6 +150,7 @@ model Material {
   code                String?                @unique
   notes               String?
   dayPrice            Float                  @default(0)
+  setupCost           Float?
   isBundle            Boolean                @default(false)
   bundlePriceOverride Float?
   categoryRel         Category?              @relation(fields: [categoryId], references: [id])
@@ -187,12 +188,13 @@ model PersonDocument {
 
 model PeriodStockItem {
   id               Int                  @id @default(autoincrement())
-  periodId         Int
-  stockItemId      Int
-  dayPriceSnapshot Float
-  discountPct      Float?
-  discountAmount   Float?
-  bundleBookingId  Int?
+  periodId          Int
+  stockItemId       Int
+  dayPriceSnapshot  Float
+  setupCostSnapshot Float                @default(0)
+  discountPct       Float?
+  discountAmount    Float?
+  bundleBookingId   Int?
   period           Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
   stockItem        StockItem            @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
   bundleBooking    PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
@@ -223,15 +225,25 @@ model PeriodBundleBooking {
 }
 
 model PeriodPerson {
-  id               Int      @id @default(autoincrement())
+  id               Int                @id @default(autoincrement())
   periodId         Int
   personId         Int
   role             String?
   dayPriceSnapshot Float
   discountPct      Float?
   discountAmount   Float?
-  period           Period   @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  person           Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  period           Period             @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  person           Person             @relation(fields: [personId], references: [id], onDelete: Cascade)
+  travelCosts      PersonTravelCost[]
 
   @@unique([periodId, personId])
+}
+
+model PersonTravelCost {
+  id             Int          @id @default(autoincrement())
+  periodPersonId Int
+  label          String?
+  unitCost       Float
+  quantity       Int          @default(1)
+  periodPerson   PeriodPerson @relation(fields: [periodPersonId], references: [id], onDelete: Cascade)
 }

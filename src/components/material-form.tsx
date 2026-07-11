@@ -17,6 +17,7 @@ const schema = z.object({
   name: z.string().min(1, "Naam is verplicht"),
   categoryId: z.number().optional().nullable(),
   dayPrice: z.coerce.number().min(0, "Moet ≥ 0 zijn"),
+  setupCost: z.coerce.number().min(0, "Moet ≥ 0 zijn").optional(),
   initialStock: z.coerce.number().int().min(0).optional(),
   notes: z.string().optional(),
 });
@@ -34,7 +35,7 @@ interface Props {
 export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPending }: Props) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
-    defaultValues: { name: "", categoryId: null, dayPrice: 0, initialStock: 1, notes: "" },
+    defaultValues: { name: "", categoryId: null, dayPrice: 0, setupCost: 0, initialStock: 1, notes: "" },
   });
   const [catId, setCatId] = useState<number | null>(null);
 
@@ -46,10 +47,10 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
   useEffect(() => {
     if (defaultValues) {
       setCatId(defaultValues.categoryId ?? null);
-      form.reset({ name: defaultValues.name, categoryId: defaultValues.categoryId ?? null, dayPrice: defaultValues.dayPrice, notes: defaultValues.notes ?? "" });
+      form.reset({ name: defaultValues.name, categoryId: defaultValues.categoryId ?? null, dayPrice: defaultValues.dayPrice, setupCost: defaultValues.setupCost ?? 0, notes: defaultValues.notes ?? "" });
     } else {
       setCatId(null);
-      form.reset({ name: "", categoryId: null, dayPrice: 0, initialStock: 1, notes: "" });
+      form.reset({ name: "", categoryId: null, dayPrice: 0, setupCost: 0, initialStock: 1, notes: "" });
     }
   }, [defaultValues, form]);
 
@@ -74,6 +75,9 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
             </FormItem>
             <FormField control={form.control} name="dayPrice" render={({ field }) => (
               <FormItem><FormLabel>Dagprijs (€)</FormLabel><FormControl><Input type="number" step="0.01" min={0} {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="setupCost" render={({ field }) => (
+              <FormItem><FormLabel>Op-/afbouwkosten (€, per unit — optioneel)</FormLabel><FormControl><Input type="number" step="0.01" min={0} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             {!defaultValues && (
               <FormField control={form.control} name="initialStock" render={({ field }) => (

@@ -3,6 +3,7 @@ import type { Material } from "@/types";
 
 export type EditableMaterialField =
   | "dayPrice"
+  | "setupCost"
   | "category"
   | "code"
   | "notes"
@@ -12,7 +13,7 @@ export type EditableMaterialField =
 function coerce(field: EditableMaterialField, rawValue: string) {
   if (field === "dayPrice") return Number(rawValue);
   if (field === "isBundle") return rawValue === "true";
-  if (field === "bundlePriceOverride")
+  if (field === "bundlePriceOverride" || field === "setupCost")
     return rawValue.trim() === "" ? null : Number(rawValue);
   return rawValue || null;
 }
@@ -35,6 +36,7 @@ export function useMaterialUpdate(material: Material | null) {
         code: material.code,
         notes: material.notes,
         dayPrice: material.dayPrice,
+        setupCost: material.setupCost,
         isBundle: material.isBundle,
         bundlePriceOverride: material.bundlePriceOverride,
         [field]: coerce(field, rawValue),
