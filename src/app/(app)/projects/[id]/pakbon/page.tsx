@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { PrintLayout } from "@/components/print/print-layout";
 import { DocumentHeader } from "@/components/print/document-header";
-import { groupMaterialAssignments } from "@/lib/grouping";
+import { groupMaterialAssignmentsNested } from "@/lib/grouping";
 import { formatEUR, periodDays, materialLineCost } from "@/lib/pricing";
 import type { Project } from "@/types";
 
@@ -60,21 +60,15 @@ export default function PakbonPage() {
           <h2 className="text-base font-semibold border-b pb-1 mb-2">Materialen</h2>
           {sorted.map((period) => {
             const days = periodDays(period);
-            const groups = groupMaterialAssignments(period.materials);
-            if (groups.length === 0) return null;
-
-            const byCategory = new Map<string, typeof groups>();
-            for (const g of groups) {
-              const cat = g.material.categoryRel?.name ?? g.material.category ?? "Overig";
-              byCategory.set(cat, [...(byCategory.get(cat) ?? []), g]);
-            }
+            const nestedGroups = groupMaterialAssignmentsNested(period.materials, period.bundleBookings ?? []);
+            if (nestedGroups.length === 0) return null;
 
             return (
               <div key={period.id} className="mb-4">
                 <p className="font-medium mb-1">{period.name}</p>
-                {Array.from(byCategory.entries()).map(([cat, catGroups]) => (
-                  <div key={cat} className="mb-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">{cat}</p>
+                {nestedGroups.map(({ category, flatLines, bundleLines }) => (
+                  <div key={category} className="mb-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">{category}</p>
                     <table className="w-full text-xs">
                       <thead><tr className="bg-gray-100">
                         <th className="text-left p-1.5">Aantal</th>
@@ -84,7 +78,7 @@ export default function PakbonPage() {
                         <th className="text-right p-1.5">Totaal</th>
                       </tr></thead>
                       <tbody>
-                        {catGroups.map((g) => (
+                        {flatLines.map((g) => (
                           <tr key={g.key}>
                             <td className="p-1.5">{g.units}</td>
                             <td className="p-1.5 text-center"><span className="border border-gray-400 inline-block w-4 h-4 mr-1" /><span className="border border-gray-400 inline-block w-4 h-4" /></td>
@@ -92,6 +86,26 @@ export default function PakbonPage() {
                             <td className="p-1.5">{g.material.code ?? "TEMP"}</td>
                             <td className="p-1.5 text-right">{formatEUR(materialLineCost(g.assignments[0], days) * g.units)}</td>
                           </tr>
+                        ))}
+                        {bundleLines.map((b) => (
+                          <>
+                            <tr key={`bundle-${b.booking.id}`} className="bg-gray-50 font-semibold">
+                              <td className="p-1.5">{b.booking.quantity}</td>
+                              <td className="p-1.5 text-center"><span className="border border-gray-400 inline-block w-4 h-4 mr-1" /><span className="border border-gray-400 inline-block w-4 h-4" /></td>
+                              <td className="p-1.5">{b.booking.material?.name ?? "Set"} <span className="text-gray-500">(set)</span></td>
+                              <td className="p-1.5">{b.booking.material?.code ?? "SET"}</td>
+                              <td className="p-1.5 text-right">{formatEUR(b.booking.dayPriceSnapshot * days * b.booking.quantity)}</td>
+                            </tr>
+                            {b.componentGroups.map((cg) => (
+                              <tr key={`comp-${cg.key}`} className="text-gray-500">
+                                <td className="p-1.5 pl-6">{cg.units}</td>
+                                <td className="p-1.5" />
+                                <td className="p-1.5 pl-6 italic">{cg.material.name}</td>
+                                <td className="p-1.5 pl-6">{cg.material.code ?? "TEMP"}</td>
+                                <td className="p-1.5 text-right">—</td>
+                              </tr>
+                            ))}
+                          </>
                         ))}
                       </tbody>
                     </table>
