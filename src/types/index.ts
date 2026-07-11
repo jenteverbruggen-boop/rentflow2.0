@@ -13,19 +13,67 @@ export interface User {
   createdAt: string;
 }
 
+export interface Client {
+  id: number;
+  name: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  postalCode: string | null;
+  city: string | null;
+  vatNumber: string | null;
+  notes: string | null;
+  _count?: { projects: number };
+}
+
+export interface Location {
+  id: number;
+  name: string;
+  address: string | null;
+  postalCode: string | null;
+  city: string | null;
+  phone: string | null;
+  notes: string | null;
+  _count?: { projects: number };
+}
+
+export interface Function {
+  id: number;
+  name: string;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  prefix: string;
+}
+
+export interface Setting {
+  key: string;
+  value: string | null;
+}
+
 export interface Person {
   id: number;
   name: string;
   role: string | null;
   email: string | null;
   phone: string | null;
+  address: string | null;
+  postalCode: string | null;
+  city: string | null;
+  country: string | null;
   dayPrice: number;
+  functions?: Function[];
 }
 
 export interface Material {
   id: number;
   name: string;
   category: string | null;
+  categoryId: number | null;
+  categoryRel?: Category | null;
   notes: string | null;
   dayPrice: number;
   stockItems?: StockItem[];
@@ -113,7 +161,11 @@ export interface Project {
   id: number;
   name: string;
   client: string | null;
+  clientId: number | null;
+  clientRel?: Client | null;
   location: string | null;
+  locationId: number | null;
+  locationRel?: Location | null;
   startDate: string;
   endDate: string;
   status: ProjectStatus;

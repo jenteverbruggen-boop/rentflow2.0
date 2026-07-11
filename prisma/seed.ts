@@ -258,9 +258,15 @@ async function main() {
   await prisma.period.deleteMany();
   await prisma.stockItem.deleteMany();
   await prisma.project.deleteMany();
+  await prisma.personFunction.deleteMany();
   await prisma.person.deleteMany();
   await prisma.material.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.client.deleteMany();
+  await prisma.location.deleteMany();
+  await prisma.function.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.setting.deleteMany();
 
   await prisma.user.createMany({
     data: [
@@ -268,6 +274,26 @@ async function main() {
       { email: "jan@rentflow.dev", password: await bcrypt.hash("user123", 10), name: "Jan Peeters", role: "user" },
     ],
   });
+
+  // Seed clients
+  const clientSummerSounds = await prisma.client.create({ data: { name: "Summer Sounds vzw", email: "info@summersounds.be", phone: "02 123 45 67" } });
+  const clientCoastline = await prisma.client.create({ data: { name: "Coastline Events", phone: "059 234 56 78" } });
+  const clientBrugge = await prisma.client.create({ data: { name: "Stad Brugge", address: "Markt 1", postalCode: "8000", city: "Brugge", phone: "050 44 81 11" } });
+  const clientWarehouse = await prisma.client.create({ data: { name: "Warehouse Sessions", email: "info@warehousesessions.be" } });
+
+  // Seed locations
+  const locGent = await prisma.location.create({ data: { name: "Gent (Festivalterrein)", address: "Blaarmeersen", postalCode: "9000", city: "Gent" } });
+  const locOostende = await prisma.location.create({ data: { name: "Oostende Beach", address: "Zeedijk 1", postalCode: "8400", city: "Oostende" } });
+  const locBrugge = await prisma.location.create({ data: { name: "Stadsplein Brugge", address: "Markt", postalCode: "8000", city: "Brugge" } });
+  const locMechelen = await prisma.location.create({ data: { name: "Hangar Mechelen", address: "Industrieweg 10", postalCode: "2800", city: "Mechelen" } });
+
+  // Seed functions
+  const fnPM = await prisma.function.create({ data: { name: "Project Manager" } });
+  const fnElec = await prisma.function.create({ data: { name: "Electrician" } });
+  const fnCarp = await prisma.function.create({ data: { name: "Carpenter" } });
+  const fnPlumb = await prisma.function.create({ data: { name: "Plumber" } });
+  const fnCrane = await prisma.function.create({ data: { name: "Crane Operator" } });
+  const fnSafety = await prisma.function.create({ data: { name: "Safety Officer" } });
 
   const [alice, bob, charlie, diana, eric, fiona] = await prisma.$transaction([
     prisma.person.create({ data: { name: "Alice Vermeersch", role: "Project Manager", email: "alice@example.com", phone: "0471 12 34 56", dayPrice: 450 } }),
@@ -278,13 +304,54 @@ async function main() {
     prisma.person.create({ data: { name: "Fiona Janssen", role: "Safety Officer", email: "fiona@example.com", phone: "0476 67 89 01", dayPrice: 360 } }),
   ]);
 
+  // Link persons to functions
+  await prisma.personFunction.createMany({
+    data: [
+      { personId: alice.id, functionId: fnPM.id },
+      { personId: bob.id, functionId: fnElec.id },
+      { personId: charlie.id, functionId: fnCarp.id },
+      { personId: diana.id, functionId: fnPlumb.id },
+      { personId: eric.id, functionId: fnCrane.id },
+      { personId: fiona.id, functionId: fnSafety.id },
+    ],
+  });
+
   const materialDefs = importMaterialsFromCsv();
   const pricedMaterialCount = materialDefs.filter((m) => m.dayPrice > 0).length;
 
+  // Build category map from seed data (normalize composite strings)
+  const categoryPrefixMap: Record<string, string> = {
+    "Audio": "01", "Catering": "02", "Verlichting": "03", "Meubilair": "04",
+    "Tenten": "05", "Video": "06", "Steiger": "07", "Communicatie": "11",
+    "Verwarming": "89", "Servies": "99",
+  };
+  const categoryMap: Record<string, { id: number }> = {};
+  const uniqueCategories = [...new Set(
+    materialDefs
+      .map((m) => m.category)
+      .filter((c): c is string => !!c && c !== "Fysiek item" && c !== "Virtuele combinatie")
+      .map((c) => c.includes(" - ") ? c.split(" - ")[0].trim() : c)
+  )];
+  for (const catName of uniqueCategories) {
+    const prefix = categoryPrefixMap[catName] ?? "9999";
+    const cat = await prisma.category.upsert({
+      where: { name: catName },
+      update: {},
+      create: { name: catName, prefix },
+    });
+    categoryMap[catName] = { id: cat.id };
+  }
+
   const materials: Record<string, { id: number; dayPrice: number; stockItemIds: number[] }> = {};
   for (const def of materialDefs) {
+    // Resolve categoryId from composite category string
+    let categoryId: number | undefined;
+    if (def.category && def.category !== "Fysiek item" && def.category !== "Virtuele combinatie") {
+      const catName = def.category.includes(" - ") ? def.category.split(" - ")[0].trim() : def.category;
+      categoryId = categoryMap[catName]?.id;
+    }
     const material = await prisma.material.create({
-      data: { name: def.name, category: def.category, dayPrice: def.dayPrice, notes: def.notes },
+      data: { name: def.name, category: def.category, categoryId, dayPrice: def.dayPrice, notes: def.notes },
     });
     const stockItemIds: number[] = [];
     for (let n = 0; n < def.stockItems.length; n++) {
@@ -302,20 +369,27 @@ async function main() {
     materials[def.name] = { id: material.id, dayPrice: def.dayPrice, stockItemIds };
   }
 
+  // Helper: midnight -> 23:59:59
+  function endOfDay(d: Date): Date {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+  }
+
   const festivalMain = await prisma.project.create({
     data: {
       name: "Summer Sounds Festival 2026",
       client: "Summer Sounds vzw",
+      clientId: clientSummerSounds.id,
       location: "Gent",
+      locationId: locGent.id,
       startDate: new Date("2026-05-01"),
-      endDate: new Date("2026-07-31"),
+      endDate: endOfDay(new Date("2026-07-31")),
       status: "actief",
       notes: "Outdoor festival site met main stage, bars en backstage.",
       periods: {
         create: [
-          { name: "Opbouw", startDate: new Date("2026-05-01"), endDate: new Date("2026-05-14") },
-          { name: "Festivaldagen", startDate: new Date("2026-05-15"), endDate: new Date("2026-07-15") },
-          { name: "Afbouw", startDate: new Date("2026-07-16"), endDate: new Date("2026-07-31") },
+          { name: "Opbouw", startDate: new Date("2026-05-01T08:00:00"), endDate: endOfDay(new Date("2026-05-14")) },
+          { name: "Festivaldagen", startDate: new Date("2026-05-15T10:00:00"), endDate: endOfDay(new Date("2026-07-15")) },
+          { name: "Afbouw", startDate: new Date("2026-07-16T08:00:00"), endDate: endOfDay(new Date("2026-07-31")) },
         ],
       },
     },
@@ -325,13 +399,15 @@ async function main() {
     data: {
       name: "Sunset Beach Fest",
       client: "Coastline Events",
+      clientId: clientCoastline.id,
       location: "Oostende",
+      locationId: locOostende.id,
       startDate: new Date("2026-06-15"),
-      endDate: new Date("2026-11-30"),
+      endDate: endOfDay(new Date("2026-11-30")),
       status: "concept",
       notes: "Conceptfase voor beach stage en VIP-zone.",
       periods: {
-        create: [{ name: "Voorproductie", startDate: new Date("2026-06-15"), endDate: new Date("2026-11-30") }],
+        create: [{ name: "Voorproductie", startDate: new Date("2026-06-15T09:00:00"), endDate: endOfDay(new Date("2026-11-30")) }],
       },
     },
     include: { periods: true },
@@ -340,13 +416,15 @@ async function main() {
     data: {
       name: "City Lights Weekender",
       client: "Stad Brugge",
+      clientId: clientBrugge.id,
       location: "Brugge",
+      locationId: locBrugge.id,
       startDate: new Date("2026-04-01"),
-      endDate: new Date("2026-05-20"),
+      endDate: endOfDay(new Date("2026-05-20")),
       status: "afgerond",
       notes: "Afgerond weekendfestival op stadsplein.",
       periods: {
-        create: [{ name: "Festivalweekend", startDate: new Date("2026-04-01"), endDate: new Date("2026-05-20") }],
+        create: [{ name: "Festivalweekend", startDate: new Date("2026-04-01T08:00:00"), endDate: endOfDay(new Date("2026-05-20")) }],
       },
     },
     include: { periods: true },
@@ -355,13 +433,15 @@ async function main() {
     data: {
       name: "Techno Night Hangar",
       client: "Warehouse Sessions",
+      clientId: clientWarehouse.id,
       location: "Mechelen",
+      locationId: locMechelen.id,
       startDate: new Date("2026-05-20"),
-      endDate: new Date("2026-06-10"),
+      endDate: endOfDay(new Date("2026-06-10")),
       status: "actief",
       notes: "Indoor dance event met lichtshow en catering setup.",
       periods: {
-        create: [{ name: "Eventproductie", startDate: new Date("2026-05-20"), endDate: new Date("2026-06-10") }],
+        create: [{ name: "Eventproductie", startDate: new Date("2026-05-20T10:00:00"), endDate: endOfDay(new Date("2026-06-10")) }],
       },
     },
     include: { periods: true },

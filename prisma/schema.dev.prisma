@@ -16,16 +16,73 @@ model User {
   createdAt DateTime @default(now())
 }
 
+model Client {
+  id          Int      @id @default(autoincrement())
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  postalCode  String?
+  city        String?
+  vatNumber   String?
+  notes       String?
+  projects    Project[]
+}
+
+model Location {
+  id         Int      @id @default(autoincrement())
+  name       String
+  address    String?
+  postalCode String?
+  city       String?
+  phone      String?
+  notes      String?
+  projects   Project[]
+}
+
+model Function {
+  id     Int              @id @default(autoincrement())
+  name   String           @unique
+  people PersonFunction[]
+}
+
+model PersonFunction {
+  personId   Int
+  functionId Int
+  person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  function   Function @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@id([personId, functionId])
+}
+
+model Category {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  prefix    String
+  materials Material[]
+}
+
+model Setting {
+  key   String  @id
+  value String?
+  blob  Bytes?
+}
+
 model Project {
   id             Int                    @id @default(autoincrement())
   name           String
   client         String?
+  clientId       Int?
   location       String?
+  locationId     Int?
   startDate      DateTime
   endDate        DateTime
   status         String                 @default("concept")
   notes          String?
   createdAt      DateTime               @default(now())
+  clientRel      Client?                @relation(fields: [clientId], references: [id])
+  locationRel    Location?              @relation(fields: [locationId], references: [id])
   periods        Period[]
   materialPrices ProjectMaterialPrice[]
   personPrices   ProjectPersonPrice[]
@@ -70,17 +127,24 @@ model Person {
   role          String?
   email         String?
   phone         String?
+  address       String?
+  postalCode    String?
+  city          String?
+  country       String?
   dayPrice      Float                @default(0)
   periods       PeriodPerson[]
   projectPrices ProjectPersonPrice[]
+  functions     PersonFunction[]
 }
 
 model Material {
   id            Int                    @id @default(autoincrement())
   name          String
   category      String?
+  categoryId    Int?
   notes         String?
   dayPrice      Float                  @default(0)
+  categoryRel   Category?              @relation(fields: [categoryId], references: [id])
   stockItems    StockItem[]
   projectPrices ProjectMaterialPrice[]
 }

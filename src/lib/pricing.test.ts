@@ -16,7 +16,7 @@ function makeStockItem(snapshot: number, opts?: { discountPct?: number; discount
     dayPriceSnapshot: snapshot,
     discountPct: opts?.discountPct ?? null,
     discountAmount: opts?.discountAmount ?? null,
-    stockItem: { id: 1, materialId: 1, unitNumber: 1, identifier: null, notes: null, material: { id: 1, name: "Test", category: null, notes: null, dayPrice: snapshot } },
+    stockItem: { id: 1, materialId: 1, unitNumber: 1, identifier: null, notes: null, material: { id: 1, name: "Test", category: null, categoryId: null, notes: null, dayPrice: snapshot } },
   };
 }
 
@@ -29,7 +29,7 @@ function makePerson(snapshot: number, opts?: { discountPct?: number; discountAmo
     dayPriceSnapshot: snapshot,
     discountPct: opts?.discountPct ?? null,
     discountAmount: opts?.discountAmount ?? null,
-    person: { id: 1, name: "Test", role: null, email: null, phone: null, dayPrice: snapshot },
+    person: { id: 1, name: "Test", role: null, email: null, phone: null, address: null, postalCode: null, city: null, country: null, dayPrice: snapshot },
   };
 }
 
