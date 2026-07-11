@@ -7,7 +7,7 @@ export const projectInclude = {
     orderBy: { startDate: "asc" },
     include: {
       materials: {
-        include: { stockItem: { include: { material: true } } },
+        include: { stockItem: { include: { material: { include: { categoryRel: true } } } } },
         orderBy: { id: "asc" },
       },
       people: {

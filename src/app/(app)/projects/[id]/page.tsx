@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -66,6 +67,12 @@ export default function ProjectDetailPage() {
         <Button variant="ghost" className="text-muted-foreground -ml-2" onClick={() => router.push("/projects")}>
           ← Terug
         </Button>
+
+        <div className="flex flex-wrap gap-2 justify-end no-print">
+          <Link href={`/projects/${project.id}/pakbon`}>
+            <Button variant="outline" size="sm">Pakbon afdrukken</Button>
+          </Link>
+        </div>
 
         <Card>
           <CardContent className="pt-6">
