@@ -3,13 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
 import { nextCode } from "@/lib/material-code";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
   if (!user) return unauthorized();
 
   try {
+    const code = new URL(req.url).searchParams.get("code");
     const materials = await prisma.material.findMany({
       orderBy: { name: "asc" },
+      where: code ? { code } : undefined,
       include: { _count: { select: { stockItems: true } }, categoryRel: true },
     });
     return NextResponse.json(

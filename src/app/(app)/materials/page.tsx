@@ -7,6 +7,7 @@ import { MaterialForm } from "@/components/material-form";
 import { MaterialDetailPane } from "@/components/material-detail-pane";
 import { MaterialsTreePane, type MaterialSort } from "@/components/materials-tree-pane";
 import { StockItemsSheet } from "@/components/stock-items-sheet";
+import { CameraScanner } from "@/components/camera-scanner";
 import { useMaterials } from "@/hooks/use-materials";
 import type { Material } from "@/types";
 
@@ -21,6 +22,7 @@ export default function MaterialsPage() {
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
 
   useEffect(() => {
     const paramId = searchParams.get("materialId");
@@ -76,7 +78,10 @@ export default function MaterialsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Materialen</h2>
-        <Button onClick={() => setFormOpen(true)}>+ Nieuw materiaal</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setScanOpen(true)}>📷 Scan</Button>
+          <Button onClick={() => setFormOpen(true)}>+ Nieuw materiaal</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] gap-4">
@@ -113,6 +118,8 @@ export default function MaterialsPage() {
         onOpenChange={setSheetOpen}
         onMaterialDeleted={() => setSelectedMaterialId(null)}
       />
+
+      <CameraScanner open={scanOpen} onOpenChange={setScanOpen} />
     </div>
   );
 }
