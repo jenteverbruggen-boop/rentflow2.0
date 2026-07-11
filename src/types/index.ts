@@ -5,11 +5,14 @@ export type ProjectStatus =
   | "afgerond"
   | "geannuleerd";
 
+export type Role = "ADMIN" | "PLANNER" | "VIEWER";
+
 export interface User {
   id: number;
   email: string;
   name: string;
   role: string;
+  personId: number | null;
   createdAt: string;
 }
 
@@ -74,6 +77,7 @@ export interface Material {
   category: string | null;
   categoryId: number | null;
   categoryRel?: Category | null;
+  code: string | null;
   notes: string | null;
   dayPrice: number;
   stockItems?: StockItem[];

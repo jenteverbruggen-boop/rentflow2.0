@@ -78,6 +78,12 @@ function parseCsv(content: string): CsvRecord[] {
   return rows;
 }
 
+function extractCodeFromNotes(notes: string | null): string | null {
+  if (!notes) return null;
+  const match = notes.match(/\b(\d{3,4}-\d{3})\b/);
+  return match?.[1] ?? null;
+}
+
 function categoryFromCode(code: string): string | null {
   const prefix = code.slice(0, 2);
   const categoryByPrefix: Record<string, string> = {
@@ -270,8 +276,8 @@ async function main() {
 
   await prisma.user.createMany({
     data: [
-      { email: "admin@rentflow.dev", password: await bcrypt.hash("admin123", 10), name: "Admin", role: "admin" },
-      { email: "jan@rentflow.dev", password: await bcrypt.hash("user123", 10), name: "Jan Peeters", role: "user" },
+      { email: "admin@rentflow.dev", password: await bcrypt.hash("admin123", 10), name: "Admin", role: "ADMIN" },
+      { email: "jan@rentflow.dev", password: await bcrypt.hash("user123", 10), name: "Jan Peeters", role: "PLANNER" },
     ],
   });
 
@@ -343,6 +349,8 @@ async function main() {
   }
 
   const materials: Record<string, { id: number; dayPrice: number; stockItemIds: number[] }> = {};
+  const usedCodes = new Set<string>();
+
   for (const def of materialDefs) {
     // Resolve categoryId from composite category string
     let categoryId: number | undefined;
@@ -350,8 +358,12 @@ async function main() {
       const catName = def.category.includes(" - ") ? def.category.split(" - ")[0].trim() : def.category;
       categoryId = categoryMap[catName]?.id;
     }
+    // Extract code from notes, deduplicate
+    let code = extractCodeFromNotes(def.notes);
+    if (code && usedCodes.has(code)) code = null;
+    if (code) usedCodes.add(code);
     const material = await prisma.material.create({
-      data: { name: def.name, category: def.category, categoryId, dayPrice: def.dayPrice, notes: def.notes },
+      data: { name: def.name, category: def.category, categoryId, code, dayPrice: def.dayPrice, notes: def.notes },
     });
     const stockItemIds: number[] = [];
     for (let n = 0; n < def.stockItems.length; n++) {

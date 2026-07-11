@@ -12,8 +12,10 @@ model User {
   email     String   @unique
   password  String
   name      String
-  role      String   @default("user")
+  role      String   @default("PLANNER")
+  personId  Int?     @unique
   createdAt DateTime @default(now())
+  person    Person?  @relation(fields: [personId], references: [id])
 }
 
 model Client {
@@ -135,6 +137,7 @@ model Person {
   periods       PeriodPerson[]
   projectPrices ProjectPersonPrice[]
   functions     PersonFunction[]
+  userAccount   User?
 }
 
 model Material {
@@ -142,6 +145,7 @@ model Material {
   name          String
   category      String?
   categoryId    Int?
+  code          String?                @unique
   notes         String?
   dayPrice      Float                  @default(0)
   categoryRel   Category?              @relation(fields: [categoryId], references: [id])
