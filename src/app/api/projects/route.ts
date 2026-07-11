@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
+import { requireAuth, requireRole, unauthorized, forbidden, badRequest, serverError } from "@/lib/api-auth";
 import { projectInclude } from "@/lib/project-include";
 
 export async function GET() {
@@ -19,8 +19,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const auth = await requireRole("ADMIN", "PLANNER").catch(() => null);
+  if (!auth) return forbidden();
 
   try {
     const { name, client, clientId, location, locationId, startDate, endDate, status, notes } = await req.json();

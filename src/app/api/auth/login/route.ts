@@ -15,9 +15,9 @@ export async function POST(req: NextRequest) {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return NextResponse.json({ error: "Ongeldig email of wachtwoord" }, { status: 401 });
 
-    const token = signToken({ id: user.id, email: user.email, name: user.name });
+    const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
 
-    const response = NextResponse.json({ user: { id: user.id, email: user.email, name: user.name } });
+    const response = NextResponse.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
     response.cookies.set("rentflow_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

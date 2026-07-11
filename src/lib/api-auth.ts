@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { verifyToken, type TokenPayload } from "./auth";
+import { prisma } from "./prisma";
 
 export async function requireAuth(): Promise<TokenPayload> {
   const cookieStore = await cookies();
@@ -9,8 +10,23 @@ export async function requireAuth(): Promise<TokenPayload> {
   return verifyToken(token);
 }
 
+export async function requireRole(...roles: string[]): Promise<TokenPayload> {
+  const payload = await requireAuth();
+  let role = payload.role;
+  if (!role) {
+    const user = await prisma.user.findUnique({ where: { id: payload.id }, select: { role: true } });
+    role = user?.role;
+  }
+  if (!role || !roles.includes(role)) throw new Error("Forbidden");
+  return { ...payload, role };
+}
+
 export function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+export function forbidden() {
+  return NextResponse.json({ error: "Verboden — onvoldoende rechten" }, { status: 403 });
 }
 
 export function badRequest(message: string) {

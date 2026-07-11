@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, unauthorized, serverError } from "@/lib/api-auth";
+import { requireAuth, requireRole, unauthorized, forbidden, serverError } from "@/lib/api-auth";
 import { getSettings, setSettings } from "@/lib/settings";
 
 export async function GET() {
@@ -14,8 +14,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const auth = await requireRole("ADMIN").catch(() => null);
+  if (!auth) return forbidden();
   try {
     const body = await req.json();
     await setSettings(body);

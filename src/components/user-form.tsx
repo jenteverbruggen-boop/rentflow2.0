@@ -33,8 +33,9 @@ function RoleSelect({ value, onChange }: { value: string; onChange: (v: string) 
     <Select onValueChange={onChange} value={value}>
       <SelectTrigger><SelectValue /></SelectTrigger>
       <SelectContent>
-        <SelectItem value="user">User</SelectItem>
-        <SelectItem value="admin">Admin</SelectItem>
+        <SelectItem value="VIEWER">Viewer</SelectItem>
+        <SelectItem value="PLANNER">Planner</SelectItem>
+        <SelectItem value="ADMIN">Admin</SelectItem>
       </SelectContent>
     </Select>
   );
@@ -48,18 +49,18 @@ type Props = CreateProps | EditProps;
 export function UserForm(props: Props) {
   const createForm = useForm<CreateUserValues>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: "", email: "", password: "", role: "user" },
+    defaultValues: { name: "", email: "", password: "", role: "PLANNER" },
   });
   const editForm = useForm<EditUserValues>({
     resolver: zodResolver(editSchema),
-    defaultValues: { role: "user", password: "" },
+    defaultValues: { role: "PLANNER", password: "" },
   });
 
   useEffect(() => {
     if (props.mode === "edit") {
       editForm.reset({ role: props.defaultValues.role, password: "" });
     } else {
-      createForm.reset({ name: "", email: "", password: "", role: "user" });
+      createForm.reset({ name: "", email: "", password: "", role: "PLANNER" });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.open]);

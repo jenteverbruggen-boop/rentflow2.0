@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, badRequest, conflict, serverError } from "@/lib/api-auth";
+import { requireRole, unauthorized, badRequest, conflict, serverError, forbidden } from "@/lib/api-auth";
 
 const USER_SELECT = {
   id: true,
   email: true,
   name: true,
   role: true,
+  personId: true,
   createdAt: true,
 } as const;
 
 export async function GET() {
-  const auth = await requireAuth().catch(() => null);
+  const auth = await requireRole("ADMIN", "PLANNER", "VIEWER").catch(() => null);
   if (!auth) return unauthorized();
 
   try {
@@ -27,8 +28,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAuth().catch(() => null);
-  if (!auth) return unauthorized();
+  const auth = await requireRole("ADMIN").catch(() => null);
+  if (!auth) return forbidden();
 
   try {
     const { email, name, password, role } = await req.json();
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const hashed = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, name, password: hashed, role: role ?? "user" },
+      data: { email, name, password: hashed, role: role ?? "PLANNER" },
       select: USER_SELECT,
     });
     return NextResponse.json(user);
