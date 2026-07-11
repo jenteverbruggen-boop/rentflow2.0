@@ -26,6 +26,12 @@ jobs:
       - name: TypeScript type check
         run: npx tsc --noEmit
 
+      - name: Run tests
+        run: npm test
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          JWT_SECRET: ci-placeholder-secret
+
       - name: Build
         run: npm run build
         env:

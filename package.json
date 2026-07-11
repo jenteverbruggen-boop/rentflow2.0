@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "db:dev:generate": "prisma generate --schema=prisma/schema.dev.prisma",
     "db:dev:migrate": "prisma db push --schema=prisma/schema.dev.prisma",
     "db:dev:reset": "prisma db push --force-reset --schema=prisma/schema.dev.prisma && npm run db:dev:seed",
@@ -56,11 +57,13 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19",
+    "@vitest/ui": "^4.1.10",
     "eslint": "^9",
     "eslint-config-next": "^16.2.9",
     "prisma": "7.8.0",
     "tailwindcss": "^4.3.1",
     "tsx": "^4.22.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }
