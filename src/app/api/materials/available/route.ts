@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
-import { findAvailableStockItems } from "@/lib/availability";
+import { findAvailableStockItems, bundleAvailableCount } from "@/lib/availability";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
@@ -27,12 +27,27 @@ export async function GET(req: NextRequest) {
 
     const results = await Promise.all(
       materials.map(async (m) => {
-        const { available } = await findAvailableStockItems(m.id, {
+        const rangeArgs = {
           from: new Date(from),
           to: new Date(to),
           excludePeriodId: excludePeriodId ? parseInt(excludePeriodId) : undefined,
-        });
-        const basePrice = Number(m.dayPrice);
+        };
+
+        let availableCount: number;
+        let availableStockItemIds: number[];
+
+        if (m.isBundle) {
+          availableCount = await bundleAvailableCount(m.id, rangeArgs);
+          availableStockItemIds = [];
+        } else {
+          const { available } = await findAvailableStockItems(m.id, rangeArgs);
+          availableCount = available.length;
+          availableStockItemIds = available.map((a) => a.id);
+        }
+
+        const basePrice = m.isBundle
+          ? (m.bundlePriceOverride != null ? Number(m.bundlePriceOverride) : Number(m.dayPrice))
+          : Number(m.dayPrice);
         const effectivePrice = overrideMap.get(m.id) ?? basePrice;
         return {
           material: {
@@ -43,10 +58,12 @@ export async function GET(req: NextRequest) {
             dayPrice: effectivePrice,
             basePrice,
             hasOverride: overrideMap.has(m.id),
+            isBundle: m.isBundle,
+            code: m.code,
           },
           totalStock: m._count.stockItems,
-          availableCount: available.length,
-          availableStockItemIds: available.map((a) => a.id),
+          availableCount,
+          availableStockItemIds,
         };
       })
     );

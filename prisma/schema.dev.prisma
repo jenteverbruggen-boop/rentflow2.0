@@ -113,14 +113,15 @@ model ProjectPersonPrice {
 }
 
 model Period {
-  id        Int                 @id @default(autoincrement())
-  projectId Int
-  name      String
-  startDate DateTime
-  endDate   DateTime
-  project   Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  materials PeriodStockItem[]
-  people    PeriodPerson[]
+  id             Int                   @id @default(autoincrement())
+  projectId      Int
+  name           String
+  startDate      DateTime
+  endDate        DateTime
+  project        Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  materials      PeriodStockItem[]
+  people         PeriodPerson[]
+  bundleBookings PeriodBundleBooking[]
 }
 
 model Person {
@@ -142,16 +143,21 @@ model Person {
 }
 
 model Material {
-  id            Int                    @id @default(autoincrement())
-  name          String
-  category      String?
-  categoryId    Int?
-  code          String?                @unique
-  notes         String?
-  dayPrice      Float                  @default(0)
-  categoryRel   Category?              @relation(fields: [categoryId], references: [id])
-  stockItems    StockItem[]
-  projectPrices ProjectMaterialPrice[]
+  id                  Int                    @id @default(autoincrement())
+  name                String
+  category            String?
+  categoryId          Int?
+  code                String?                @unique
+  notes               String?
+  dayPrice            Float                  @default(0)
+  isBundle            Boolean                @default(false)
+  bundlePriceOverride Float?
+  categoryRel         Category?              @relation(fields: [categoryId], references: [id])
+  stockItems          StockItem[]
+  projectPrices       ProjectMaterialPrice[]
+  components          MaterialComponent[]    @relation("BundleParent")
+  usedInBundles       MaterialComponent[]    @relation("BundleChild")
+  bundleBookings      PeriodBundleBooking[]
 }
 
 model StockItem {
@@ -180,16 +186,40 @@ model PersonDocument {
 }
 
 model PeriodStockItem {
-  id               Int       @id @default(autoincrement())
+  id               Int                  @id @default(autoincrement())
   periodId         Int
   stockItemId      Int
   dayPriceSnapshot Float
   discountPct      Float?
   discountAmount   Float?
-  period           Period    @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  stockItem        StockItem @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+  bundleBookingId  Int?
+  period           Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  stockItem        StockItem            @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+  bundleBooking    PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
 
   @@unique([periodId, stockItemId])
+}
+
+model MaterialComponent {
+  id       Int      @id @default(autoincrement())
+  parentId Int
+  childId  Int
+  quantity Int      @default(1)
+  parent   Material @relation("BundleParent", fields: [parentId], references: [id], onDelete: Cascade)
+  child    Material @relation("BundleChild", fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, childId])
+}
+
+model PeriodBundleBooking {
+  id               Int             @id @default(autoincrement())
+  periodId         Int
+  materialId       Int
+  quantity         Int             @default(1)
+  dayPriceSnapshot Float
+  period           Period          @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  material         Material        @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  stockItems       PeriodStockItem[]
 }
 
 model PeriodPerson {

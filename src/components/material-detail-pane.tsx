@@ -8,6 +8,7 @@ import { formatEUR } from "@/lib/pricing";
 import { InlineEditField } from "@/components/inline-edit-field";
 import { MaterialStockList } from "@/components/material-stock-list";
 import { MaterialCodes } from "@/components/material-codes";
+import { BundleComponentEditor } from "@/components/bundle-component-editor";
 import type { Material, StockItem } from "@/types";
 
 interface MaterialDetailPaneProps {
@@ -40,9 +41,11 @@ export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPa
     );
   }
 
-  async function saveField(field: "dayPrice" | "category" | "code" | "notes", rawValue: string) {
+  async function saveField(field: "dayPrice" | "category" | "code" | "notes" | "isBundle", rawValue: string) {
     if (!material) return;
-    const value = field === "dayPrice" ? Number(rawValue) : rawValue || null;
+    const value = field === "dayPrice" ? Number(rawValue)
+      : field === "isBundle" ? rawValue === "true"
+      : rawValue || null;
     const res = await fetch(`/api/materials/${material.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -53,6 +56,7 @@ export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPa
         code: material.code,
         notes: material.notes,
         dayPrice: material.dayPrice,
+        isBundle: material.isBundle,
         [field]: value,
       }),
     });
@@ -68,8 +72,20 @@ export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPa
     <Card className="h-full">
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between gap-4">
-          <CardTitle>{material.name}</CardTitle>
-          <Button size="sm" variant="outline" onClick={onManageUnits}>Beheer units</Button>
+          <div>
+            <CardTitle>{material.name}</CardTitle>
+            {material.isBundle && <span className="text-xs text-muted-foreground">Bundel / set</span>}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={material.isBundle ? "default" : "outline"}
+              onClick={() => saveField("isBundle", String(!material.isBundle))}
+            >
+              {material.isBundle ? "🎁 Set" : "Markeer als set"}
+            </Button>
+            {!material.isBundle && <Button size="sm" variant="outline" onClick={onManageUnits}>Beheer units</Button>}
+          </div>
         </div>
       </CardHeader>
 
@@ -113,10 +129,14 @@ export function MaterialDetailPane({ material, onManageUnits }: MaterialDetailPa
 
         <Separator />
 
-        <div className="space-y-2">
-          <p className="text-sm font-semibold">Per item</p>
-          <MaterialStockList stockItems={stockItems} />
-        </div>
+        {material.isBundle ? (
+          <BundleComponentEditor material={material} />
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm font-semibold">Per item</p>
+            <MaterialStockList stockItems={stockItems} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

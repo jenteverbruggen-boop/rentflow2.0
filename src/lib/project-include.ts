@@ -14,6 +14,12 @@ export const projectInclude = {
         include: { person: true },
         orderBy: { id: "asc" },
       },
+      bundleBookings: {
+        include: {
+          material: { include: { components: { include: { child: true } } } },
+        },
+        orderBy: { id: "asc" },
+      },
     },
   },
   materialPrices: { include: { material: true } },

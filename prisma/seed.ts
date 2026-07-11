@@ -260,9 +260,11 @@ function importMaterialsFromCsv(): ImportedMaterial[] {
 
 async function main() {
   await prisma.periodStockItem.deleteMany();
+  await prisma.periodBundleBooking.deleteMany();
   await prisma.periodPerson.deleteMany();
   await prisma.period.deleteMany();
   await prisma.stockItem.deleteMany();
+  await prisma.materialComponent.deleteMany();
   await prisma.project.deleteMany();
   await prisma.personFunction.deleteMany();
   await prisma.person.deleteMany();
@@ -526,6 +528,32 @@ async function main() {
   await bookMaterial(beachP.id, ["Tent 4x8", "Tent 5x10", "Tent 10x40"], 1);
   await bookMaterial(beachP.id, ["Horeca Frigo"], 1);
   await bookMaterial(beachP.id, ["Tap instalatie", "Tap met spoelbak"], 1);
+
+  // Demo bundle: "Catering Tafelset" = Cava glazen (2 stuks) + Borden 32 (1 stuk)
+  const cavaGlass = Object.values(materials).find(
+    (m) => materialDefs.find((d) => d.name === m.id.toString())
+  );
+  const glassMat = Object.entries(materials).find(([name]) => name.startsWith("Cava"));
+  const bordMat = Object.entries(materials).find(([name]) => name.startsWith("Borden 32"));
+  if (glassMat && bordMat) {
+    await prisma.material.create({
+      data: {
+        name: "Catering Tafelset (Demo)",
+        category: "Catering",
+        categoryId: categoryMap["Catering"]?.id,
+        isBundle: true,
+        dayPrice: 0,
+        code: "DEMO-SET",
+        notes: "Demo bundle: Cava glazen + Borden",
+        components: {
+          create: [
+            { childId: glassMat[1].id, quantity: 2 },
+            { childId: bordMat[1].id, quantity: 1 },
+          ],
+        },
+      },
+    });
+  }
 
   console.log("Seed complete.");
   console.log(`  Materials with non-zero day price: ${pricedMaterialCount}/${materialDefs.length}`);

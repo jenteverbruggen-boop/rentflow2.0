@@ -34,6 +34,40 @@ export async function findAvailableStockItems(
   return { available, bookedElsewhere: Array.from(bookedIds) };
 }
 
+export async function bundleAvailableCount(
+  bundleMaterialId: number,
+  args: RangeArgs
+): Promise<number> {
+  const components = await prisma.materialComponent.findMany({
+    where: { parentId: bundleMaterialId },
+    include: { child: { include: { stockItems: { select: { id: true } } } } },
+  });
+  if (components.length === 0) return 0;
+
+  let min = Infinity;
+  for (const comp of components) {
+    const allIds = comp.child.stockItems.map((s) => s.id);
+    const booked = await prisma.periodStockItem.findMany({
+      where: {
+        stockItemId: { in: allIds },
+        ...(args.excludePeriodId != null ? { NOT: { periodId: args.excludePeriodId } } : {}),
+        period: {
+          AND: [
+            { startDate: { lt: args.to } },
+            { endDate: { gt: args.from } },
+          ],
+        },
+      },
+      select: { stockItemId: true },
+    });
+    const bookedSet = new Set(booked.map((b) => b.stockItemId));
+    const availCount = allIds.filter((id) => !bookedSet.has(id)).length;
+    const setsFromThis = Math.floor(availCount / comp.quantity);
+    if (setsFromThis < min) min = setsFromThis;
+  }
+  return min === Infinity ? 0 : min;
+}
+
 export async function checkPersonAvailability(
   personId: number,
   args: RangeArgs & { sameProjectId?: number }

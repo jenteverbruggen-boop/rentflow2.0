@@ -71,6 +71,23 @@ export interface Person {
   functions?: Function[];
 }
 
+export interface MaterialComponent {
+  id: number;
+  parentId: number;
+  childId: number;
+  quantity: number;
+  child?: Material;
+}
+
+export interface PeriodBundleBooking {
+  id: number;
+  periodId: number;
+  materialId: number;
+  quantity: number;
+  dayPriceSnapshot: number;
+  material?: Material & { components?: MaterialComponent[] };
+}
+
 export interface Material {
   id: number;
   name: string;
@@ -80,6 +97,9 @@ export interface Material {
   code: string | null;
   notes: string | null;
   dayPrice: number;
+  isBundle: boolean;
+  bundlePriceOverride: number | null;
+  components?: MaterialComponent[];
   stockItems?: StockItem[];
   totalStock?: number;
 }
@@ -132,6 +152,7 @@ export interface PeriodStockItem {
   dayPriceSnapshot: number;
   discountPct: number | null;
   discountAmount: number | null;
+  bundleBookingId: number | null;
   stockItem: StockItem & { material: Material };
 }
 
@@ -154,6 +175,7 @@ export interface Period {
   endDate: string;
   materials: PeriodStockItem[];
   people: PeriodPerson[];
+  bundleBookings?: PeriodBundleBooking[];
 }
 
 export interface ProjectMaterialPrice {
@@ -192,7 +214,7 @@ export interface Project {
 }
 
 export interface MaterialAvailability {
-  material: Material & { basePrice: number; hasOverride: boolean };
+  material: Material & { basePrice: number; hasOverride: boolean; isBundle?: boolean };
   totalStock: number;
   availableCount: number;
   availableStockItemIds: number[];

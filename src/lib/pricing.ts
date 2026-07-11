@@ -48,7 +48,12 @@ export function periodPeopleCost(period: Period): number {
 
 export function periodMaterialsCost(period: Period): number {
   const days = periodDays(period);
-  return Math.round(period.materials.reduce((acc, l) => acc + materialLineCost(l, days), 0) * 100) / 100;
+  const flat = period.materials
+    .filter((l) => !l.bundleBookingId)
+    .reduce((acc, l) => acc + materialLineCost(l, days), 0);
+  const bundles = (period.bundleBookings ?? [])
+    .reduce((acc, b) => acc + b.dayPriceSnapshot * days * b.quantity, 0);
+  return Math.round((flat + bundles) * 100) / 100;
 }
 
 export function projectCostSummary(periods: Period[]): { people: number; materials: number; total: number } {
@@ -59,9 +64,10 @@ export function projectCostSummary(periods: Period[]): { people: number; materia
 
 export function periodTotal(period: Period): number {
   const days = periodDays(period);
-  const mats = period.materials.reduce((acc, l) => acc + materialLineCost(l, days), 0);
+  const flat = period.materials.filter((l) => !l.bundleBookingId).reduce((acc, l) => acc + materialLineCost(l, days), 0);
+  const bundles = (period.bundleBookings ?? []).reduce((acc, b) => acc + b.dayPriceSnapshot * days * b.quantity, 0);
   const pers = period.people.reduce((acc, l) => acc + personLineCost(l, days), 0);
-  return Math.round((mats + pers) * 100) / 100;
+  return Math.round((flat + bundles + pers) * 100) / 100;
 }
 
 export function projectTotal(periods: Period[]): number {

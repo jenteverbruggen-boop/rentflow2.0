@@ -11,7 +11,7 @@ import {
 } from "@/lib/pricing";
 import type { Period, PeriodStockItem, PeriodPerson } from "@/types";
 
-function makeStockItem(snapshot: number, opts?: { discountPct?: number; discountAmount?: number }): PeriodStockItem {
+function makeStockItem(snapshot: number, opts?: { discountPct?: number; discountAmount?: number; bundleBookingId?: number }): PeriodStockItem {
   return {
     id: 1,
     periodId: 1,
@@ -19,7 +19,8 @@ function makeStockItem(snapshot: number, opts?: { discountPct?: number; discount
     dayPriceSnapshot: snapshot,
     discountPct: opts?.discountPct ?? null,
     discountAmount: opts?.discountAmount ?? null,
-    stockItem: { id: 1, materialId: 1, unitNumber: 1, identifier: null, notes: null, material: { id: 1, name: "Test", category: null, categoryId: null, code: null, notes: null, dayPrice: snapshot } },
+    bundleBookingId: opts?.bundleBookingId ?? null,
+    stockItem: { id: 1, materialId: 1, unitNumber: 1, identifier: null, notes: null, material: { id: 1, name: "Test", category: null, categoryId: null, code: null, notes: null, dayPrice: snapshot, isBundle: false, bundlePriceOverride: null } },
   };
 }
 
@@ -32,8 +33,7 @@ function makePerson(snapshot: number, opts?: { discountPct?: number; discountAmo
     dayPriceSnapshot: snapshot,
     discountPct: opts?.discountPct ?? null,
     discountAmount: opts?.discountAmount ?? null,
-    person: { id: 1, name: "Test", role: null, email: null, phone: null, address: null, postalCode: null, city: null, country: null, dayPrice: snapshot },
-  };
+    person: { id: 1, name: "Test", role: null, email: null, phone: null, address: null, postalCode: null, city: null, country: null, dayPrice: snapshot },  };
 }
 
 function makePeriod(start: string, end: string, materials: PeriodStockItem[] = [], people: PeriodPerson[] = []): Period {
@@ -95,6 +95,17 @@ describe("periodTotal", () => {
   it("sums materials and people", () => {
     const period = makePeriod("2026-05-01", "2026-05-02", [makeStockItem(100)], [makePerson(200)]);
     expect(periodTotal(period)).toBe(600);
+  });
+
+  it("bundle booking counted separately, component PeriodStockItem (bundleBookingId set) excluded", () => {
+    const flatItem = makeStockItem(100);
+    const bundleItem: typeof flatItem = { ...makeStockItem(0), bundleBookingId: 99 };
+    const bundleBooking = { id: 99, periodId: 1, materialId: 1, quantity: 1, dayPriceSnapshot: 50 };
+    const period = {
+      ...makePeriod("2026-05-01", "2026-05-01", [flatItem, bundleItem], []),
+      bundleBookings: [bundleBooking],
+    };
+    expect(periodTotal(period)).toBe(150);
   });
 });
 

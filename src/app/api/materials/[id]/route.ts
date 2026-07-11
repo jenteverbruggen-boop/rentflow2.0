@@ -26,12 +26,17 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   try {
     const { id } = await params;
-    const { name, category, categoryId, code, dayPrice, notes } = await req.json();
+    const { name, category, categoryId, code, dayPrice, notes, isBundle, bundlePriceOverride } = await req.json();
     if (!name) return badRequest("naam is verplicht");
     try {
       const material = await prisma.material.update({
         where: { id: parseInt(id) },
-        data: { name, category, categoryId: categoryId ?? null, code: code ?? null, notes, dayPrice: Number(dayPrice) || 0 },
+        data: {
+          name, category, categoryId: categoryId ?? null, code: code ?? null, notes,
+          dayPrice: Number(dayPrice) || 0,
+          isBundle: Boolean(isBundle),
+          bundlePriceOverride: bundlePriceOverride != null ? Number(bundlePriceOverride) : null,
+        },
         include: { categoryRel: true },
       });
       return NextResponse.json(material);
