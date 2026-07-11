@@ -100,7 +100,7 @@ export default function PeoplePage() {
         open={open}
         onOpenChange={setOpen}
         defaultValues={editing}
-        onSubmit={(values) => upsert.mutate(values as Omit<Person, "id">)}
+        onSubmit={(values) => upsert.mutate(values as unknown as Omit<Person, "id">)}
         isPending={upsert.isPending}
       />
     </div>
