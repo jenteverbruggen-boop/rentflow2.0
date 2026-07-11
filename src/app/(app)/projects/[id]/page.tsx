@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,7 +14,7 @@ import { ProjectPeriodsTab } from "@/components/project-periods-tab";
 import { ProjectPersonsTab } from "@/components/project-persons-tab";
 import { ProjectMaterialsTab } from "@/components/project-materials-tab";
 import { ProjectCostsTab } from "@/components/project-costs-tab";
-import { statusVariant } from "@/lib/utils";
+import { StatusSelect } from "@/components/status-select";
 import { formatEUR, projectTotal } from "@/lib/pricing";
 import type { Project } from "@/types";
 
@@ -86,7 +85,7 @@ export default function ProjectDetailPage() {
                   <p className="text-xs text-muted-foreground">Totaal</p>
                   <p className="text-xl font-semibold tabular-nums">{formatEUR(total)}</p>
                 </div>
-                <Badge className={statusVariant(project.status)}>{project.status}</Badge>
+                <StatusSelect project={project} />
               </div>
             </div>
           </CardContent>
