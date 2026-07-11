@@ -138,6 +138,7 @@ model Person {
   projectPrices ProjectPersonPrice[]
   functions     PersonFunction[]
   userAccount   User?
+  documents     PersonDocument[]
 }
 
 model Material {
@@ -163,6 +164,19 @@ model StockItem {
   assignments PeriodStockItem[]
 
   @@unique([materialId, unitNumber])
+}
+
+model PersonDocument {
+  id        Int       @id @default(autoincrement())
+  personId  Int
+  filename  String
+  label     String?
+  mimeType  String
+  sizeBytes Int
+  data      Bytes
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
 }
 
 model PeriodStockItem {

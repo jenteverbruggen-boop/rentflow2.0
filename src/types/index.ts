@@ -84,6 +84,17 @@ export interface Material {
   totalStock?: number;
 }
 
+export interface PersonDocument {
+  id: number;
+  personId: number;
+  filename: string;
+  label: string | null;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+  expiresAt: string | null;
+}
+
 export interface StockItem {
   id: number;
   materialId: number;
