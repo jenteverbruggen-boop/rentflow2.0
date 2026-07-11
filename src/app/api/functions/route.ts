@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
+import {
+  requireAuth,
+  unauthorized,
+  badRequest,
+  serverError,
+} from "@/lib/api-auth";
 
 const schema = z.object({ name: z.string().min(1, "Naam is verplicht") });
 
@@ -9,7 +14,9 @@ export async function GET() {
   const user = await requireAuth().catch(() => null);
   if (!user) return unauthorized();
   try {
-    const functions = await prisma.function.findMany({ orderBy: { name: "asc" } });
+    const functions = await prisma.function.findMany({
+      orderBy: { name: "asc" },
+    });
     return NextResponse.json(functions);
   } catch (err) {
     return serverError((err as Error).message);

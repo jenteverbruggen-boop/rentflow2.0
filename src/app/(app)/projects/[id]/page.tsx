@@ -16,6 +16,7 @@ import { ProjectPersonsTab } from "@/components/project-persons-tab";
 import { ProjectMaterialsTab } from "@/components/project-materials-tab";
 import { ProjectCostsTab } from "@/components/project-costs-tab";
 import { StatusSelect } from "@/components/status-select";
+import { ProjectEditButton } from "@/components/project-edit-button";
 import { formatEUR, projectTotal } from "@/lib/pricing";
 import type { Project } from "@/types";
 
@@ -52,7 +53,8 @@ export default function ProjectDetailPage() {
   }, [project, selectedPeriodId]);
 
   if (isLoading) return <p className="text-muted-foreground">Laden...</p>;
-  if (!project) return <p className="text-muted-foreground">Project niet gevonden</p>;
+  if (!project)
+    return <p className="text-muted-foreground">Project niet gevonden</p>;
 
   const total = projectTotal(project.periods);
 
@@ -64,16 +66,25 @@ export default function ProjectDetailPage() {
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        <Button variant="ghost" className="text-muted-foreground -ml-2" onClick={() => router.push("/projects")}>
+        <Button
+          variant="ghost"
+          className="text-muted-foreground -ml-2"
+          onClick={() => router.push("/projects")}
+        >
           ← Terug
         </Button>
 
         <div className="flex flex-wrap gap-2 justify-end no-print">
+          <ProjectEditButton project={project} />
           <Link href={`/projects/${project.id}/pakbon`}>
-            <Button variant="outline" size="sm">Pakbon afdrukken</Button>
+            <Button variant="outline" size="sm">
+              Pakbon afdrukken
+            </Button>
           </Link>
           <Link href={`/projects/${project.id}/callsheet`}>
-            <Button variant="outline" size="sm">Callsheet afdrukken</Button>
+            <Button variant="outline" size="sm">
+              Callsheet afdrukken
+            </Button>
           </Link>
         </div>
 
@@ -83,17 +94,26 @@ export default function ProjectDetailPage() {
               <div className="min-w-0">
                 <h2 className="text-2xl font-bold">{project.name}</h2>
                 <p className="text-muted-foreground text-sm mt-0.5">
-                  {[project.client, project.location].filter(Boolean).join(" · ")}
+                  {[project.client, project.location]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
                 <p className="text-muted-foreground text-sm">
-                  {format(new Date(project.startDate), "d MMM yyyy", { locale: nl })} –{" "}
-                  {format(new Date(project.endDate), "d MMM yyyy", { locale: nl })}
+                  {format(new Date(project.startDate), "d MMM yyyy", {
+                    locale: nl,
+                  })}{" "}
+                  –{" "}
+                  {format(new Date(project.endDate), "d MMM yyyy", {
+                    locale: nl,
+                  })}
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <div>
                   <p className="text-xs text-muted-foreground">Totaal</p>
-                  <p className="text-xl font-semibold tabular-nums">{formatEUR(total)}</p>
+                  <p className="text-xl font-semibold tabular-nums">
+                    {formatEUR(total)}
+                  </p>
                 </div>
                 <StatusSelect project={project} />
               </div>
@@ -112,16 +132,31 @@ export default function ProjectDetailPage() {
             </TabsList>
           </div>
           <TabsContent value="overview" className="mt-4">
-            <ProjectOverviewTab project={project} onJumpToPeriod={jumpToPeriod} />
+            <ProjectOverviewTab
+              project={project}
+              onJumpToPeriod={jumpToPeriod}
+            />
           </TabsContent>
           <TabsContent value="periods" className="mt-4">
-            <ProjectPeriodsTab project={project} selectedPeriodId={selectedPeriodId} onSelectPeriod={setSelectedPeriodId} />
+            <ProjectPeriodsTab
+              project={project}
+              selectedPeriodId={selectedPeriodId}
+              onSelectPeriod={setSelectedPeriodId}
+            />
           </TabsContent>
           <TabsContent value="persons" className="mt-4">
-            <ProjectPersonsTab project={project} selectedPeriodId={selectedPeriodId} onSelectPeriod={setSelectedPeriodId} />
+            <ProjectPersonsTab
+              project={project}
+              selectedPeriodId={selectedPeriodId}
+              onSelectPeriod={setSelectedPeriodId}
+            />
           </TabsContent>
           <TabsContent value="materials" className="mt-4">
-            <ProjectMaterialsTab project={project} selectedPeriodId={selectedPeriodId} onSelectPeriod={setSelectedPeriodId} />
+            <ProjectMaterialsTab
+              project={project}
+              selectedPeriodId={selectedPeriodId}
+              onSelectPeriod={setSelectedPeriodId}
+            />
           </TabsContent>
           <TabsContent value="costs" className="mt-4">
             <ProjectCostsTab project={project} />

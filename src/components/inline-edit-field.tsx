@@ -11,7 +11,13 @@ interface InlineEditFieldProps {
   onSave: (newValue: string) => Promise<void>;
 }
 
-export function InlineEditField({ label, value, displayValue, type = "text", onSave }: InlineEditFieldProps) {
+export function InlineEditField({
+  label,
+  value,
+  displayValue,
+  type = "text",
+  onSave,
+}: InlineEditFieldProps) {
   const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState(String(value ?? ""));
   const [error, setError] = useState<string | null>(null);
@@ -61,8 +67,22 @@ export function InlineEditField({ label, value, displayValue, type = "text", onS
             className="h-7 text-sm"
             disabled={saving}
           />
-          <button onClick={handleSave} disabled={saving} className="text-primary hover:opacity-70 text-sm px-1" title="Opslaan">✓</button>
-          <button onClick={handleCancel} disabled={saving} className="text-muted-foreground hover:opacity-70 text-sm px-1" title="Annuleren">✕</button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="text-primary hover:opacity-70 text-sm px-1"
+            title="Opslaan"
+          >
+            ✓
+          </button>
+          <button
+            onClick={handleCancel}
+            disabled={saving}
+            className="text-muted-foreground hover:opacity-70 text-sm px-1"
+            title="Annuleren"
+          >
+            ✕
+          </button>
         </div>
         {error && <p className="text-xs text-destructive mt-1">{error}</p>}
       </div>
@@ -76,7 +96,9 @@ export function InlineEditField({ label, value, displayValue, type = "text", onS
       title="Klik om te bewerken"
     >
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-medium text-sm">{displayValue ?? String(value ?? "—")}</p>
+      <p className="font-medium text-sm">
+        {displayValue ?? String(value ?? "—")}
+      </p>
     </button>
   );
 }

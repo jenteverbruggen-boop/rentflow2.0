@@ -5,7 +5,11 @@ import { nl } from "date-fns/locale";
 import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { periodDays } from "@/lib/pricing";
 import type { Period, Project } from "@/types";
@@ -27,12 +31,22 @@ function outOfRange(period: Period, project: Project): boolean {
   );
 }
 
-export function PeriodList({ periods, selectedId, onSelect, onAdd, onEdit, onDelete, project }: Props) {
+export function PeriodList({
+  periods,
+  selectedId,
+  onSelect,
+  onAdd,
+  onEdit,
+  onDelete,
+  project,
+}: Props) {
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
         <h3 className="text-sm font-semibold">Periodes</h3>
-        <Button size="sm" variant="outline" onClick={onAdd}>+ Periode</Button>
+        <Button size="sm" variant="outline" onClick={onAdd}>
+          + Periode
+        </Button>
       </div>
       {periods.length === 0 && (
         <p className="text-xs text-muted-foreground py-4">Nog geen periodes</p>
@@ -45,7 +59,7 @@ export function PeriodList({ periods, selectedId, onSelect, onAdd, onEdit, onDel
             key={p.id}
             className={cn(
               "p-3 cursor-pointer hover:border-primary transition-colors",
-              isSelected && "border-primary bg-muted/40"
+              isSelected && "border-primary bg-muted/40",
             )}
             onClick={() => onSelect(p.id)}
           >
@@ -63,8 +77,12 @@ export function PeriodList({ periods, selectedId, onSelect, onAdd, onEdit, onDel
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {format(new Date(p.startDate), "d MMM HH:mm", { locale: nl })} –{" "}
-                  {format(new Date(p.endDate), "d MMM yyyy HH:mm", { locale: nl })} · {periodDays(p)} d
+                  {format(new Date(p.startDate), "d MMM HH:mm", { locale: nl })}{" "}
+                  –{" "}
+                  {format(new Date(p.endDate), "d MMM yyyy HH:mm", {
+                    locale: nl,
+                  })}{" "}
+                  · {periodDays(p)} d
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   👥 {p.people.length} · 📦 {p.materials.length}
@@ -75,7 +93,10 @@ export function PeriodList({ periods, selectedId, onSelect, onAdd, onEdit, onDel
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={(e) => { e.stopPropagation(); onEdit(p); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(p);
+                  }}
                 >
                   <Pencil className="h-3 w-3" />
                 </Button>
@@ -83,7 +104,10 @@ export function PeriodList({ periods, selectedId, onSelect, onAdd, onEdit, onDel
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 hover:text-destructive"
-                  onClick={(e) => { e.stopPropagation(); onDelete(p); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(p);
+                  }}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>

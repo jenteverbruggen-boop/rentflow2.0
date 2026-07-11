@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireRole, unauthorized, badRequest, conflict, serverError, forbidden } from "@/lib/api-auth";
+import {
+  requireRole,
+  unauthorized,
+  badRequest,
+  conflict,
+  serverError,
+  forbidden,
+} from "@/lib/api-auth";
 
 const USER_SELECT = {
   id: true,
@@ -13,7 +20,9 @@ const USER_SELECT = {
 } as const;
 
 export async function GET() {
-  const auth = await requireRole("ADMIN", "PLANNER", "VIEWER").catch(() => null);
+  const auth = await requireRole("ADMIN", "PLANNER", "VIEWER").catch(
+    () => null,
+  );
   if (!auth) return unauthorized();
 
   try {
@@ -33,7 +42,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const { email, name, password, role } = await req.json();
-    if (!email || !name || !password) return badRequest("email, naam en wachtwoord zijn verplicht");
+    if (!email || !name || !password)
+      return badRequest("email, naam en wachtwoord zijn verplicht");
 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return conflict("Email is al in gebruik");

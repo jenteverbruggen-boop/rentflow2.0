@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, requireRole, unauthorized, forbidden, serverError } from "@/lib/api-auth";
+import {
+  requireAuth,
+  requireRole,
+  unauthorized,
+  forbidden,
+  serverError,
+} from "@/lib/api-auth";
 import { getSettings, setSettings } from "@/lib/settings";
 
 export async function GET() {

@@ -9,7 +9,8 @@ const PUBLIC_API_PREFIX = "/api/auth";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next();
+  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p)))
+    return NextResponse.next();
   if (pathname.startsWith(PUBLIC_API_PREFIX)) return NextResponse.next();
 
   const token = request.cookies.get("rentflow_token")?.value;
@@ -26,5 +27,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon-192.png|icon-512.png|api/settings/logo).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon-192.png|icon-512.png|api/settings/logo).*)",
+  ],
 };

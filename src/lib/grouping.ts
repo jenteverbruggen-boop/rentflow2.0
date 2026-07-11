@@ -40,7 +40,9 @@ function groupKey(a: PeriodStockItem): string {
   ].join("|");
 }
 
-export function groupMaterialAssignments(materials: PeriodStockItem[]): MaterialGroup[] {
+export function groupMaterialAssignments(
+  materials: PeriodStockItem[],
+): MaterialGroup[] {
   const map = new Map<string, MaterialGroup>();
   for (const a of materials) {
     const k = groupKey(a);
@@ -60,18 +62,21 @@ export function groupMaterialAssignments(materials: PeriodStockItem[]): Material
       });
     }
   }
-  return Array.from(map.values()).sort((a, b) => a.material.name.localeCompare(b.material.name));
+  return Array.from(map.values()).sort((a, b) =>
+    a.material.name.localeCompare(b.material.name),
+  );
 }
 
 export function groupMaterialAssignmentsNested(
   materials: PeriodStockItem[],
-  bundleBookings: PeriodBundleBooking[]
+  bundleBookings: PeriodBundleBooking[],
 ): NestedCategoryGroup[] {
   const flatItems = materials.filter((m) => !m.bundleBookingId);
   const bundleItemsByBookingId = new Map<number, PeriodStockItem[]>();
   for (const m of materials) {
     if (m.bundleBookingId != null) {
-      if (!bundleItemsByBookingId.has(m.bundleBookingId)) bundleItemsByBookingId.set(m.bundleBookingId, []);
+      if (!bundleItemsByBookingId.has(m.bundleBookingId))
+        bundleItemsByBookingId.set(m.bundleBookingId, []);
       bundleItemsByBookingId.get(m.bundleBookingId)!.push(m);
     }
   }
@@ -79,12 +84,15 @@ export function groupMaterialAssignmentsNested(
   const allGroups = groupMaterialAssignments(flatItems);
   const bundleLines: BundleLine[] = bundleBookings.map((b) => ({
     booking: b,
-    componentGroups: groupMaterialAssignments(bundleItemsByBookingId.get(b.id) ?? []),
+    componentGroups: groupMaterialAssignments(
+      bundleItemsByBookingId.get(b.id) ?? [],
+    ),
   }));
 
   const catMap = new Map<string, NestedCategoryGroup>();
   const getCat = (name: string) => {
-    if (!catMap.has(name)) catMap.set(name, { category: name, flatLines: [], bundleLines: [] });
+    if (!catMap.has(name))
+      catMap.set(name, { category: name, flatLines: [], bundleLines: [] });
     return catMap.get(name)!;
   };
 
@@ -93,7 +101,10 @@ export function groupMaterialAssignmentsNested(
     getCat(cat).flatLines.push(g);
   }
   for (const b of bundleLines) {
-    const cat = b.booking.material?.categoryRel?.name ?? b.booking.material?.category ?? "Overig";
+    const cat =
+      b.booking.material?.categoryRel?.name ??
+      b.booking.material?.category ??
+      "Overig";
     getCat(cat).bundleLines.push(b);
   }
 

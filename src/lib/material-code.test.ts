@@ -15,7 +15,9 @@ describe("nextCode", () => {
   });
 
   it("ignores malformed codes", () => {
-    expect(nextCode("04", ["0401-001", "bad-code", "898-xxx"])).toBe("0401-002");
+    expect(nextCode("04", ["0401-001", "bad-code", "898-xxx"])).toBe(
+      "0401-002",
+    );
   });
 
   it("ignores codes from other prefixes", () => {
@@ -23,7 +25,12 @@ describe("nextCode", () => {
   });
 
   it("throws when no code available", () => {
-    const full = Array.from({ length: 999 }, (_, i) => `0401-${String(i + 1).padStart(3, "0")}`);
-    expect(() => nextCode("04", full)).toThrow("Geen vrije code meer in deze categorie");
+    const full = Array.from(
+      { length: 999 },
+      (_, i) => `0401-${String(i + 1).padStart(3, "0")}`,
+    );
+    expect(() => nextCode("04", full)).toThrow(
+      "Geen vrije code meer in deze categorie",
+    );
   });
 });

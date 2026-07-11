@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireRole, unauthorized, forbidden, badRequest, serverError } from "@/lib/api-auth";
+import {
+  requireAuth,
+  requireRole,
+  unauthorized,
+  forbidden,
+  badRequest,
+  serverError,
+} from "@/lib/api-auth";
 import { projectInclude } from "@/lib/project-include";
 
 export async function GET() {
@@ -23,8 +30,19 @@ export async function POST(req: NextRequest) {
   if (!auth) return forbidden();
 
   try {
-    const { name, client, clientId, location, locationId, startDate, endDate, status, notes } = await req.json();
-    if (!name || !startDate || !endDate) return badRequest("naam, startdatum en einddatum zijn verplicht");
+    const {
+      name,
+      client,
+      clientId,
+      location,
+      locationId,
+      startDate,
+      endDate,
+      status,
+      notes,
+    } = await req.json();
+    if (!name || !startDate || !endDate)
+      return badRequest("naam, startdatum en einddatum zijn verplicht");
 
     const project = await prisma.project.create({
       data: {
@@ -39,7 +57,11 @@ export async function POST(req: NextRequest) {
         endDate: new Date(endDate),
         periods: {
           create: [
-            { name: "Hoofdperiode", startDate: new Date(startDate), endDate: new Date(endDate) },
+            {
+              name: "Hoofdperiode",
+              startDate: new Date(startDate),
+              endDate: new Date(endDate),
+            },
           ],
         },
       },

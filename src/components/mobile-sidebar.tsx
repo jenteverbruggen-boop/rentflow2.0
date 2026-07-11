@@ -7,6 +7,7 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV_LINKS = [
   { href: "/", label: "Dashboard", icon: "🏠" },
@@ -69,6 +70,10 @@ export function MobileTopBar() {
         </SheetContent>
       </Sheet>
       <span className="text-base font-bold text-primary">RentFlow</span>
+      <ThemeToggle
+        iconOnly
+        className="ml-auto text-sidebar-foreground hover:bg-sidebar-accent"
+      />
     </header>
   );
 }

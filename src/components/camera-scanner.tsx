@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 interface CameraScannerProps {
@@ -19,7 +24,9 @@ export function CameraScanner({ open, onOpenChange }: CameraScannerProps) {
 
   async function startCamera() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
       setScanning(true);
@@ -49,7 +56,9 @@ export function CameraScanner({ open, onOpenChange }: CameraScannerProps) {
       try {
         const url = new URL(text);
         router.push(url.pathname + url.search);
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
       return;
     }
 
@@ -72,13 +81,20 @@ export function CameraScanner({ open, onOpenChange }: CameraScannerProps) {
       // Try native BarcodeDetector
       if ("BarcodeDetector" in window) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const detector = new (window as any).BarcodeDetector({ formats: ["qr_code", "code_128"] });
+        const detector = new (window as any).BarcodeDetector({
+          formats: ["qr_code", "code_128"],
+        });
         const tick = async () => {
           if (!videoRef.current || !streamRef.current) return;
           try {
             const results = await detector.detect(videoRef.current);
-            if (results.length > 0) { handleResult(results[0].rawValue); return; }
-          } catch { /* noop */ }
+            if (results.length > 0) {
+              handleResult(results[0].rawValue);
+              return;
+            }
+          } catch {
+            /* noop */
+          }
           requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
@@ -88,25 +104,46 @@ export function CameraScanner({ open, onOpenChange }: CameraScannerProps) {
         const reader = new BrowserMultiFormatReader();
         if (!videoRef.current) return;
         try {
-          await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
-            if (result) { handleResult(result.getText()); }
-          });
-        } catch { /* user cancelled or not found */ }
+          await reader.decodeFromVideoDevice(
+            undefined,
+            videoRef.current,
+            (result) => {
+              if (result) {
+                handleResult(result.getText());
+              }
+            },
+          );
+        } catch {
+          /* user cancelled or not found */
+        }
       }
     };
 
     scan();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanning]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
-        <DialogHeader><DialogTitle>Scan materiaalcode</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Scan materiaalcode</DialogTitle>
+        </DialogHeader>
         <div className="space-y-3">
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <video ref={videoRef} autoPlay playsInline className="w-full rounded-md bg-black aspect-square object-cover" />
-          <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>Annuleren</Button>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="w-full rounded-md bg-black aspect-square object-cover"
+          />
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => onOpenChange(false)}
+          >
+            Annuleren
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

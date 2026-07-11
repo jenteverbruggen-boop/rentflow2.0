@@ -4,9 +4,17 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { PersonCostRow, MaterialGroupCostRow } from "@/components/cost-line-row";
+import {
+  PersonCostRow,
+  MaterialGroupCostRow,
+} from "@/components/cost-line-row";
 import { PeriodSubtotals, CostSummary } from "@/components/cost-summary";
-import { formatEUR, periodDays, personLineCost, periodTotal } from "@/lib/pricing";
+import {
+  formatEUR,
+  periodDays,
+  personLineCost,
+  periodTotal,
+} from "@/lib/pricing";
 import { groupMaterialAssignments } from "@/lib/grouping";
 import type { Project } from "@/types";
 
@@ -42,7 +50,7 @@ const PRINT_CSS = `
 
 export function ProjectCostsTab({ project }: Props) {
   const sorted = [...project.periods].sort(
-    (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+    (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
   );
 
   return (
@@ -52,9 +60,12 @@ export function ProjectCostsTab({ project }: Props) {
       <div className="space-y-6 print-root">
         <div className="flex justify-between items-center no-print">
           <p className="text-xs text-muted-foreground">
-            Klik op een prijs om een projectprijs in te stellen. Klik op het kortingsveld voor korting per regel.
+            Klik op een prijs om een projectprijs in te stellen. Klik op het
+            kortingsveld voor korting per regel.
           </p>
-          <Button variant="outline" onClick={() => window.print()}>Afdrukken / PDF</Button>
+          <Button variant="outline" onClick={() => window.print()}>
+            Afdrukken / PDF
+          </Button>
         </div>
 
         <header className="print-only space-y-1">
@@ -78,10 +89,13 @@ export function ProjectCostsTab({ project }: Props) {
                   <div>
                     <h2 className="text-lg font-semibold">{period.name}</h2>
                     <p className="text-xs text-muted-foreground">
-                      {fmtDate(period.startDate)} – {fmtDate(period.endDate)} · {days} dag{days !== 1 ? "en" : ""}
+                      {fmtDate(period.startDate)} – {fmtDate(period.endDate)} ·{" "}
+                      {days} dag{days !== 1 ? "en" : ""}
                     </p>
                   </div>
-                  <span className="text-base font-semibold tabular-nums">{formatEUR(subtotal)}</span>
+                  <span className="text-base font-semibold tabular-nums">
+                    {formatEUR(subtotal)}
+                  </span>
                 </div>
                 <PeriodSubtotals period={period} />
                 <div className="border rounded-lg overflow-x-auto bg-card">
@@ -96,11 +110,24 @@ export function ProjectCostsTab({ project }: Props) {
                     </colgroup>
                     <thead>
                       <tr className="bg-muted/60 text-[11px] uppercase tracking-wide text-muted-foreground">
-                        <th className="py-2 pl-3 text-left font-semibold" colSpan={2}>Omschrijving</th>
-                        <th className="py-2 pr-4 text-left font-semibold">Berekening</th>
-                        <th className="py-2 pr-3 text-left font-semibold">Korting</th>
-                        <th className="py-2 pr-3 text-right font-semibold">Projectprijs</th>
-                        <th className="py-2 pr-3 text-right font-semibold">Subtotaal</th>
+                        <th
+                          className="py-2 pl-3 text-left font-semibold"
+                          colSpan={2}
+                        >
+                          Omschrijving
+                        </th>
+                        <th className="py-2 pr-4 text-left font-semibold">
+                          Berekening
+                        </th>
+                        <th className="py-2 pr-3 text-left font-semibold">
+                          Korting
+                        </th>
+                        <th className="py-2 pr-3 text-right font-semibold">
+                          Projectprijs
+                        </th>
+                        <th className="py-2 pr-3 text-right font-semibold">
+                          Subtotaal
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="[&>tr:hover]:bg-muted/30 [&>tr]:transition-colors">
@@ -115,7 +142,9 @@ export function ProjectCostsTab({ project }: Props) {
                         />
                       ))}
                       {period.people.length > 0 && matGroups.length > 0 && (
-                        <tr><td colSpan={6} className="py-0.5" /></tr>
+                        <tr>
+                          <td colSpan={6} className="py-0.5" />
+                        </tr>
                       )}
                       {matGroups.map((g) => (
                         <MaterialGroupCostRow
@@ -126,13 +155,17 @@ export function ProjectCostsTab({ project }: Props) {
                           project={project}
                         />
                       ))}
-                      {period.people.length === 0 && period.materials.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="py-6 text-center text-xs text-muted-foreground">
-                            Geen boekingen in deze periode
-                          </td>
-                        </tr>
-                      )}
+                      {period.people.length === 0 &&
+                        period.materials.length === 0 && (
+                          <tr>
+                            <td
+                              colSpan={6}
+                              className="py-6 text-center text-xs text-muted-foreground"
+                            >
+                              Geen boekingen in deze periode
+                            </td>
+                          </tr>
+                        )}
                     </tbody>
                   </table>
                 </div>

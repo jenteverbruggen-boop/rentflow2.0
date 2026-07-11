@@ -13,13 +13,18 @@ export function MaterialCodes({ material }: MaterialCodesProps) {
   const barcodeRef = useRef<SVGSVGElement>(null);
 
   const code = material.code;
-  const deepLink = typeof window !== "undefined"
-    ? `${window.location.origin}/materials?materialId=${material.id}`
-    : `/materials?materialId=${material.id}`;
+  const deepLink =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/materials?materialId=${material.id}`
+      : `/materials?materialId=${material.id}`;
 
   useEffect(() => {
     if (!qrRef.current) return;
-    QRCode.toCanvas(qrRef.current, deepLink, { width: 120, margin: 1, color: { dark: "#000", light: "#fff" } });
+    QRCode.toCanvas(qrRef.current, deepLink, {
+      width: 120,
+      margin: 1,
+      color: { dark: "#000", light: "#fff" },
+    });
   }, [deepLink]);
 
   useEffect(() => {

@@ -7,9 +7,16 @@ export const metadata: Metadata = {
   description: "Rental project management",
 };
 
+// Applied before paint to avoid a theme flash. Defaults to dark unless the
+// user explicitly stored "light".
+const themeScript = `try{if(localStorage.getItem('theme')==='light'){document.documentElement.classList.remove('dark')}else{document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="nl" className="dark">
+    <html lang="nl" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>
         <QueryProvider>{children}</QueryProvider>
       </body>

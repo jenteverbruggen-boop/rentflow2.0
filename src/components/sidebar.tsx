@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { LogoutButton } from "./logout-button";
+import { ThemeToggle } from "./theme-toggle";
 import { Separator } from "./ui/separator";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
@@ -47,20 +48,30 @@ export async function Sidebar() {
         {BASE_LINKS.map(({ href, label, icon }) => (
           <SidebarLink key={href} href={href} label={label} icon={icon} />
         ))}
-        {isAdmin && ADMIN_LINKS.map(({ href, label, icon }) => (
-          <SidebarLink key={href} href={href} label={label} icon={icon} />
-        ))}
+        {isAdmin &&
+          ADMIN_LINKS.map(({ href, label, icon }) => (
+            <SidebarLink key={href} href={href} label={label} icon={icon} />
+          ))}
       </nav>
 
       <Separator className="bg-sidebar-border" />
-      <div className="p-4">
+      <div className="p-4 space-y-1">
+        <ThemeToggle className="w-full justify-start px-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground" />
         <LogoutButton />
       </div>
     </aside>
   );
 }
 
-function SidebarLink({ href, label, icon }: { href: string; label: string; icon: string }) {
+function SidebarLink({
+  href,
+  label,
+  icon,
+}: {
+  href: string;
+  label: string;
+  icon: string;
+}) {
   return (
     <Link
       href={href}

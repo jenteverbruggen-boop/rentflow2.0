@@ -28,22 +28,49 @@ export default function PakbonPage() {
   const clientName = project.clientRel?.name ?? project.client;
   const locName = project.locationRel?.name ?? project.location;
   const locAddr = project.locationRel
-    ? [project.locationRel.address, [project.locationRel.postalCode, project.locationRel.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")
+    ? [
+        project.locationRel.address,
+        [project.locationRel.postalCode, project.locationRel.city]
+          .filter(Boolean)
+          .join(" "),
+      ]
+        .filter(Boolean)
+        .join(", ")
     : null;
 
-  const sorted = [...project.periods].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  const sorted = [...project.periods].sort(
+    (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+  );
 
   return (
     <PrintLayout>
       <div className="p-6 max-w-4xl mx-auto space-y-6 text-sm">
-        <DocumentHeader meta={{ opdrachtgever: clientName, locatie: locName, locatieAdres: locAddr, projectnummer: project.id, aangemaaktOp: format(new Date(project.createdAt), "dd-MM-yyyy", { locale: nl }) }} />
+        <DocumentHeader
+          meta={{
+            opdrachtgever: clientName,
+            locatie: locName,
+            locatieAdres: locAddr,
+            projectnummer: project.id,
+            aangemaaktOp: format(new Date(project.createdAt), "dd-MM-yyyy", {
+              locale: nl,
+            }),
+          }}
+        />
 
         <h1 className="text-2xl font-bold">Pakbon</h1>
 
         <div>
-          <h2 className="text-base font-semibold border-b pb-1 mb-2">Tijdschema</h2>
+          <h2 className="text-base font-semibold border-b pb-1 mb-2">
+            Tijdschema
+          </h2>
           <table className="w-full text-xs">
-            <thead><tr className="bg-gray-100"><th className="text-left p-2">Periode</th><th className="text-left p-2">Van</th><th className="text-left p-2">Tot</th></tr></thead>
+            <thead>
+              <tr className="bg-muted">
+                <th className="text-left p-2">Periode</th>
+                <th className="text-left p-2">Van</th>
+                <th className="text-left p-2">Tot</th>
+              </tr>
+            </thead>
             <tbody>
               {sorted.map((p) => (
                 <tr key={p.id}>
@@ -57,10 +84,15 @@ export default function PakbonPage() {
         </div>
 
         <div>
-          <h2 className="text-base font-semibold border-b pb-1 mb-2">Materialen</h2>
+          <h2 className="text-base font-semibold border-b pb-1 mb-2">
+            Materialen
+          </h2>
           {sorted.map((period) => {
             const days = periodDays(period);
-            const nestedGroups = groupMaterialAssignmentsNested(period.materials, period.bundleBookings ?? []);
+            const nestedGroups = groupMaterialAssignmentsNested(
+              period.materials,
+              period.bundleBookings ?? [],
+            );
             if (nestedGroups.length === 0) return null;
 
             return (
@@ -68,40 +100,78 @@ export default function PakbonPage() {
                 <p className="font-medium mb-1">{period.name}</p>
                 {nestedGroups.map(({ category, flatLines, bundleLines }) => (
                   <div key={category} className="mb-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">{category}</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                      {category}
+                    </p>
                     <table className="w-full text-xs">
-                      <thead><tr className="bg-gray-100">
-                        <th className="text-left p-1.5">Aantal</th>
-                        <th className="text-center p-1.5 w-16">✓ ✓</th>
-                        <th className="text-left p-1.5">Naam</th>
-                        <th className="text-left p-1.5">Code</th>
-                        <th className="text-right p-1.5">Totaal</th>
-                      </tr></thead>
+                      <thead>
+                        <tr className="bg-muted">
+                          <th className="text-left p-1.5">Aantal</th>
+                          <th className="text-center p-1.5 w-16">✓ ✓</th>
+                          <th className="text-left p-1.5">Naam</th>
+                          <th className="text-left p-1.5">Code</th>
+                          <th className="text-right p-1.5">Totaal</th>
+                        </tr>
+                      </thead>
                       <tbody>
                         {flatLines.map((g) => (
                           <tr key={g.key}>
                             <td className="p-1.5">{g.units}</td>
-                            <td className="p-1.5 text-center"><span className="border border-gray-400 inline-block w-4 h-4 mr-1" /><span className="border border-gray-400 inline-block w-4 h-4" /></td>
+                            <td className="p-1.5 text-center">
+                              <span className="border border-muted-foreground inline-block w-4 h-4 mr-1" />
+                              <span className="border border-muted-foreground inline-block w-4 h-4" />
+                            </td>
                             <td className="p-1.5">{g.material.name}</td>
-                            <td className="p-1.5">{g.material.code ?? "TEMP"}</td>
-                            <td className="p-1.5 text-right">{formatEUR(materialLineCost(g.assignments[0], days) * g.units)}</td>
+                            <td className="p-1.5">
+                              {g.material.code ?? "TEMP"}
+                            </td>
+                            <td className="p-1.5 text-right">
+                              {formatEUR(
+                                materialLineCost(g.assignments[0], days) *
+                                  g.units,
+                              )}
+                            </td>
                           </tr>
                         ))}
                         {bundleLines.map((b) => (
                           <>
-                            <tr key={`bundle-${b.booking.id}`} className="bg-gray-50 font-semibold">
+                            <tr
+                              key={`bundle-${b.booking.id}`}
+                              className="bg-muted/50 font-semibold"
+                            >
                               <td className="p-1.5">{b.booking.quantity}</td>
-                              <td className="p-1.5 text-center"><span className="border border-gray-400 inline-block w-4 h-4 mr-1" /><span className="border border-gray-400 inline-block w-4 h-4" /></td>
-                              <td className="p-1.5">{b.booking.material?.name ?? "Set"} <span className="text-gray-500">(set)</span></td>
-                              <td className="p-1.5">{b.booking.material?.code ?? "SET"}</td>
-                              <td className="p-1.5 text-right">{formatEUR(b.booking.dayPriceSnapshot * days * b.booking.quantity)}</td>
+                              <td className="p-1.5 text-center">
+                                <span className="border border-muted-foreground inline-block w-4 h-4 mr-1" />
+                                <span className="border border-muted-foreground inline-block w-4 h-4" />
+                              </td>
+                              <td className="p-1.5">
+                                {b.booking.material?.name ?? "Set"}{" "}
+                                <span className="text-muted-foreground">(set)</span>
+                              </td>
+                              <td className="p-1.5">
+                                {b.booking.material?.code ?? "SET"}
+                              </td>
+                              <td className="p-1.5 text-right">
+                                {formatEUR(
+                                  b.booking.dayPriceSnapshot *
+                                    days *
+                                    b.booking.quantity,
+                                )}
+                              </td>
                             </tr>
                             {b.componentGroups.map((cg) => (
-                              <tr key={`comp-${cg.key}`} className="text-gray-500">
+                              <tr
+                                key={`comp-${cg.key}`}
+                                className="text-muted-foreground"
+                              >
                                 <td className="p-1.5 pl-6">{cg.units}</td>
                                 <td className="p-1.5" />
-                                <td className="p-1.5 pl-6 italic">{cg.material.name}</td>
-                                <td className="p-1.5 pl-6">{cg.material.code ?? "TEMP"}</td>
+                                <td className="p-1.5 pl-6 italic">
+                                  {cg.material.name}
+                                </td>
+                                <td className="p-1.5 pl-6">
+                                  {cg.material.code ?? "TEMP"}
+                                </td>
                                 <td className="p-1.5 text-right">—</td>
                               </tr>
                             ))}
@@ -117,8 +187,16 @@ export default function PakbonPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-8 mt-8 pt-6 border-t">
-          <div><p className="font-semibold mb-8">Handtekening uitvoerder</p><div className="border-b border-black" /><p className="text-xs mt-1">Naam + datum</p></div>
-          <div><p className="font-semibold mb-8">Handtekening klant</p><div className="border-b border-black" /><p className="text-xs mt-1">Naam + datum</p></div>
+          <div>
+            <p className="font-semibold mb-8">Handtekening uitvoerder</p>
+            <div className="border-b border-foreground" />
+            <p className="text-xs mt-1">Naam + datum</p>
+          </div>
+          <div>
+            <p className="font-semibold mb-8">Handtekening klant</p>
+            <div className="border-b border-foreground" />
+            <p className="text-xs mt-1">Naam + datum</p>
+          </div>
         </div>
       </div>
     </PrintLayout>

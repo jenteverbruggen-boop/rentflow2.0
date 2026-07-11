@@ -29,7 +29,8 @@ async function fetchProjects(): Promise<Project[]> {
 }
 
 function countAssignments(project: Project) {
-  let people = 0, materials = 0;
+  let people = 0,
+    materials = 0;
   for (const period of project.periods) {
     people += period.people.length;
     materials += period.materials.length;
@@ -57,19 +58,36 @@ export default function PlanningPage() {
       return new Date(p.startDate) <= dayEnd && new Date(p.endDate) >= dayStart;
     });
 
-  const weekProjects = [...new Map(days.flatMap(projectsOnDay).map((p) => [p.id, p])).values()];
+  const weekProjects = [
+    ...new Map(days.flatMap(projectsOnDay).map((p) => [p.id, p])).values(),
+  ];
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Planning</h2>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setWeek(subWeeks(week, 1))}>← Vorige</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWeek(subWeeks(week, 1))}
+          >
+            ← Vorige
+          </Button>
           <span className="text-sm text-muted-foreground min-w-40 text-center">
-            {format(days[0], "d MMM", { locale: nl })} – {format(days[6], "d MMM yyyy", { locale: nl })}
+            {format(days[0], "d MMM", { locale: nl })} –{" "}
+            {format(days[6], "d MMM yyyy", { locale: nl })}
           </span>
-          <Button variant="outline" size="sm" onClick={() => setWeek(addWeeks(week, 1))}>Volgende →</Button>
-          <Button size="sm" onClick={() => setWeek(new Date())}>Vandaag</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWeek(addWeeks(week, 1))}
+          >
+            Volgende →
+          </Button>
+          <Button size="sm" onClick={() => setWeek(new Date())}>
+            Vandaag
+          </Button>
         </div>
       </div>
 
@@ -78,15 +96,30 @@ export default function PlanningPage() {
           const dayProjects = projectsOnDay(day);
           const isToday = isSameDay(day, new Date());
           return (
-            <Card key={day.toISOString()} className={cn("min-h-32", isToday && "border-primary")}>
+            <Card
+              key={day.toISOString()}
+              className={cn("min-h-32", isToday && "border-primary")}
+            >
               <CardContent className="p-3">
-                <p className={cn("text-xs font-semibold mb-2", isToday ? "text-primary" : "text-muted-foreground")}>
+                <p
+                  className={cn(
+                    "text-xs font-semibold mb-2",
+                    isToday ? "text-primary" : "text-muted-foreground",
+                  )}
+                >
                   {format(day, "EEE d", { locale: nl })}
                 </p>
                 <div className="space-y-1">
                   {dayProjects.map((p) => {
                     const { people, materials } = countAssignments(p);
-                    return <PlanningCalendarItem key={p.id} project={p} people={people} materials={materials} />;
+                    return (
+                      <PlanningCalendarItem
+                        key={p.id}
+                        project={p}
+                        people={people}
+                        materials={materials}
+                      />
+                    );
                   })}
                 </div>
               </CardContent>
@@ -97,18 +130,25 @@ export default function PlanningPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base text-muted-foreground">Alle projecten deze week</CardTitle>
+          <CardTitle className="text-base text-muted-foreground">
+            Alle projecten deze week
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {weekProjects.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Geen projecten deze week</p>
+            <p className="text-muted-foreground text-sm">
+              Geen projecten deze week
+            </p>
           ) : (
             <div className="space-y-0">
               {weekProjects.map((p, i) => {
                 const { people, materials } = countAssignments(p);
                 return (
                   <div key={p.id}>
-                    <Link href={`/projects/${p.id}`} className="flex justify-between items-center py-3 hover:bg-accent px-2 rounded-lg transition-colors">
+                    <Link
+                      href={`/projects/${p.id}`}
+                      className="flex justify-between items-center py-3 hover:bg-accent px-2 rounded-lg transition-colors"
+                    >
                       <div>
                         <p className="text-sm font-medium">{p.name}</p>
                         <p className="text-xs text-muted-foreground">

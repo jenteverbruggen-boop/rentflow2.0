@@ -11,7 +11,13 @@ import {
 import { statusVariant } from "@/lib/utils";
 import type { Project, ProjectStatus } from "@/types";
 
-const STATUSES: ProjectStatus[] = ["concept", "bevestigd", "actief", "afgerond", "geannuleerd"];
+const STATUSES: ProjectStatus[] = [
+  "concept",
+  "bevestigd",
+  "actief",
+  "afgerond",
+  "geannuleerd",
+];
 
 interface StatusSelectProps {
   project: Project;
@@ -39,20 +45,31 @@ export function StatusSelect({ project }: StatusSelectProps) {
       return res.json();
     },
     onMutate: async (newStatus) => {
-      await queryClient.cancelQueries({ queryKey: ["project", String(project.id)] });
-      const prev = queryClient.getQueryData<Project>(["project", String(project.id)]);
-      queryClient.setQueryData(["project", String(project.id)], (old: Project) => ({
-        ...old,
-        status: newStatus,
-      }));
+      await queryClient.cancelQueries({
+        queryKey: ["project", String(project.id)],
+      });
+      const prev = queryClient.getQueryData<Project>([
+        "project",
+        String(project.id),
+      ]);
+      queryClient.setQueryData(
+        ["project", String(project.id)],
+        (old: Project) => ({
+          ...old,
+          status: newStatus,
+        }),
+      );
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(["project", String(project.id)], ctx.prev);
+      if (ctx?.prev)
+        queryClient.setQueryData(["project", String(project.id)], ctx.prev);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      queryClient.invalidateQueries({ queryKey: ["project", String(project.id)] });
+      queryClient.invalidateQueries({
+        queryKey: ["project", String(project.id)],
+      });
     },
   });
 
@@ -60,7 +77,9 @@ export function StatusSelect({ project }: StatusSelectProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <Badge className={statusVariant(project.status)}>{project.status}</Badge>
+          <Badge className={statusVariant(project.status)}>
+            {project.status}
+          </Badge>
           <span className="text-muted-foreground text-xs">▾</span>
         </button>
       </DropdownMenuTrigger>

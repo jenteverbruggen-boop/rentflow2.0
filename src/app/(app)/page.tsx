@@ -18,9 +18,15 @@ async function get<T>(url: string): Promise<T> {
 export default function DashboardPage() {
   const [projectsQuery, peopleQuery, materialsQuery] = useQueries({
     queries: [
-      { queryKey: ["projects"], queryFn: () => get<Project[]>("/api/projects") },
+      {
+        queryKey: ["projects"],
+        queryFn: () => get<Project[]>("/api/projects"),
+      },
       { queryKey: ["people"], queryFn: () => get<Person[]>("/api/people") },
-      { queryKey: ["materials"], queryFn: () => get<Material[]>("/api/materials") },
+      {
+        queryKey: ["materials"],
+        queryFn: () => get<Material[]>("/api/materials"),
+      },
     ],
   });
 
@@ -30,9 +36,24 @@ export default function DashboardPage() {
     .slice(0, 5);
 
   const stats = [
-    { label: "Projecten", value: projects.length, icon: "📁", href: "/projects" },
-    { label: "Personen", value: peopleQuery.data?.length ?? 0, icon: "👥", href: "/people" },
-    { label: "Materialen", value: materialsQuery.data?.length ?? 0, icon: "📦", href: "/materials" },
+    {
+      label: "Projecten",
+      value: projects.length,
+      icon: "📁",
+      href: "/projects",
+    },
+    {
+      label: "Personen",
+      value: peopleQuery.data?.length ?? 0,
+      icon: "👥",
+      href: "/people",
+    },
+    {
+      label: "Materialen",
+      value: materialsQuery.data?.length ?? 0,
+      icon: "📦",
+      href: "/materials",
+    },
   ];
 
   return (
@@ -41,10 +62,16 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {stats.map((s) => (
-          <Link key={s.label} href={s.href} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl">
+          <Link
+            key={s.label}
+            href={s.href}
+            className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+          >
             <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {s.label}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl">{s.icon}</div>
@@ -61,7 +88,9 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           {upcoming.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Geen aankomende projecten</p>
+            <p className="text-muted-foreground text-sm">
+              Geen aankomende projecten
+            </p>
           ) : (
             <div className="space-y-2">
               {upcoming.map((p) => (
@@ -80,7 +109,9 @@ export default function DashboardPage() {
                     <span className="text-xs text-muted-foreground hidden sm:block">
                       {format(new Date(p.startDate), "d MMM", { locale: nl })}
                     </span>
-                    <Badge className={statusVariant(p.status)}>{p.status}</Badge>
+                    <Badge className={statusVariant(p.status)}>
+                      {p.status}
+                    </Badge>
                   </div>
                 </Link>
               ))}

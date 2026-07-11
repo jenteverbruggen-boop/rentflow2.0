@@ -16,7 +16,11 @@ export function MaterialStockList({ stockItems }: MaterialStockListProps) {
   const [openId, setOpenId] = useState<number | null>(null);
 
   if (stockItems.length === 0) {
-    return <p className="text-xs text-muted-foreground py-4 text-center">Geen units gevonden voor dit materiaal</p>;
+    return (
+      <p className="text-xs text-muted-foreground py-4 text-center">
+        Geen units gevonden voor dit materiaal
+      </p>
+    );
   }
 
   return (
@@ -33,7 +37,10 @@ export function MaterialStockList({ stockItems }: MaterialStockListProps) {
             >
               <span className="font-medium">Unit #{si.unitNumber}</span>
               <span className="text-muted-foreground">
-                {assignments.length > 0 ? `${assignments.length} boeking(en)` : "Niet geboekt"} · {open ? "Inklappen" : "Uitklappen"}
+                {assignments.length > 0
+                  ? `${assignments.length} boeking(en)`
+                  : "Niet geboekt"}{" "}
+                · {open ? "Inklappen" : "Uitklappen"}
               </span>
             </button>
             {open && (
@@ -43,15 +50,30 @@ export function MaterialStockList({ stockItems }: MaterialStockListProps) {
                 {assignments.length > 0 ? (
                   <div className="pt-1 space-y-2">
                     {assignments.map((a) => (
-                      <div key={a.id} className="rounded-md border border-border px-2 py-2 space-y-1">
+                      <div
+                        key={a.id}
+                        className="rounded-md border border-border px-2 py-2 space-y-1"
+                      >
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-foreground font-medium truncate">{a.period.project.name}</p>
-                          <Badge className={statusVariant(a.period.project.status)}>{a.period.project.status}</Badge>
+                          <p className="text-foreground font-medium truncate">
+                            {a.period.project.name}
+                          </p>
+                          <Badge
+                            className={statusVariant(a.period.project.status)}
+                          >
+                            {a.period.project.status}
+                          </Badge>
                         </div>
                         <p>Periode: {a.period.name}</p>
                         <p>
-                          Data: {format(new Date(a.period.startDate), "d MMM yyyy", { locale: nl })} -{" "}
-                          {format(new Date(a.period.endDate), "d MMM yyyy", { locale: nl })}
+                          Data:{" "}
+                          {format(new Date(a.period.startDate), "d MMM yyyy", {
+                            locale: nl,
+                          })}{" "}
+                          -{" "}
+                          {format(new Date(a.period.endDate), "d MMM yyyy", {
+                            locale: nl,
+                          })}
                         </p>
                         <p>Locatie: {a.period.project.location ?? "-"}</p>
                         <p>Tarief snapshot: {formatEUR(a.dayPriceSnapshot)}</p>

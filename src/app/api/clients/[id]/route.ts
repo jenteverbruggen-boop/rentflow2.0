@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, badRequest, notFound, conflict, serverError } from "@/lib/api-auth";
+import {
+  requireAuth,
+  unauthorized,
+  badRequest,
+  notFound,
+  conflict,
+  serverError,
+} from "@/lib/api-auth";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -57,9 +64,13 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   if (!user) return unauthorized();
   try {
     const { id } = await params;
-    const count = await prisma.project.count({ where: { clientId: parseInt(id) } });
+    const count = await prisma.project.count({
+      where: { clientId: parseInt(id) },
+    });
     if (count > 0) {
-      return conflict("Klant kan niet verwijderd worden: er zijn nog projecten gekoppeld.");
+      return conflict(
+        "Klant kan niet verwijderd worden: er zijn nog projecten gekoppeld.",
+      );
     }
     await prisma.client.delete({ where: { id: parseInt(id) } });
     return NextResponse.json({ success: true });

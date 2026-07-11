@@ -26,15 +26,31 @@ export default function CallsheetPage() {
   const clientName = project.clientRel?.name ?? project.client;
   const locName = project.locationRel?.name ?? project.location;
   const locAddr = project.locationRel
-    ? [project.locationRel.address, [project.locationRel.postalCode, project.locationRel.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")
+    ? [
+        project.locationRel.address,
+        [project.locationRel.postalCode, project.locationRel.city]
+          .filter(Boolean)
+          .join(" "),
+      ]
+        .filter(Boolean)
+        .join(", ")
     : null;
 
-  const sorted = [...project.periods].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  const sorted = [...project.periods].sort(
+    (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+  );
 
   return (
     <PrintLayout>
       <div className="p-6 max-w-4xl mx-auto space-y-6 text-sm">
-        <DocumentHeader meta={{ opdrachtgever: clientName, locatie: locName, locatieAdres: locAddr, projectnummer: project.id }} />
+        <DocumentHeader
+          meta={{
+            opdrachtgever: clientName,
+            locatie: locName,
+            locatieAdres: locAddr,
+            projectnummer: project.id,
+          }}
+        />
 
         <h1 className="text-2xl font-bold">Callsheet — {project.name}</h1>
 
@@ -42,26 +58,42 @@ export default function CallsheetPage() {
           <div key={period.id} className="space-y-3">
             <div className="border-b pb-1">
               <p className="font-semibold text-base">{period.name}</p>
-              <p className="text-xs text-gray-600">{fmtDT(period.startDate)} – {fmtDT(period.endDate)}</p>
+              <p className="text-xs text-muted-foreground">
+                {fmtDT(period.startDate)} – {fmtDT(period.endDate)}
+              </p>
             </div>
 
             {project.locationRel && (
               <div className="text-xs space-y-0.5">
-                <p><span className="font-medium">Locatie:</span> {project.locationRel.name}</p>
-                {project.locationRel.address && <p>{project.locationRel.address}</p>}
-                {(project.locationRel.postalCode || project.locationRel.city) && (
-                  <p>{[project.locationRel.postalCode, project.locationRel.city].filter(Boolean).join(" ")}</p>
+                <p>
+                  <span className="font-medium">Locatie:</span>{" "}
+                  {project.locationRel.name}
+                </p>
+                {project.locationRel.address && (
+                  <p>{project.locationRel.address}</p>
                 )}
-                {project.locationRel.phone && <p>Tel: {project.locationRel.phone}</p>}
+                {(project.locationRel.postalCode ||
+                  project.locationRel.city) && (
+                  <p>
+                    {[project.locationRel.postalCode, project.locationRel.city]
+                      .filter(Boolean)
+                      .join(" ")}
+                  </p>
+                )}
+                {project.locationRel.phone && (
+                  <p>Tel: {project.locationRel.phone}</p>
+                )}
               </div>
             )}
 
             {period.people.length === 0 ? (
-              <p className="text-xs text-gray-500">Geen medewerkers ingepland</p>
+              <p className="text-xs text-muted-foreground">
+                Geen medewerkers ingepland
+              </p>
             ) : (
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-gray-100">
+                  <tr className="bg-muted">
                     <th className="text-left p-2">Naam</th>
                     <th className="text-left p-2">Functie</th>
                     <th className="text-left p-2">Van</th>
@@ -73,7 +105,9 @@ export default function CallsheetPage() {
                   {period.people.map((pp) => (
                     <tr key={pp.id}>
                       <td className="p-2">{pp.person.name}</td>
-                      <td className="p-2">{pp.role ?? pp.person.role ?? "—"}</td>
+                      <td className="p-2">
+                        {pp.role ?? pp.person.role ?? "—"}
+                      </td>
                       <td className="p-2">{fmtDT(period.startDate)}</td>
                       <td className="p-2">{fmtDT(period.endDate)}</td>
                       <td className="p-2">{pp.person.phone ?? "—"}</td>

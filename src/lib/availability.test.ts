@@ -8,7 +8,10 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { findAvailableStockItems, checkPersonAvailability } from "@/lib/availability";
+import {
+  findAvailableStockItems,
+  checkPersonAvailability,
+} from "@/lib/availability";
 import { prisma } from "@/lib/prisma";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,16 +27,26 @@ describe("availability — strict boundary (B7 Q16)", () => {
   });
 
   it("back-to-back periods should NOT conflict (end 12:00 / start 12:00)", async () => {
-    mockPrisma.periodStockItem.findMany.mockImplementation(({ where }: { where: { period: { AND: { startDate?: { lt: Date }; endDate?: { gt: Date } }[] } } }) => {
-      const [startCond, endCond] = where.period.AND;
-      const existingEnd = new Date("2026-05-14T12:00:00Z");
-      const existingStart = new Date("2026-05-10T08:00:00Z");
-      const newStart = startCond.startDate?.lt;
-      const newEnd = endCond.endDate?.gt;
-      if (!newStart || !newEnd) return [];
-      const overlaps = existingStart < newStart && existingEnd > newEnd;
-      return overlaps ? [{ stockItemId: 1 }] : [];
-    });
+    mockPrisma.periodStockItem.findMany.mockImplementation(
+      ({
+        where,
+      }: {
+        where: {
+          period: {
+            AND: { startDate?: { lt: Date }; endDate?: { gt: Date } }[];
+          };
+        };
+      }) => {
+        const [startCond, endCond] = where.period.AND;
+        const existingEnd = new Date("2026-05-14T12:00:00Z");
+        const existingStart = new Date("2026-05-10T08:00:00Z");
+        const newStart = startCond.startDate?.lt;
+        const newEnd = endCond.endDate?.gt;
+        if (!newStart || !newEnd) return [];
+        const overlaps = existingStart < newStart && existingEnd > newEnd;
+        return overlaps ? [{ stockItemId: 1 }] : [];
+      },
+    );
 
     const from = new Date("2026-05-14T12:00:00Z");
     const to = new Date("2026-05-16T17:00:00Z");

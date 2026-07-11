@@ -25,7 +25,9 @@ export default function LabelsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [origin, setOrigin] = useState("");
 
-  useEffect(() => { setOrigin(window.location.origin); }, []);
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   const { data: materials = [] } = useQuery<Material[]>({
     queryKey: ["materials"],
@@ -66,31 +68,62 @@ export default function LabelsPage() {
           <h2 className="text-2xl font-bold">Materiaallabels — A4 (3×8)</h2>
           <div className="flex gap-2">
             <Button variant="outline" onClick={toggleAll}>
-              {selectedIds.size === materials.length ? "Alles deselecteren" : "Alles selecteren"}
+              {selectedIds.size === materials.length
+                ? "Alles deselecteren"
+                : "Alles selecteren"}
             </Button>
             <Button onClick={() => window.print()}>Afdrukken</Button>
-            <Button variant="ghost" onClick={() => window.history.back()}>← Terug</Button>
+            <Button variant="ghost" onClick={() => window.history.back()}>
+              ← Terug
+            </Button>
           </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-64 overflow-y-auto border rounded-lg p-3">
           {materials.map((m) => (
-            <label key={m.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-accent rounded px-1 py-0.5">
-              <input type="checkbox" checked={selectedIds.has(m.id)} onChange={() => toggleMaterial(m.id)} />
+            <label
+              key={m.id}
+              className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-accent rounded px-1 py-0.5"
+            >
+              <input
+                type="checkbox"
+                checked={selectedIds.has(m.id)}
+                onChange={() => toggleMaterial(m.id)}
+              />
               <span className="truncate">{m.name}</span>
             </label>
           ))}
         </div>
 
         <p className="text-xs text-muted-foreground">
-          {selectedIds.size === 0 ? `Alle ${materials.length}` : selectedIds.size} materialen · {pages.length} pagina{pages.length !== 1 ? "s" : ""}
+          {selectedIds.size === 0
+            ? `Alle ${materials.length}`
+            : selectedIds.size}{" "}
+          materialen · {pages.length} pagina{pages.length !== 1 ? "s" : ""}
         </p>
       </div>
 
       <div className="label-sheet">
         {pages.map((page, pi) => (
-          <div key={pi} style={{ width: "210mm", minHeight: "297mm", pageBreakAfter: pi < pages.length - 1 ? "always" : "auto", padding: "10mm", boxSizing: "border-box" }}>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${COLS}, 1fr)`, gridTemplateRows: `repeat(${ROWS}, 1fr)`, gap: "2mm", height: "277mm" }}>
+          <div
+            key={pi}
+            style={{
+              width: "210mm",
+              minHeight: "297mm",
+              pageBreakAfter: pi < pages.length - 1 ? "always" : "auto",
+              padding: "10mm",
+              boxSizing: "border-box",
+            }}
+          >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+                gridTemplateRows: `repeat(${ROWS}, 1fr)`,
+                gap: "2mm",
+                height: "277mm",
+              }}
+            >
               {page.map((m) => (
                 <MaterialLabel key={m.id} material={m} origin={origin} />
               ))}

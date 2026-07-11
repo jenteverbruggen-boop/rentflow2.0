@@ -14,7 +14,10 @@ export async function requireRole(...roles: string[]): Promise<TokenPayload> {
   const payload = await requireAuth();
   let role = payload.role;
   if (!role) {
-    const user = await prisma.user.findUnique({ where: { id: payload.id }, select: { role: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: payload.id },
+      select: { role: true },
+    });
     role = user?.role;
   }
   if (!role || !roles.includes(role)) throw new Error("Forbidden");
@@ -26,7 +29,10 @@ export function unauthorized() {
 }
 
 export function forbidden() {
-  return NextResponse.json({ error: "Verboden — onvoldoende rechten" }, { status: 403 });
+  return NextResponse.json(
+    { error: "Verboden — onvoldoende rechten" },
+    { status: 403 },
+  );
 }
 
 export function badRequest(message: string) {
