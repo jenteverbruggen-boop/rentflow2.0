@@ -13,13 +13,35 @@ npx tsc --noEmit         # Type-check — must pass with zero errors
 npm run lint             # ESLint
 
 # SQLite dev database (no Docker needed for local dev)
-npm run db:dev:migrate   # Create/migrate SQLite DB at prisma/dev.db
+npm run db:dev:migrate   # Push schema changes to SQLite dev DB (prisma db push)
+npm run db:dev:reset     # Drop + recreate dev DB and re-seed (prisma db push --force-reset && seed)
+npm run db:dev:seed      # Run seed only (tsx prisma/seed.ts)
 npm run db:dev:generate  # Re-generate Prisma client from schema.dev.prisma
-npm run db:dev:reset     # Drop and recreate the dev DB
 npm run db:dev:studio    # Open Prisma Studio against the dev DB
 ```
 
 Local dev setup: copy `.env.local.example` to `.env.local` — it points `DATABASE_URL` at the local SQLite file.
+
+## Authoring Postgres migrations
+
+Dev uses `prisma db push` (schema-driven, no migration files). Production migrations live in `prisma/migrations/` and are authored against the Postgres schema **without a local shadow DB**:
+
+```bash
+# 1. Start the compose Postgres service
+docker compose up -d db
+
+# 2. Diff current migrations against the updated schema to produce a new migration SQL
+npx prisma migrate diff \
+  --from-migrations prisma/migrations \
+  --to-schema-datamodel prisma/schema.prisma \
+  --shadow-database-url "postgresql://rentflow:rentflow@localhost:5432/rentflow" \
+  --script > prisma/migrations/$(date +%Y%m%d%H%M%S)_<name>/migration.sql
+
+# 3. Validate the migration applies cleanly
+docker compose run --rm app sh -c "npx prisma migrate deploy"
+```
+
+Always author migrations against `prisma/schema.prisma` (Postgres). Never edit `migration_lock.toml` manually.
 
 ## Architecture
 
@@ -82,7 +104,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 | `prisma/schema.prisma` | PostgreSQL | Production / Docker / CI |
 | `prisma/schema.dev.prisma` | SQLite | Local dev (no Docker needed) |
 
-Production migrations use `prisma migrate deploy` (run automatically by Docker CMD). Dev migrations use the `npm run db:dev:*` scripts above.
+Production migrations use `prisma migrate deploy` (run automatically by Docker CMD). Dev uses `prisma db push` via the `npm run db:dev:*` scripts — no migration files on the SQLite side.
 
 ## Key Conventions
 

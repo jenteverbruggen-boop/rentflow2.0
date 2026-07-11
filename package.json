@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:dev:generate": "prisma generate --schema=prisma/schema.dev.prisma",
-    "db:dev:migrate": "prisma migrate dev --schema=prisma/schema.dev.prisma",
-    "db:dev:reset": "prisma migrate reset --schema=prisma/schema.dev.prisma",
+    "db:dev:migrate": "prisma db push --schema=prisma/schema.dev.prisma",
+    "db:dev:reset": "prisma db push --force-reset --schema=prisma/schema.dev.prisma && npm run db:dev:seed",
     "db:dev:seed": "tsx --env-file=.env.local prisma/seed.ts",
     "db:dev:studio": "prisma studio --schema=prisma/schema.dev.prisma"
   },
