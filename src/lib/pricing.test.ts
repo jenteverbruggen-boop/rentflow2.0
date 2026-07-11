@@ -5,6 +5,9 @@ import {
   materialLineCost,
   personLineCost,
   periodTotal,
+  periodPeopleCost,
+  periodMaterialsCost,
+  projectCostSummary,
 } from "@/lib/pricing";
 import type { Period, PeriodStockItem, PeriodPerson } from "@/types";
 
@@ -90,12 +93,35 @@ describe("periodTotal", () => {
   });
 
   it("sums materials and people", () => {
-    const period = makePeriod(
-      "2026-05-01",
-      "2026-05-02",
-      [makeStockItem(100)],
-      [makePerson(200)]
-    );
+    const period = makePeriod("2026-05-01", "2026-05-02", [makeStockItem(100)], [makePerson(200)]);
     expect(periodTotal(period)).toBe(600);
+  });
+});
+
+describe("B6 cost split", () => {
+  it("only-people period", () => {
+    const period = makePeriod("2026-05-01", "2026-05-01", [], [makePerson(100)]);
+    expect(periodPeopleCost(period)).toBe(100);
+    expect(periodMaterialsCost(period)).toBe(0);
+  });
+
+  it("only-materials period", () => {
+    const period = makePeriod("2026-05-01", "2026-05-01", [makeStockItem(50)], []);
+    expect(periodPeopleCost(period)).toBe(0);
+    expect(periodMaterialsCost(period)).toBe(50);
+  });
+
+  it("mixed period sums equal periodTotal", () => {
+    const period = makePeriod("2026-05-01", "2026-05-02", [makeStockItem(100)], [makePerson(200)]);
+    expect(periodPeopleCost(period) + periodMaterialsCost(period)).toBe(periodTotal(period));
+  });
+
+  it("projectCostSummary totals equal sum of periods", () => {
+    const p1 = makePeriod("2026-05-01", "2026-05-01", [makeStockItem(50)], [makePerson(100)]);
+    const p2 = makePeriod("2026-05-02", "2026-05-02", [], [makePerson(200)]);
+    const summary = projectCostSummary([p1, p2]);
+    expect(summary.total).toBe(periodTotal(p1) + periodTotal(p2));
+    expect(summary.people).toBe(100 + 200);
+    expect(summary.materials).toBe(50);
   });
 });

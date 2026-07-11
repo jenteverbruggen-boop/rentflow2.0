@@ -41,6 +41,22 @@ export function personLineCost(line: PeriodPerson, days: number): number {
   return lineCost(line.dayPriceSnapshot, days, line);
 }
 
+export function periodPeopleCost(period: Period): number {
+  const days = periodDays(period);
+  return Math.round(period.people.reduce((acc, l) => acc + personLineCost(l, days), 0) * 100) / 100;
+}
+
+export function periodMaterialsCost(period: Period): number {
+  const days = periodDays(period);
+  return Math.round(period.materials.reduce((acc, l) => acc + materialLineCost(l, days), 0) * 100) / 100;
+}
+
+export function projectCostSummary(periods: Period[]): { people: number; materials: number; total: number } {
+  const people = Math.round(periods.reduce((acc, p) => acc + periodPeopleCost(p), 0) * 100) / 100;
+  const materials = Math.round(periods.reduce((acc, p) => acc + periodMaterialsCost(p), 0) * 100) / 100;
+  return { people, materials, total: Math.round((people + materials) * 100) / 100 };
+}
+
 export function periodTotal(period: Period): number {
   const days = periodDays(period);
   const mats = period.materials.reduce((acc, l) => acc + materialLineCost(l, days), 0);

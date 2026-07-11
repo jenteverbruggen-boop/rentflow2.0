@@ -5,7 +5,8 @@ import { nl } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { PersonCostRow, MaterialGroupCostRow } from "@/components/cost-line-row";
-import { formatEUR, periodDays, personLineCost, periodTotal, projectTotal } from "@/lib/pricing";
+import { PeriodSubtotals, CostSummary } from "@/components/cost-summary";
+import { formatEUR, periodDays, personLineCost, periodTotal } from "@/lib/pricing";
 import { groupMaterialAssignments } from "@/lib/grouping";
 import type { Project } from "@/types";
 
@@ -43,7 +44,6 @@ export function ProjectCostsTab({ project }: Props) {
   const sorted = [...project.periods].sort(
     (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
   );
-  const grand = projectTotal(project.periods);
 
   return (
     <>
@@ -83,6 +83,7 @@ export function ProjectCostsTab({ project }: Props) {
                   </div>
                   <span className="text-base font-semibold tabular-nums">{formatEUR(subtotal)}</span>
                 </div>
+                <PeriodSubtotals period={period} />
                 <div className="border rounded-lg overflow-x-auto bg-card">
                   <table className="w-full min-w-[560px]">
                     <colgroup>
@@ -142,12 +143,7 @@ export function ProjectCostsTab({ project }: Props) {
 
         <Separator />
 
-        <div className="flex justify-end">
-          <div className="text-right space-y-0.5 print-grand-total">
-            <p className="text-xs text-muted-foreground">Totaal excl. BTW</p>
-            <p className="text-2xl font-bold tabular-nums">{formatEUR(grand)}</p>
-          </div>
-        </div>
+        <CostSummary periods={sorted} />
       </div>
     </>
   );
