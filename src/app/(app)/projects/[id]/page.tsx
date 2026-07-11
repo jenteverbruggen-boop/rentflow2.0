@@ -72,6 +72,9 @@ export default function ProjectDetailPage() {
           <Link href={`/projects/${project.id}/pakbon`}>
             <Button variant="outline" size="sm">Pakbon afdrukken</Button>
           </Link>
+          <Link href={`/projects/${project.id}/callsheet`}>
+            <Button variant="outline" size="sm">Callsheet afdrukken</Button>
+          </Link>
         </div>
 
         <Card>
