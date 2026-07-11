@@ -28,12 +28,12 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   try {
     const { id } = await params;
-    const { name, client, location, startDate, endDate, status, notes } = await req.json();
+    const { name, client, clientId, location, locationId, startDate, endDate, status, notes } = await req.json();
     if (!name || !startDate || !endDate) return badRequest("naam, startdatum en einddatum zijn verplicht");
 
     const project = await prisma.project.update({
       where: { id: parseInt(id) },
-      data: { name, client, location, status, notes, startDate: new Date(startDate), endDate: new Date(endDate) },
+      data: { name, client, clientId: clientId ?? null, location, locationId: locationId ?? null, status, notes, startDate: new Date(startDate), endDate: new Date(endDate) },
     });
     return NextResponse.json(project);
   } catch (err) {

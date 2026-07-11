@@ -1,6 +1,8 @@
 import type { Prisma } from "@/generated/prisma/client";
 
 export const projectInclude = {
+  clientRel: true,
+  locationRel: true,
   periods: {
     orderBy: { startDate: "asc" },
     include: {
