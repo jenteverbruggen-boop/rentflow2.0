@@ -12,14 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { EntityCombobox } from "@/components/entity-combobox";
-import type { Client, Project, ProjectStatus } from "@/types";
+import type { Client, Location, Project, ProjectStatus } from "@/types";
 
 const STATUS_OPTIONS: ProjectStatus[] = ["concept", "bevestigd", "actief", "afgerond", "geannuleerd"];
 
 const schema = z.object({
   name: z.string().min(1, "Naam is verplicht"),
   clientId: z.number().optional().nullable(),
-  location: z.string().optional(),
+  locationId: z.number().optional().nullable(),
   startDate: z.string().min(1, "Startdatum is verplicht"),
   endDate: z.string().min(1, "Einddatum is verplicht"),
   status: z.enum(["concept", "bevestigd", "actief", "afgerond", "geannuleerd"]),
@@ -39,22 +39,29 @@ interface ProjectFormProps {
 export function ProjectForm({ open, onOpenChange, defaultValues, onSubmit, isPending }: ProjectFormProps) {
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", clientId: null, location: "", startDate: "", endDate: "", status: "concept", notes: "" },
+    defaultValues: { name: "", clientId: null, locationId: null, startDate: "", endDate: "", status: "concept", notes: "" },
   });
   const [clientId, setClientId] = useState<number | null>(null);
+  const [locationId, setLocationId] = useState<number | null>(null);
 
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["clients"],
     queryFn: () => fetch("/api/clients").then((r) => r.json()),
   });
 
+  const { data: locations = [] } = useQuery<Location[]>({
+    queryKey: ["locations"],
+    queryFn: () => fetch("/api/locations").then((r) => r.json()),
+  });
+
   useEffect(() => {
     if (defaultValues) {
       setClientId(defaultValues.clientId ?? null);
+      setLocationId(defaultValues.locationId ?? null);
       form.reset({
         name: defaultValues.name,
         clientId: defaultValues.clientId ?? null,
-        location: defaultValues.location ?? "",
+        locationId: defaultValues.locationId ?? null,
         startDate: defaultValues.startDate.slice(0, 10),
         endDate: defaultValues.endDate.slice(0, 10),
         status: defaultValues.status,
@@ -62,7 +69,8 @@ export function ProjectForm({ open, onOpenChange, defaultValues, onSubmit, isPen
       });
     } else {
       setClientId(null);
-      form.reset({ name: "", clientId: null, location: "", startDate: "", endDate: "", status: "concept", notes: "" });
+      setLocationId(null);
+      form.reset({ name: "", clientId: null, locationId: null, startDate: "", endDate: "", status: "concept", notes: "" });
     }
   }, [defaultValues, form]);
 
@@ -71,9 +79,15 @@ export function ProjectForm({ open, onOpenChange, defaultValues, onSubmit, isPen
     return res.json() as Promise<{ id: number }>;
   }
 
+  async function createLocation(name: string) {
+    const res = await fetch("/api/locations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+    return res.json() as Promise<{ id: number }>;
+  }
+
   function handleSubmit(values: ProjectFormValues) {
     const selectedClient = clients.find((c) => c.id === clientId);
-    onSubmit({ ...values, clientId, client: selectedClient?.name ?? values.location } as ProjectFormValues & { client?: string });
+    const selectedLocation = locations.find((l) => l.id === locationId);
+    onSubmit({ ...values, clientId, locationId, client: selectedClient?.name, location: selectedLocation?.name } as ProjectFormValues & { client?: string; location?: string });
   }
 
   return (
@@ -92,9 +106,11 @@ export function ProjectForm({ open, onOpenChange, defaultValues, onSubmit, isPen
               <EntityCombobox items={clients} value={clientId} onChange={(id) => { setClientId(id); form.setValue("clientId", id); }}
                 onCreate={createClient} placeholder="Selecteer klant..." createLabel="+ Nieuwe klant aanmaken" />
             </FormItem>
-            <FormField control={form.control} name="location" render={({ field }) => (
-              <FormItem><FormLabel>Locatie</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-            )} />
+            <FormItem>
+              <FormLabel>Locatie</FormLabel>
+              <EntityCombobox items={locations} value={locationId} onChange={(id) => { setLocationId(id); form.setValue("locationId", id); }}
+                onCreate={createLocation} placeholder="Selecteer locatie..." createLabel="+ Nieuwe locatie aanmaken" />
+            </FormItem>
             <div className="grid grid-cols-2 gap-3">
               <FormField control={form.control} name="startDate" render={({ field }) => (
                 <FormItem><FormLabel>Startdatum *</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
