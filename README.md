@@ -242,7 +242,7 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | Push to any branch | `npm ci` → `prisma generate` → `tsc --noEmit` → `next build` |
+| `ci.yml` | Push to any branch | `npm ci` → `prisma generate` (Postgres) → `tsc --noEmit` → `prisma generate` (SQLite dev) → `npm test` → `prisma generate` (Postgres) → `next build` |
 | `release.yml` | CI passes on `main` | Semantic-release tag → Docker build → push `ghcr.io/<repo>:latest` + `:<sha>` + `:<semver>` |
 
 ---
