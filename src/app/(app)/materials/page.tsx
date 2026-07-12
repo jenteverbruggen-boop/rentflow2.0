@@ -102,10 +102,18 @@ function MaterialsPageContent() {
 
       <MaterialForm
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={(o) => {
+          if (!o) create.reset();
+          setFormOpen(o);
+        }}
         defaultValues={null}
-        onSubmit={(v) => create.mutate(v as Omit<Material, "id">)}
+        onSubmit={(v) =>
+          create.mutate(v as Omit<Material, "id">, {
+            onSuccess: () => setFormOpen(false),
+          })
+        }
         isPending={create.isPending}
+        error={create.error?.message ?? null}
       />
 
       <StockItemsSheet

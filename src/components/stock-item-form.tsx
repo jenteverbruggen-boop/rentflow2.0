@@ -42,7 +42,7 @@ export function StockItemForm({ open, onOpenChange, defaultValues, onSubmit, isP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{defaultValues ? "Unit bewerken" : "Unit toevoegen"}</DialogTitle>
         </DialogHeader>

@@ -21,7 +21,18 @@ export function useMaterials() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
-      if (!res.ok) throw new Error("Aanmaken mislukt");
+      if (!res.ok) {
+        // Surface validation messages (4xx) verbatim; keep server faults (5xx)
+        // friendly — the raw Prisma error is logged server-side, not shown here.
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(
+          res.status < 500 && data?.error
+            ? data.error
+            : "Aanmaken mislukt — er ging iets mis. Probeer het opnieuw.",
+        );
+      }
       return res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["materials"] }),

@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { type Resolver, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { EntityCombobox } from "@/components/entity-combobox";
@@ -30,14 +31,16 @@ interface Props {
   defaultValues?: Material | null;
   onSubmit: (values: FormValues) => void;
   isPending: boolean;
+  error?: string | null;
 }
 
-export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPending }: Props) {
+export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPending, error }: Props) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema) as Resolver<FormValues>,
     defaultValues: { name: "", categoryId: null, dayPrice: 0, setupCost: 0, initialStock: 1, notes: "" },
   });
   const [catId, setCatId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
@@ -56,23 +59,25 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
 
   async function createCategory(name: string) {
     const res = await fetch("/api/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, prefix: "9999" }) });
-    return res.json() as Promise<{ id: number }>;
+    const created = (await res.json()) as { id: number };
+    await queryClient.invalidateQueries({ queryKey: ["categories"] });
+    return created;
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{defaultValues ? "Materiaal bewerken" : "Nieuw materiaal"}</DialogTitle></DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit((v) => onSubmit({ ...v, categoryId: catId }))} className="space-y-4">
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem><FormLabel>Naam *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            <FormItem>
-              <FormLabel>Categorie</FormLabel>
+            <div className="space-y-2">
+              <Label>Categorie</Label>
               <EntityCombobox items={categories} value={catId} onChange={(id) => { setCatId(id); form.setValue("categoryId", id); }}
                 onCreate={createCategory} placeholder="Selecteer categorie..." createLabel="+ Nieuwe categorie" />
-            </FormItem>
+            </div>
             <FormField control={form.control} name="dayPrice" render={({ field }) => (
               <FormItem><FormLabel>Dagprijs (€)</FormLabel><FormControl><Input type="number" step="0.01" min={0} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
@@ -87,6 +92,9 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
             <FormField control={form.control} name="notes" render={({ field }) => (
               <FormItem><FormLabel>Notities</FormLabel><FormControl><Textarea rows={2} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
+            {error && (
+              <p className="text-sm text-destructive" role="alert">{error}</p>
+            )}
             <div className="flex gap-3 pt-2">
               <Button type="submit" className="flex-1" disabled={isPending}>{isPending ? "Bezig..." : defaultValues ? "Opslaan" : "Aanmaken"}</Button>
               <Button type="button" variant="secondary" className="flex-1" onClick={() => onOpenChange(false)}>Annuleren</Button>

@@ -90,7 +90,7 @@ export function BundleComponentEditor({ material }: BundleComponentEditorProps) 
         </div>
       )}
 
-      <div className="flex gap-2 items-end">
+      <div className="flex gap-2 items-start">
         <div className="flex-1">
           <EntityCombobox
             items={available.map((m) => ({ id: m.id, name: m.name }))}
@@ -109,11 +109,11 @@ export function BundleComponentEditor({ material }: BundleComponentEditorProps) 
           min={1}
           value={qty}
           onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
-          className="w-16 h-9 text-sm"
+          className="w-16 h-10 text-sm"
           aria-label="Aantal per set"
         />
         <Button
-          size="sm"
+          size="icon"
           disabled={!selectedChildId || addComponent.isPending}
           onClick={() => {
             if (selectedChildId) {

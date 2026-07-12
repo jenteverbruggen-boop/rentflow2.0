@@ -125,7 +125,7 @@ export function CameraScanner({ open, onOpenChange }: CameraScannerProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>Scan materiaalcode</DialogTitle>
         </DialogHeader>

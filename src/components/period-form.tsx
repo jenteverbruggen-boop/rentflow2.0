@@ -8,6 +8,7 @@ import { format, endOfDay } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/date-input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Period, Project } from "@/types";
@@ -79,7 +80,7 @@ export function PeriodForm({ open, onOpenChange, defaultValues, project, onSubmi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{defaultValues ? "Periode bewerken" : "Nieuwe periode"}</DialogTitle>
         </DialogHeader>
@@ -90,10 +91,10 @@ export function PeriodForm({ open, onOpenChange, defaultValues, project, onSubmi
             )} />
             <div className="grid grid-cols-2 gap-3">
               <FormField control={form.control} name="startDate" render={({ field }) => (
-                <FormItem><FormLabel>Van *</FormLabel><FormControl><Input type="datetime-local" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Van *</FormLabel><FormControl><DateInput type="datetime-local" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="endDate" render={({ field }) => (
-                <FormItem><FormLabel>Tot *</FormLabel><FormControl><Input type="datetime-local" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Tot *</FormLabel><FormControl><DateInput type="datetime-local" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
             {outOfRange && (

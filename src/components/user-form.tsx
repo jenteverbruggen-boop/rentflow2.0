@@ -115,7 +115,7 @@ export function UserForm(props: Props) {
   if (props.mode === "edit") {
     return (
       <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Gebruiker bewerken</DialogTitle>
           </DialogHeader>
@@ -172,7 +172,7 @@ export function UserForm(props: Props) {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent>
+      <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>Nieuwe gebruiker</DialogTitle>
         </DialogHeader>

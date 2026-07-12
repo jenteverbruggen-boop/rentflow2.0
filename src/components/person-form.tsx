@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { type Resolver, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -40,6 +40,7 @@ export function PersonForm({ open, onOpenChange, defaultValues, onSubmit, isPend
     defaultValues: { name: "", email: "", phone: "", dayPrice: 0, address: "", postalCode: "", city: "", country: "" },
   });
   const [selectedFnIds, setSelectedFnIds] = useState<number[]>([]);
+  const queryClient = useQueryClient();
 
   const { data: functions = [] } = useQuery<Fn[]>({
     queryKey: ["functions"],
@@ -60,7 +61,9 @@ export function PersonForm({ open, onOpenChange, defaultValues, onSubmit, isPend
 
   async function createFunction(name: string) {
     const res = await fetch("/api/functions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
-    return res.json() as Promise<{ id: number }>;
+    const created = (await res.json()) as { id: number };
+    await queryClient.invalidateQueries({ queryKey: ["functions"] });
+    return created;
   }
 
   function toggleFn(id: number) {
@@ -69,7 +72,7 @@ export function PersonForm({ open, onOpenChange, defaultValues, onSubmit, isPend
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{defaultValues ? "Persoon bewerken" : "Nieuwe persoon"}</DialogTitle></DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit((v) => onSubmit({ ...v, functionIds: selectedFnIds }))} className="space-y-3">

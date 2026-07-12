@@ -49,6 +49,10 @@ label {
 }
 
 :root {
+  /* Tells the browser to render native controls (date-picker icon + calendar
+     popup, scrollbars) in the matching scheme. Without this the date icon is a
+     dark glyph on our dark background and effectively invisible. */
+  color-scheme: light;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -79,6 +83,7 @@ label {
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

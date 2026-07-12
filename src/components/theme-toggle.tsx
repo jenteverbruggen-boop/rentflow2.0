@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -10,11 +10,13 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ iconOnly = false, className }: ThemeToggleProps) {
-  const [isDark, setIsDark] = useState(
-    () =>
-      typeof document !== "undefined" &&
-      document.documentElement.classList.contains("dark"),
-  );
+  // Start false so the server render and first client render agree (the actual
+  // theme is read after mount to avoid a hydration mismatch).
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    setIsDark(document.documentElement.classList.contains("dark"));
+  }, []);
 
   function toggle() {
     const next = !isDark;

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   Dialog,
@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ export function ProjectForm({
   });
   const [clientId, setClientId] = useState<number | null>(null);
   const [locationId, setLocationId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["clients"],
@@ -128,7 +130,10 @@ export function ProjectForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
-    return res.json() as Promise<{ id: number }>;
+    const created = (await res.json()) as { id: number };
+    // Refetch so the new client is in the list and shows as the selection.
+    await queryClient.invalidateQueries({ queryKey: ["clients"] });
+    return created;
   }
 
   async function createLocation(name: string) {
@@ -137,7 +142,9 @@ export function ProjectForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
-    return res.json() as Promise<{ id: number }>;
+    const created = (await res.json()) as { id: number };
+    await queryClient.invalidateQueries({ queryKey: ["locations"] });
+    return created;
   }
 
   function handleSubmit(values: ProjectFormValues) {
@@ -219,7 +226,7 @@ export function ProjectForm({
                   <FormItem>
                     <FormLabel>Startdatum *</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <DateInput type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -232,7 +239,7 @@ export function ProjectForm({
                   <FormItem>
                     <FormLabel>Einddatum *</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <DateInput type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
