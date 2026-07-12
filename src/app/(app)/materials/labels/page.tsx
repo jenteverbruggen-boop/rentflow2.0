@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { MaterialLabel } from "@/components/print/material-label";
@@ -23,11 +23,7 @@ const PAGE_SIZE = COLS * ROWS;
 
 export default function LabelsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [origin, setOrigin] = useState("");
-
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
 
   const { data: materials = [] } = useQuery<Material[]>({
     queryKey: ["materials"],

@@ -39,9 +39,12 @@ export function DocumentHeader({ meta }: DocumentHeaderProps) {
     <div className="flex justify-between items-start mb-6 gap-4">
       <div className="space-y-0.5">
         {!logoError ? (
-          <img
+          <Image
             src="/api/settings/logo"
             alt="Logo"
+            width={224}
+            height={56}
+            unoptimized
             className="h-14 object-contain mb-2"
             onError={() => setLogoError(true)}
           />

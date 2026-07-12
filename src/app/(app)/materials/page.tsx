@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,9 @@ import { useMaterials } from "@/hooks/use-materials";
 import { useMaterialFilters } from "@/hooks/use-material-filters";
 import type { Material } from "@/types";
 
-export default function MaterialsPage() {
+function MaterialsPageContent() {
   const { query, create } = useMaterials();
-  const materials = query.data ?? [];
+  const materials = useMemo(() => query.data ?? [], [query.data]);
   const searchParams = useSearchParams();
 
   const [search, setSearch] = useState("");
@@ -117,5 +117,13 @@ export default function MaterialsPage() {
 
       <CameraScanner open={scanOpen} onOpenChange={setScanOpen} />
     </div>
+  );
+}
+
+export default function MaterialsPage() {
+  return (
+    <Suspense fallback={<p className="text-muted-foreground">Laden...</p>}>
+      <MaterialsPageContent />
+    </Suspense>
   );
 }

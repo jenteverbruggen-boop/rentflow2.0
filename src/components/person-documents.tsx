@@ -110,7 +110,7 @@ export function PersonDocuments({ personId }: Props) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Document verwijderen?</AlertDialogTitle>
-            <AlertDialogDescription>"{deleting?.label ?? deleting?.filename}" definitief verwijderen?</AlertDialogDescription>
+            <AlertDialogDescription>&quot;{deleting?.label ?? deleting?.filename}&quot; definitief verwijderen?</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuleren</AlertDialogCancel>

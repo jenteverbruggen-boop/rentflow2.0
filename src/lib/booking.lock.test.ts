@@ -23,7 +23,6 @@ describe("lockMaterials", () => {
   it("emits pg_advisory_xact_lock in sorted order for Postgres URL", async () => {
     vi.stubEnv("DATABASE_URL", "postgresql://user:pass@localhost/db");
     vi.resetModules();
-    vi.mock("@/lib/prisma", () => ({ prisma: {} }));
     const { lockMaterials } = await import("@/lib/booking");
     const calls: string[] = [];
     const pgTx = {

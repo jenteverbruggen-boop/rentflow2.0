@@ -530,9 +530,6 @@ async function main() {
   await bookMaterial(beachP.id, ["Tap instalatie", "Tap met spoelbak"], 1);
 
   // Demo bundle: "Catering Tafelset" = Cava glazen (2 stuks) + Borden 32 (1 stuk)
-  const cavaGlass = Object.values(materials).find(
-    (m) => materialDefs.find((d) => d.name === m.id.toString())
-  );
   const glassMat = Object.entries(materials).find(([name]) => name.startsWith("Cava"));
   const bordMat = Object.entries(materials).find(([name]) => name.startsWith("Borden 32"));
   if (glassMat && bordMat) {

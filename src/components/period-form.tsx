@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, endOfDay } from "date-fns";
@@ -62,8 +62,8 @@ export function PeriodForm({ open, onOpenChange, defaultValues, project, onSubmi
     }
   }, [defaultValues, project, form]);
 
-  const start = form.watch("startDate");
-  const end = form.watch("endDate");
+  const start = useWatch({ control: form.control, name: "startDate" });
+  const end = useWatch({ control: form.control, name: "endDate" });
   const outOfRange =
     start && end &&
     (new Date(start) < new Date(project.startDate) ||

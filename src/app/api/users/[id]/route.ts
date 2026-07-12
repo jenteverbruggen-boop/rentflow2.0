@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireRole, unauthorized, badRequest, notFound, conflict, serverError, forbidden } from "@/lib/api-auth";
+import { requireRole, badRequest, notFound, conflict, serverError, forbidden } from "@/lib/api-auth";
 
 type Params = { params: Promise<{ id: string }> };
 

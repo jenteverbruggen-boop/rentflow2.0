@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,9 +54,12 @@ export function LogoUpload() {
       </CardHeader>
       <CardContent className="space-y-3">
         {previewUrl && (
-          <img
+          <Image
             src={previewUrl}
             alt="Bedrijfslogo"
+            width={192}
+            height={96}
+            unoptimized
             className="max-h-24 max-w-48 object-contain border border-border rounded"
             onError={() => setPreviewUrl(null)}
           />

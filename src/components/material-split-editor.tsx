@@ -265,10 +265,10 @@ export function MaterialSplitEditor({
 
           <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
             <div className="bg-muted/60 px-3 py-2.5 border-b border-border md:hidden">
-              <h4 className="text-sm font-semibold">In "{period.name}"</h4>
+              <h4 className="text-sm font-semibold">In &quot;{period.name}&quot;</h4>
             </div>
             <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">
-              In "{period.name}"
+              In &quot;{period.name}&quot;
             </h4>
             <div className="hidden md:block h-9" aria-hidden />
             <div className="p-3 md:p-0">

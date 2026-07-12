@@ -33,7 +33,10 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
   };
   const persons = usePersonAvailability(range);
   const days = periodDays(period);
-  const assignedIds = new Set(period.people.map((pp) => pp.personId));
+  const assignedIds = useMemo(
+    () => new Set(period.people.map((pp) => pp.personId)),
+    [period.people],
+  );
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -77,7 +80,7 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
       map.get(role)!.push(pp);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [period.people]);
+  }, [period]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["project", String(project.id)] });
@@ -167,9 +170,9 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
 
           <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
             <div className="bg-muted/60 px-3 py-2.5 border-b border-border md:hidden">
-              <h4 className="text-sm font-semibold">In "{period.name}"</h4>
+              <h4 className="text-sm font-semibold">In &quot;{period.name}&quot;</h4>
             </div>
-            <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">In "{period.name}"</h4>
+            <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">In &quot;{period.name}&quot;</h4>
             <div className="hidden md:block h-9" aria-hidden />
             <div className="p-3 md:p-0">
             <ScrollArea className="h-[400px] pr-2">
