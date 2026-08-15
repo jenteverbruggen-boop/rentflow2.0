@@ -13,9 +13,31 @@ model User {
   password  String
   name      String
   role      String   @default("PLANNER")
+  roleId    Int?
   personId  Int?     @unique
   createdAt DateTime @default(now())
   person    Person?  @relation(fields: [personId], references: [id])
+  roleRel   Role?    @relation(fields: [roleId], references: [id])
+}
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  key         String           @unique
+  label       String
+  isSystem    Boolean          @default(false)
+  scope       String           @default("all")
+  permissions RolePermission[]
+  users       User[]
+}
+
+model RolePermission {
+  id     Int    @id @default(autoincrement())
+  roleId Int
+  module String
+  access String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, module])
 }
 
 model Client {

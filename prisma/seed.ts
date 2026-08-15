@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { MODULES } from "../src/lib/modules";
 
 // Prisma 7 connects through a driver adapter; pick it from the connection
 // string (a `file:` URL is the local SQLite dev database, else Postgres).
@@ -270,16 +271,53 @@ async function main() {
   await prisma.person.deleteMany();
   await prisma.material.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.role.deleteMany(); // cascades RolePermission
   await prisma.client.deleteMany();
   await prisma.location.deleteMany();
   await prisma.function.deleteMany();
   await prisma.category.deleteMany();
   await prisma.setting.deleteMany();
 
+  // Three system roles, fully-open matrix (decision C1) — every role gets
+  // verwijderen on every module so nobody loses access on deployment; the
+  // PO tightens it themselves via the settings UI (N3.3).
+  const systemRoles = [
+    { key: "ADMIN", label: "Admin" },
+    { key: "PLANNER", label: "Planner" },
+    { key: "VIEWER", label: "Viewer" },
+  ];
+  const roleByKey = new Map<string, { id: number }>();
+  for (const r of systemRoles) {
+    const role = await prisma.role.create({
+      data: {
+        key: r.key,
+        label: r.label,
+        isSystem: true,
+        scope: "all",
+        permissions: {
+          create: MODULES.map((m) => ({ module: m.key, access: "verwijderen" })),
+        },
+      },
+    });
+    roleByKey.set(r.key, role);
+  }
+
   await prisma.user.createMany({
     data: [
-      { email: "admin@rentflow.dev", password: await bcrypt.hash("admin123", 10), name: "Admin", role: "ADMIN" },
-      { email: "jan@rentflow.dev", password: await bcrypt.hash("user123", 10), name: "Jan Peeters", role: "PLANNER" },
+      {
+        email: "admin@rentflow.dev",
+        password: await bcrypt.hash("admin123", 10),
+        name: "Admin",
+        role: "ADMIN",
+        roleId: roleByKey.get("ADMIN")!.id,
+      },
+      {
+        email: "jan@rentflow.dev",
+        password: await bcrypt.hash("user123", 10),
+        name: "Jan Peeters",
+        role: "PLANNER",
+        roleId: roleByKey.get("PLANNER")!.id,
+      },
     ],
   });
 
