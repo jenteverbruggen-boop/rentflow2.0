@@ -64,6 +64,10 @@ function makePerson(
     discountPct?: number;
     discountAmount?: number;
     travelCosts?: { unitCost: number; quantity: number }[];
+    billingUnit?: "dag" | "uur";
+    rateSnapshot?: number | null;
+    startAt?: string | null;
+    endAt?: string | null;
   },
 ): PeriodPerson {
   return {
@@ -72,11 +76,11 @@ function makePerson(
     personId: 1,
     functionId: null,
     role: null,
-    startAt: null,
-    endAt: null,
+    startAt: opts?.startAt ?? null,
+    endAt: opts?.endAt ?? null,
     overlapAck: false,
-    billingUnit: "dag",
-    rateSnapshot: null,
+    billingUnit: opts?.billingUnit ?? "dag",
+    rateSnapshot: opts?.rateSnapshot ?? null,
     dayPriceSnapshot: snapshot,
     discountPct: opts?.discountPct ?? null,
     discountAmount: opts?.discountAmount ?? null,
@@ -176,6 +180,44 @@ describe("personLineCost", () => {
   it("snapshot × days", () => {
     const line = makePerson(200);
     expect(personLineCost(line, 3)).toBe(600);
+  });
+
+  // H5.3 — hourly billing and the day-rate regression it must not touch.
+  it("a 4-hour evening assignment at an hourly rate bills 4 × hour rate", () => {
+    const line = makePerson(300, {
+      billingUnit: "uur",
+      rateSnapshot: 45,
+      startAt: "2026-06-01T18:00:00Z",
+      endAt: "2026-06-01T22:00:00Z",
+    });
+    // days (3) is irrelevant on the hourly path — only the window's own
+    // hours matter, proving the two billing modes don't leak into each
+    // other via the shared `days` argument.
+    expect(personLineCost(line, 3)).toBe(180);
+  });
+
+  it("billingUnit: uur with no window (Q19 fallback) bills a full day, not zero", () => {
+    const line = makePerson(300, { billingUnit: "uur", rateSnapshot: 45 });
+    expect(personLineCost(line, 2)).toBe(600);
+  });
+
+  it("every existing day-billed figure stays byte-identical (rateSnapshot: null, billingUnit: dag)", () => {
+    const line = makePerson(200);
+    expect(personLineCost(line, 3)).toBe(600);
+    expect(line.billingUnit).toBe("dag");
+    expect(line.rateSnapshot).toBeNull();
+  });
+
+  it("a mixed period bills each line correctly: one legacy day-billed line, one new hourly line", () => {
+    const legacy = makePerson(200);
+    const hourly = makePerson(300, {
+      billingUnit: "uur",
+      rateSnapshot: 45,
+      startAt: "2026-06-01T18:00:00Z",
+      endAt: "2026-06-01T21:00:00Z",
+    });
+    expect(personLineCost(legacy, 3)).toBe(600);
+    expect(personLineCost(hourly, 3)).toBe(135);
   });
 });
 
