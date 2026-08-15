@@ -31,8 +31,11 @@ export async function GET(req: NextRequest) {
     const range = parseDateRange(from, to);
     if (!range) return badRequest("from en to zijn verplicht en moeten een geldige periode vormen (to na from)");
 
+    // M1.3 — an archived material must be refused for booking, not just
+    // hidden from the catalogue list.
     const materials = await prisma.material.findMany({
       orderBy: { name: "asc" },
+      where: { archived: false },
       include: {
         _count: { select: { stockItems: true } },
         components: {

@@ -59,6 +59,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       notes,
       isBundle,
       bundlePriceOverride,
+      archived,
     } = body;
     if (!name) return badRequest("naam is verplicht");
 
@@ -78,6 +79,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
           isBundle: Boolean(isBundle),
           bundlePriceOverride:
             bundlePriceOverride != null ? Number(bundlePriceOverride) : null,
+          ...(archived !== undefined ? { archived: Boolean(archived) } : {}),
         },
         include: { categoryRel: true },
       });

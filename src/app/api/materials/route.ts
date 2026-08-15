@@ -21,10 +21,18 @@ export async function GET(req: NextRequest) {
   if (access.scope === "own") return forbidden();
 
   try {
-    const code = new URL(req.url).searchParams.get("code");
+    const { searchParams } = new URL(req.url);
+    const code = searchParams.get("code");
+    // M1.3 — archived materials (M1 import's advanced file, Q34b) are
+    // hidden by default; the materials page's own archive view (out of
+    // scope for M1 itself) is the one caller that will ever pass this.
+    const includeArchived = searchParams.get("includeArchived") === "true";
     const materials = await prisma.material.findMany({
       orderBy: { name: "asc" },
-      where: code ? { code } : undefined,
+      where: {
+        ...(code ? { code } : {}),
+        ...(includeArchived ? {} : { archived: false }),
+      },
       include: {
         _count: { select: { stockItems: true } },
         categoryRel: true,

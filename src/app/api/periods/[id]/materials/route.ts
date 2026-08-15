@@ -62,6 +62,9 @@ export async function POST(req: NextRequest, { params }: Params) {
       include: { components: { include: { child: { include: { stockItems: true } } } } },
     });
     if (!material) return notFound();
+    // M1.3 — an archived material must be refused for booking, not
+    // merely hidden from the catalogue and availability lists.
+    if (material.archived) return badRequest("Dit materiaal is gearchiveerd en kan niet geboekt worden");
 
     if (material.isBundle) {
       if (material.components.length === 0) return badRequest("Bundle heeft geen componenten");
