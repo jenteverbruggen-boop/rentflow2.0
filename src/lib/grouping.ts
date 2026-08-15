@@ -1,4 +1,6 @@
 import type { Material, PeriodBundleBooking, PeriodStockItem } from "@/types";
+import { lineCost } from "@/lib/pricing";
+import { toNumber } from "@/lib/serialize";
 
 export interface MaterialGroup {
   key: string;
@@ -111,4 +113,20 @@ export function groupMaterialAssignmentsNested(
   return Array.from(catMap.entries())
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([, v]) => v);
+}
+
+/**
+ * Cost of a grouped material line: per-unit rental (with discount) × units,
+ * plus each assignment's own setup/teardown cost summed once (not
+ * multiplied by units or days). Shared by cost-line-row.tsx and
+ * period-bookings.tsx so neither reimplements the arithmetic by hand —
+ * that duplication was the actual €1500 bug (Y1.4).
+ */
+export function materialGroupCost(group: MaterialGroup, days: number): number {
+  const perUnit = lineCost(group.dayPriceSnapshot, days, group);
+  const setup = group.assignments.reduce(
+    (s, a) => s + toNumber(a.setupCostSnapshot),
+    0,
+  );
+  return Math.round((perUnit * group.units + setup) * 100) / 100;
 }

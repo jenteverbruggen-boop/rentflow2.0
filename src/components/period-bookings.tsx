@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LinePricePopover } from "@/components/line-price-popover";
 import { PersonTravelEditor } from "@/components/person-travel-editor";
-import { formatEUR, periodDays, lineCost, personLineCost } from "@/lib/pricing";
-import { groupMaterialAssignments } from "@/lib/grouping";
+import { formatEUR, periodDays, personLineCost } from "@/lib/pricing";
+import { groupMaterialAssignments, materialGroupCost } from "@/lib/grouping";
 import type { Period, Project } from "@/types";
 
 interface Props {
@@ -96,11 +96,7 @@ export function PeriodBookings({ period, project }: Props) {
           ) : (
             <div className="space-y-1.5">
               {groups.map((g) => {
-                const setup = g.assignments.reduce((s, a) => s + (a.setupCostSnapshot ?? 0), 0);
-                const groupCost = lineCost(g.dayPriceSnapshot, days, {
-                  discountPct: g.discountPct,
-                  discountAmount: g.discountAmount,
-                }) * g.units + setup;
+                const groupCost = materialGroupCost(g, days);
                 const override = project.materialPrices.find((p) => p.materialId === g.material.id);
                 return (
                   <div key={g.key} className="flex items-center gap-2 bg-muted/40 rounded-md px-3 py-1.5 text-sm">

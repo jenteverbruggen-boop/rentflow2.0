@@ -2,9 +2,10 @@
 
 import { LinePricePopover } from "@/components/line-price-popover";
 import { BookingDiscountPopover } from "@/components/booking-discount-popover";
-import { formatEUR, lineCost } from "@/lib/pricing";
+import { formatEUR } from "@/lib/pricing";
+import { toNumber } from "@/lib/serialize";
 import type { PeriodPerson, Project } from "@/types";
-import type { MaterialGroup } from "@/lib/grouping";
+import { materialGroupCost, type MaterialGroup } from "@/lib/grouping";
 
 interface PersonRowProps {
   line: PeriodPerson;
@@ -63,12 +64,11 @@ export function PersonCostRow({ line, days, cost, periodId, project }: PersonRow
 }
 
 export function MaterialGroupCostRow({ group, days, periodId, project }: MaterialGroupRowProps) {
-  const perUnit = lineCost(group.dayPriceSnapshot, days, group);
+  const total = materialGroupCost(group, days);
   const setup = group.assignments.reduce(
-    (s, a) => s + (a.setupCostSnapshot ?? 0),
+    (s, a) => s + toNumber(a.setupCostSnapshot),
     0,
   );
-  const total = perUnit * group.units + setup;
   const override = project.materialPrices.find((p) => p.materialId === group.material.id);
   return (
     <tr className="border-b last:border-0">
