@@ -8,6 +8,7 @@ import {
   periodPeopleCost,
   periodMaterialsCost,
   periodTravelCost,
+  periodSubtotal,
   projectCostSummary,
 } from "@/lib/pricing";
 import type { Period, PeriodStockItem, PeriodPerson } from "@/types";
@@ -332,16 +333,19 @@ describe("travel costs", () => {
     expect(periodTravelCost(period)).toBe(30 * 4 + 80 * 2);
   });
 
-  it("periodTotal and projectCostSummary include travel as its own bucket", () => {
+  it("periodTotal stays travel-inclusive; projectCostSummary also exposes a travel-exclusive subtotal (J1.1, Q22)", () => {
     const person = makePerson(100, {
       travelCosts: [{ unitCost: 50, quantity: 3 }],
     });
     const period = makePeriod("2026-05-01", "2026-05-02", [], [person]);
-    // 100 × 2 days + 50 × 3 trips = 350
+    // 100 × 2 days + 50 × 3 trips = 350 — periodTotal's arithmetic is
+    // unchanged by J1.1; travel still stays inside it per Q22.
     expect(periodTotal(period)).toBe(350);
+    expect(periodSubtotal(period)).toBe(200);
     const summary = projectCostSummary([period]);
     expect(summary.travel).toBe(150);
     expect(summary.people).toBe(200);
+    expect(summary.subtotal).toBe(200);
     expect(summary.total).toBe(350);
   });
 });

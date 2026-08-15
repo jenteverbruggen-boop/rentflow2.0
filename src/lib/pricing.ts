@@ -1,28 +1,6 @@
 import { differenceInCalendarDays } from "date-fns";
-import type { Period, PeriodPerson, PeriodStockItem, Project } from "@/types";
+import type { Period, PeriodPerson, PeriodStockItem } from "@/types";
 import { toNumber } from "@/lib/serialize";
-
-type PriceCarrier = Pick<Project, "materialPrices" | "personPrices">;
-
-export function effectiveMaterialPriceFromProject(
-  project: PriceCarrier,
-  materialId: number,
-  fallback: number,
-): number {
-  const override = project.materialPrices.find(
-    (p) => p.materialId === materialId,
-  );
-  return override ? override.dayPrice : fallback;
-}
-
-export function effectivePersonPriceFromProject(
-  project: PriceCarrier,
-  personId: number,
-  fallback: number,
-): number {
-  const override = project.personPrices.find((p) => p.personId === personId);
-  return override ? override.dayPrice : fallback;
-}
 
 export function periodDays(
   period: Pick<Period, "startDate" | "endDate">,
@@ -98,9 +76,23 @@ export function periodMaterialsCost(period: Period): number {
   return Math.round((flat + bundles) * 100) / 100;
 }
 
+/**
+ * people + materials only — excludes travel (Q22). Distinct from `total`,
+ * which stays travel-inclusive per Q22; kept as its own function so J1's
+ * itemised travel lines and the six display sites can all show the same
+ * subtotal without recomputing it inline (J1.1).
+ */
+export function periodSubtotal(period: Period): number {
+  return (
+    Math.round((periodPeopleCost(period) + periodMaterialsCost(period)) * 100) /
+    100
+  );
+}
+
 export function projectCostSummary(periods: Period[]): {
   people: number;
   materials: number;
+  subtotal: number;
   travel: number;
   total: number;
 } {
@@ -114,29 +106,23 @@ export function projectCostSummary(periods: Period[]): {
   const travel =
     Math.round(periods.reduce((acc, p) => acc + periodTravelCost(p), 0) * 100) /
     100;
+  const subtotal = Math.round((people + materials) * 100) / 100;
   return {
     people,
     materials,
+    subtotal,
     travel,
-    total: Math.round((people + materials + travel) * 100) / 100,
+    total: Math.round((subtotal + travel) * 100) / 100,
   };
 }
 
+// Travel stays inside the total per Q22 — the accountant's VAT-treatment
+// review (outstanding, does not block this item) is a one-line change here
+// and at the single BTW application site (cost-summary.tsx), not a hunt.
 export function periodTotal(period: Period): number {
-  const days = periodDays(period);
-  const flat = period.materials
-    .filter((l) => !l.bundleBookingId)
-    .reduce((acc, l) => acc + materialLineCost(l, days), 0);
-  const bundles = (period.bundleBookings ?? []).reduce(
-    (acc, b) => acc + b.dayPriceSnapshot * days * b.quantity,
-    0,
+  return (
+    Math.round((periodSubtotal(period) + periodTravelCost(period)) * 100) / 100
   );
-  const pers = period.people.reduce(
-    (acc, l) => acc + personLineCost(l, days),
-    0,
-  );
-  const travel = periodTravelCost(period);
-  return Math.round((flat + bundles + pers + travel) * 100) / 100;
 }
 
 export function projectTotal(periods: Period[]): number {
