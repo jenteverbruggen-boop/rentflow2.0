@@ -74,3 +74,50 @@ describe("checkPersonAvailability — strict boundary", () => {
     expect(result.blockingProject).toBeUndefined();
   });
 });
+
+describe("checkPersonAvailability — same-day non-overlapping windows (H3)", () => {
+  // Reproduces the PO's exact scenario: a person is booked 08:00-17:00 on
+  // project A (a single-day period). Before H3, both split editors sent
+  // date-only strings (from === to), producing a zero-width window that
+  // matched nothing regardless of the query — everyone read "Beschikbaar".
+  beforeEach(() => {
+    mockPrisma.periodPerson.findFirst.mockImplementation(
+      ({
+        where,
+      }: {
+        where: {
+          period: {
+            AND: { startDate?: { lt: Date }; endDate?: { gt: Date } }[];
+          };
+        };
+      }) => {
+        const [startCond, endCond] = where.period.AND;
+        const existingStart = new Date("2026-06-01T08:00:00Z");
+        const existingEnd = new Date("2026-06-01T17:00:00Z");
+        const queryEnd = startCond.startDate?.lt;
+        const queryStart = endCond.endDate?.gt;
+        if (!queryStart || !queryEnd) return null;
+        const overlaps = existingStart < queryEnd && existingEnd > queryStart;
+        return overlaps
+          ? { id: 99, period: { project: { id: 7, name: "Project A" } } }
+          : null;
+      },
+    );
+  });
+
+  it("18:00-23:00 the same day does not conflict with an 08:00-17:00 booking", async () => {
+    const result = await checkPersonAvailability(1, {
+      from: new Date("2026-06-01T18:00:00Z"),
+      to: new Date("2026-06-01T23:00:00Z"),
+    });
+    expect(result.blockingProject).toBeUndefined();
+  });
+
+  it("14:00-20:00 the same day conflicts with an 08:00-17:00 booking", async () => {
+    const result = await checkPersonAvailability(1, {
+      from: new Date("2026-06-01T14:00:00Z"),
+      to: new Date("2026-06-01T20:00:00Z"),
+    });
+    expect(result.blockingProject?.name).toBe("Project A");
+  });
+});
