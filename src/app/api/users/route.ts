@@ -9,12 +9,14 @@ import {
   serverError,
   forbidden,
 } from "@/lib/api-auth";
+import { resolveRoleAssignment } from "@/lib/role-assignment";
 
 const USER_SELECT = {
   id: true,
   email: true,
   name: true,
   role: true,
+  roleId: true,
   personId: true,
   createdAt: true,
 } as const;
@@ -41,16 +43,30 @@ export async function POST(req: NextRequest) {
   if (!auth) return forbidden();
 
   try {
-    const { email, name, password, role } = await req.json();
+    const { email, name, password, role, roleId } = await req.json();
     if (!email || !name || !password)
       return badRequest("email, naam en wachtwoord zijn verplicht");
+
+    const resolved = await resolveRoleAssignment({
+      role: roleId === undefined ? (role ?? "PLANNER") : undefined,
+      roleId,
+    });
+    if (!resolved || "error" in resolved) {
+      return badRequest(resolved?.error ?? "Ongeldige rol");
+    }
 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return conflict("Email is al in gebruik");
 
     const hashed = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, name, password: hashed, role: role ?? "PLANNER" },
+      data: {
+        email,
+        name,
+        password: hashed,
+        role: resolved.role,
+        roleId: resolved.roleId,
+      },
       select: USER_SELECT,
     });
     return NextResponse.json(user);

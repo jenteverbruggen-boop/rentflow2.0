@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireRole, badRequest, notFound, conflict, serverError, forbidden } from "@/lib/api-auth";
+import { resolveRoleAssignment } from "@/lib/role-assignment";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -10,6 +11,7 @@ const USER_SELECT = {
   email: true,
   name: true,
   role: true,
+  roleId: true,
   personId: true,
   createdAt: true,
 } as const;
@@ -23,13 +25,32 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const userId = parseInt(id, 10);
     const body = await req.json();
 
-    // No self-promotion allowed
-    if (body.role !== undefined && auth.id === userId) {
+    // No self-promotion allowed — covers both the legacy role string and
+    // the new roleId column, so an admin can't bypass this via either field.
+    if (
+      (body.role !== undefined || body.roleId !== undefined) &&
+      auth.id === userId
+    ) {
       return badRequest("Je kunt je eigen rol niet wijzigen");
     }
 
-    const data: { role?: string; password?: string; personId?: number | null } = {};
-    if (body.role !== undefined) data.role = body.role;
+    const data: {
+      role?: string;
+      roleId?: number;
+      password?: string;
+      personId?: number | null;
+    } = {};
+    if (body.role !== undefined || body.roleId !== undefined) {
+      const resolved = await resolveRoleAssignment({
+        role: body.role,
+        roleId: body.roleId,
+      });
+      if (resolved && "error" in resolved) return badRequest(resolved.error);
+      if (resolved) {
+        data.role = resolved.role;
+        data.roleId = resolved.roleId;
+      }
+    }
     if (body.personId !== undefined) data.personId = body.personId ?? null;
     if (body.password) {
       if (typeof body.password !== "string" || body.password.length < 8) {
