@@ -2,20 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   requireAuth,
+  resolveCurrentAccess,
   unauthorized,
   badRequest,
   serverError,
 } from "@/lib/api-auth";
 import { nextCode } from "@/lib/material-code";
-import { computeBundleStock } from "@/lib/bundle-stock";
-import { computeSharingMap } from "@/lib/bundle-sharing";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
+import { redactMoney } from "@/lib/redact";
+import { serializeMaterialsList } from "@/lib/materials-list";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
   if (!user) return unauthorized();
 
   try {
+    const access = await resolveCurrentAccess();
     const code = new URL(req.url).searchParams.get("code");
     const materials = await prisma.material.findMany({
       orderBy: { name: "asc" },
@@ -42,49 +44,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const allComponents = materials.flatMap((m) =>
-      m.components.map((c) => ({
-        parentId: m.id,
-        parentName: m.name,
-        childId: c.childId,
-      })),
-    );
-    const sharingMap = computeSharingMap(allComponents);
-
-    return NextResponse.json(
-      materials.map((m) => {
-        const usedInSets = (m.usedInBundles ?? []).map((u) => ({
-          id: u.parent.id,
-          name: u.parent.name,
-          quantity: u.quantity,
-        }));
-        const base = {
-          ...m,
-          dayPrice: toNumber(m.dayPrice),
-          setupCost: toNumberOrNull(m.setupCost),
-          bundlePriceOverride: toNumberOrNull(m.bundlePriceOverride),
-          totalStock: m._count.stockItems,
-          usedInSets,
-        };
-        if (!m.isBundle) return base;
-        const bundleStock = computeBundleStock(
-          m.components.map((c) => ({
-            childId: c.childId,
-            name: c.child.name,
-            code: c.child.code,
-            needPerSet: c.quantity,
-            totalStock: c.child._count.stockItems,
-            dayPrice: toNumber(c.child.dayPrice),
-            sharedWith: sharingMap.get(c.childId)?.filter((s) => s.id !== m.id) ?? [],
-          })),
-        );
-        const setPrice =
-          m.bundlePriceOverride != null
-            ? toNumber(m.bundlePriceOverride)
-            : bundleStock.componentSum;
-        return { ...base, bundleStock, setPrice };
-      }),
-    );
+    return NextResponse.json(serializeMaterialsList(materials, access));
   } catch (err) {
     return serverError((err as Error).message);
   }
@@ -147,12 +107,18 @@ export async function POST(req: NextRequest) {
         })),
       });
     }
-    return NextResponse.json({
-      ...material,
-      dayPrice: toNumber(material.dayPrice),
-      setupCost: toNumberOrNull(material.setupCost),
-      totalStock: stock,
-    });
+    const access = await resolveCurrentAccess();
+    return NextResponse.json(
+      redactMoney(
+        {
+          ...material,
+          dayPrice: toNumber(material.dayPrice),
+          setupCost: toNumberOrNull(material.setupCost),
+          totalStock: stock,
+        },
+        access,
+      ),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }

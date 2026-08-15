@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 import { formatEUR } from "@/lib/pricing";
 
 interface Props {
-  snapshot: number;
-  basePrice: number;
+  snapshot: number | null;
+  basePrice: number | null;
   override: number | null;
   resnapshotUrl: string;
   projectId: number;
@@ -39,8 +39,12 @@ export function LinePricePopover({
   invalidateKey,
 }: Props) {
   const queryClient = useQueryClient();
-  const effective = override ?? basePrice;
-  const drift = Math.abs(snapshot - effective) >= 0.005;
+  // Redacted for this caller (no Kosten/Facturen access, N2.1). Hooks
+  // still run unconditionally below (Rules of Hooks) — the placeholder
+  // return happens after them, before the real JSX.
+  const redacted = snapshot == null || basePrice == null;
+  const effective = override ?? basePrice ?? 0;
+  const drift = !redacted && Math.abs((snapshot ?? 0) - effective) >= 0.005;
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<string>(String(override ?? ""));
   const [error, setError] = useState<string>("");
@@ -89,6 +93,14 @@ export function LinePricePopover({
     onSuccess: () => { setError(""); invalidateAll(); setOpen(false); },
     onError: (err) => setError((err as Error).message),
   });
+
+  if (redacted) {
+    return (
+      <span className="h-7 w-20 rounded-md border border-dashed border-input/60 px-2 text-xs text-right tabular-nums inline-flex items-center justify-end text-muted-foreground">
+        {formatEUR(null)}
+      </span>
+    );
+  }
 
   return (
     <Popover

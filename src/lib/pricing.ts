@@ -14,7 +14,7 @@ export function periodDays(
 }
 
 export function lineCost(
-  snapshot: number,
+  snapshot: number | null,
   days: number,
   discount: { discountPct?: number | null; discountAmount?: number | null },
 ): number {
@@ -70,7 +70,7 @@ export function periodMaterialsCost(period: Period): number {
     .filter((l) => !l.bundleBookingId)
     .reduce((acc, l) => acc + materialLineCost(l, days), 0);
   const bundles = (period.bundleBookings ?? []).reduce(
-    (acc, b) => acc + b.dayPriceSnapshot * days * b.quantity,
+    (acc, b) => acc + toNumber(b.dayPriceSnapshot) * days * b.quantity,
     0,
   );
   return Math.round((flat + bundles) * 100) / 100;

@@ -24,7 +24,8 @@ export function BundleBookingRow({ booking: b, days, onRemove }: Props) {
           </Badge>
         </p>
         <p className="text-[10px] text-muted-foreground">
-          {formatEUR(b.dayPriceSnapshot)}/d · {formatEUR(b.dayPriceSnapshot * days)} totaal
+          {formatEUR(b.dayPriceSnapshot)}/d ·{" "}
+          {formatEUR(b.dayPriceSnapshot == null ? null : b.dayPriceSnapshot * days)} totaal
         </p>
       </div>
       <Button

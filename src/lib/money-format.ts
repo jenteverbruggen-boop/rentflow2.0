@@ -14,7 +14,14 @@ export function withBtw(amountExcl: number): number {
   return Math.round(amountExcl * (1 + BTW_RATE) * 100) / 100;
 }
 
-export function formatEUR(amount: number): string {
+/**
+ * `null`/`undefined` mean the value was redacted (N2.1 — a caller without
+ * Kosten/Facturen access) rather than genuinely absent or zero. Rendering
+ * "—" avoids two failure modes: crashing (Intl.NumberFormat throws on
+ * null) and lying (defaulting to €0,00 would look like a real free price).
+ */
+export function formatEUR(amount: number | null | undefined): string {
+  if (amount == null) return "—";
   return new Intl.NumberFormat("nl-BE", {
     style: "currency",
     currency: "EUR",

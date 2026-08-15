@@ -6,7 +6,7 @@ export interface MaterialGroup {
   key: string;
   material: Material;
   units: number;
-  dayPriceSnapshot: number;
+  dayPriceSnapshot: number | null;
   discountPct: number | null;
   discountAmount: number | null;
   assignments: PeriodStockItem[];
@@ -27,7 +27,7 @@ export interface MaterialGroup {
   key: string;
   material: Material;
   units: number;
-  dayPriceSnapshot: number;
+  dayPriceSnapshot: number | null;
   discountPct: number | null;
   discountAmount: number | null;
   assignments: PeriodStockItem[];

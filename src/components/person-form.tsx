@@ -50,7 +50,7 @@ export function PersonForm({ open, onOpenChange, defaultValues, onSubmit, isPend
   useEffect(() => {
     if (defaultValues) {
       form.reset({ name: defaultValues.name, email: defaultValues.email ?? "", phone: defaultValues.phone ?? "",
-        dayPrice: defaultValues.dayPrice, address: defaultValues.address ?? "", postalCode: defaultValues.postalCode ?? "",
+        dayPrice: defaultValues.dayPrice ?? 0, address: defaultValues.address ?? "", postalCode: defaultValues.postalCode ?? "",
         city: defaultValues.city ?? "", country: defaultValues.country ?? "" });
       setSelectedFnIds(defaultValues.functions?.map((f) => f.id) ?? []);
     } else {

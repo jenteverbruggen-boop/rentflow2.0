@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   requireAuth,
+  resolveCurrentAccess,
   unauthorized,
   badRequest,
+  forbidden,
   notFound,
   conflict,
   serverError,
 } from "@/lib/api-auth";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
+import { findRejectedMoneyWrite, redactMoney } from "@/lib/redact";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -17,18 +20,24 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!user) return unauthorized();
   try {
     const { id } = await params;
+    const access = await resolveCurrentAccess();
     const material = await prisma.material.findUnique({
       where: { id: parseInt(id) },
       include: { stockItems: { orderBy: { unitNumber: "asc" } } },
     });
     if (!material) return notFound();
-    return NextResponse.json({
-      ...material,
-      dayPrice: toNumber(material.dayPrice),
-      setupCost: toNumberOrNull(material.setupCost),
-      bundlePriceOverride: toNumberOrNull(material.bundlePriceOverride),
-      totalStock: material.stockItems.length,
-    });
+    return NextResponse.json(
+      redactMoney(
+        {
+          ...material,
+          dayPrice: toNumber(material.dayPrice),
+          setupCost: toNumberOrNull(material.setupCost),
+          bundlePriceOverride: toNumberOrNull(material.bundlePriceOverride),
+          totalStock: material.stockItems.length,
+        },
+        access,
+      ),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }
@@ -40,6 +49,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   try {
     const { id } = await params;
+    const body = await req.json();
     const {
       name,
       category,
@@ -50,8 +60,12 @@ export async function PUT(req: NextRequest, { params }: Params) {
       notes,
       isBundle,
       bundlePriceOverride,
-    } = await req.json();
+    } = body;
     if (!name) return badRequest("naam is verplicht");
+
+    const access = await resolveCurrentAccess();
+    if (findRejectedMoneyWrite(body, access)) return forbidden();
+
     try {
       const material = await prisma.material.update({
         where: { id: parseInt(id) },
@@ -69,12 +83,17 @@ export async function PUT(req: NextRequest, { params }: Params) {
         },
         include: { categoryRel: true },
       });
-      return NextResponse.json({
-        ...material,
-        dayPrice: toNumber(material.dayPrice),
-        setupCost: toNumberOrNull(material.setupCost),
-        bundlePriceOverride: toNumberOrNull(material.bundlePriceOverride),
-      });
+      return NextResponse.json(
+        redactMoney(
+          {
+            ...material,
+            dayPrice: toNumber(material.dayPrice),
+            setupCost: toNumberOrNull(material.setupCost),
+            bundlePriceOverride: toNumberOrNull(material.bundlePriceOverride),
+          },
+          access,
+        ),
+      );
     } catch (e: unknown) {
       if ((e as { code?: string })?.code === "P2002")
         return conflict("Code bestaat al");

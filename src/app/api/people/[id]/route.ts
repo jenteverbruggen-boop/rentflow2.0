@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   requireAuth,
+  resolveCurrentAccess,
   unauthorized,
   badRequest,
+  forbidden,
   serverError,
 } from "@/lib/api-auth";
 import { toNumber } from "@/lib/serialize";
+import { findRejectedMoneyWrite, redactMoney } from "@/lib/redact";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,6 +19,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   try {
     const { id } = await params;
+    const body = await req.json();
     const {
       name,
       role,
@@ -27,8 +31,13 @@ export async function PUT(req: NextRequest, { params }: Params) {
       city,
       country,
       functionIds,
-    } = await req.json();
+    } = body;
     if (!name) return badRequest("naam is verplicht");
+
+    const access = await resolveCurrentAccess();
+    const rejectedField = findRejectedMoneyWrite(body, access);
+    if (rejectedField) return forbidden();
+
     const person = await prisma.person.update({
       where: { id: parseInt(id) },
       data: {
@@ -53,11 +62,16 @@ export async function PUT(req: NextRequest, { params }: Params) {
       },
       include: { functions: { include: { function: true } } },
     });
-    return NextResponse.json({
-      ...person,
-      dayPrice: toNumber(person.dayPrice),
-      functions: person.functions.map((f) => f.function),
-    });
+    return NextResponse.json(
+      redactMoney(
+        {
+          ...person,
+          dayPrice: toNumber(person.dayPrice),
+          functions: person.functions.map((f) => f.function),
+        },
+        access,
+      ),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }

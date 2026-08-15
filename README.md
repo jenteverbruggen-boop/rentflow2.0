@@ -189,7 +189,7 @@ docker compose up -d
 
 ## API Overview
 
-All endpoints except `/api/auth/*` require authentication via an httpOnly cookie (`rentflow_token`) set on login.
+All endpoints except `/api/auth/*` require authentication via an httpOnly cookie (`rentflow_token`) set on login. Money fields (`dayPrice`, `dayPriceSnapshot`, `setupCost`, `discountPct`/`discountAmount`, travel costs, price overrides, etc.) are stripped from every response below for a caller whose role lacks `Kosten/Facturen` read access — those fields then arrive as `null` (or an empty array/`false` for whole-record fields), not omitted from the JSON shape.
 
 | Method | Path | Description |
 |---|---|---|

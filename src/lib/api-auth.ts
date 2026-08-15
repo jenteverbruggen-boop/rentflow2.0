@@ -69,6 +69,21 @@ async function resolveAccess(userId: number): Promise<ResolvedAccess | null> {
 }
 
 /**
+ * Resolve the caller's own permission set without requiring a specific
+ * module/level — for code that needs to know "what can this caller see"
+ * (e.g. redact.ts) on a route not yet gated by requireModule() (N2.1 runs
+ * before N2.2-N2.4's guard sweep lands on these same route files).
+ * Fails closed identically to requireModule: no user row, or roleId not
+ * pointing at a real role, throws rather than returning an empty set.
+ */
+export async function resolveCurrentAccess(): Promise<ResolvedAccess> {
+  const payload = await requireAuth();
+  const access = await resolveAccess(payload.id);
+  if (!access) throw new Error("Forbidden");
+  return access;
+}
+
+/**
  * Resolve the caller's module permissions from the database on every
  * call — no cache. A matrix change must apply on the next request, not
  * after re-login (7-day tokens). The JWT keeps carrying `role` for nav
@@ -79,9 +94,7 @@ export async function requireModule(
   module: ModuleKey,
   level: AccessLevel,
 ): Promise<ResolvedAccess> {
-  const payload = await requireAuth();
-  const access = await resolveAccess(payload.id);
-  if (!access) throw new Error("Forbidden");
+  const access = await resolveCurrentAccess();
   const held = access.permissions[module] ?? "geen";
   if (!satisfies(held, level)) throw new Error("Forbidden");
   return access;

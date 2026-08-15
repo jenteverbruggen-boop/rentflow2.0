@@ -83,7 +83,7 @@ export interface Person {
   postalCode: string | null;
   city: string | null;
   country: string | null;
-  dayPrice: number;
+  dayPrice: number | null;
   functions?: Function[];
 }
 
@@ -124,7 +124,7 @@ export interface PeriodBundleBooking {
   periodId: number;
   materialId: number;
   quantity: number;
-  dayPriceSnapshot: number;
+  dayPriceSnapshot: number | null;
   material?: Material & { components?: MaterialComponent[] };
 }
 
@@ -136,7 +136,7 @@ export interface Material {
   categoryRel?: Category | null;
   code: string | null;
   notes: string | null;
-  dayPrice: number;
+  dayPrice: number | null;
   setupCost: number | null;
   isBundle: boolean;
   bundlePriceOverride: number | null;
@@ -144,7 +144,7 @@ export interface Material {
   stockItems?: StockItem[];
   totalStock?: number;
   bundleStock?: BundleStock;
-  setPrice?: number;
+  setPrice?: number | null;
   usedInSets?: { id: number; name: string; quantity: number }[];
 }
 
@@ -172,7 +172,8 @@ export interface StockItem {
 export interface StockItemAssignment {
   id: number;
   periodId: number;
-  dayPriceSnapshot: number;
+  dayPriceSnapshot: number | null;
+  setupCostSnapshot: number | null;
   discountPct: number | null;
   discountAmount: number | null;
   period: {
@@ -193,8 +194,8 @@ export interface PeriodStockItem {
   id: number;
   periodId: number;
   stockItemId: number;
-  dayPriceSnapshot: number;
-  setupCostSnapshot: number;
+  dayPriceSnapshot: number | null;
+  setupCostSnapshot: number | null;
   discountPct: number | null;
   discountAmount: number | null;
   bundleBookingId: number | null;
@@ -214,7 +215,7 @@ export interface PeriodPerson {
   periodId: number;
   personId: number;
   role: string | null;
-  dayPriceSnapshot: number;
+  dayPriceSnapshot: number | null;
   discountPct: number | null;
   discountAmount: number | null;
   person: Person;
@@ -236,7 +237,7 @@ export interface ProjectMaterialPrice {
   id: number;
   projectId: number;
   materialId: number;
-  dayPrice: number;
+  dayPrice: number | null;
   material: Material;
 }
 
@@ -244,7 +245,7 @@ export interface ProjectPersonPrice {
   id: number;
   projectId: number;
   personId: number;
-  dayPrice: number;
+  dayPrice: number | null;
   person: Person;
 }
 
@@ -269,7 +270,7 @@ export interface Project {
 
 export interface MaterialAvailability {
   material: Material & {
-    basePrice: number;
+    basePrice: number | null;
     hasOverride: boolean;
     isBundle?: boolean;
   };
@@ -280,7 +281,7 @@ export interface MaterialAvailability {
 }
 
 export interface PersonAvailability {
-  person: Person & { basePrice: number; hasOverride: boolean };
+  person: Person & { basePrice: number | null; hasOverride: boolean };
   isAvailable: boolean;
   blockingProject?: { id: number; name: string };
   sameProjectWarning?: { projectId: number; projectName: string };

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   requireAuth,
   requireRole,
+  resolveCurrentAccess,
   unauthorized,
   forbidden,
   badRequest,
@@ -11,17 +12,21 @@ import {
 import { projectInclude } from "@/lib/project-include";
 import { serializeProject } from "@/lib/serialize-project";
 import { brusselsWallClockToUtc } from "@/lib/brussels-time";
+import { redactMoney } from "@/lib/redact";
 
 export async function GET() {
   const user = await requireAuth().catch(() => null);
   if (!user) return unauthorized();
 
   try {
+    const access = await resolveCurrentAccess();
     const projects = await prisma.project.findMany({
       orderBy: { startDate: "asc" },
       include: projectInclude,
     });
-    return NextResponse.json(projects.map(serializeProject));
+    return NextResponse.json(
+      projects.map((p) => redactMoney(serializeProject(p), access)),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }
@@ -76,7 +81,8 @@ export async function POST(req: NextRequest) {
       },
       include: projectInclude,
     });
-    return NextResponse.json(serializeProject(project));
+    const access = await resolveCurrentAccess();
+    return NextResponse.json(redactMoney(serializeProject(project), access));
   } catch (err) {
     return serverError((err as Error).message);
   }

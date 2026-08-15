@@ -50,7 +50,7 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
   useEffect(() => {
     if (defaultValues) {
       setCatId(defaultValues.categoryId ?? null);
-      form.reset({ name: defaultValues.name, categoryId: defaultValues.categoryId ?? null, dayPrice: defaultValues.dayPrice, setupCost: defaultValues.setupCost ?? 0, notes: defaultValues.notes ?? "" });
+      form.reset({ name: defaultValues.name, categoryId: defaultValues.categoryId ?? null, dayPrice: defaultValues.dayPrice ?? 0, setupCost: defaultValues.setupCost ?? 0, notes: defaultValues.notes ?? "" });
     } else {
       setCatId(null);
       form.reset({ name: "", categoryId: null, dayPrice: 0, setupCost: 0, initialStock: 1, notes: "" });

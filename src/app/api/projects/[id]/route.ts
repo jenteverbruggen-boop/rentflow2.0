@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   requireAuth,
+  resolveCurrentAccess,
   unauthorized,
   badRequest,
   notFound,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/api-auth";
 import { projectInclude } from "@/lib/project-include";
 import { serializeProject } from "@/lib/serialize-project";
+import { redactMoney } from "@/lib/redact";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -18,12 +20,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   try {
     const { id } = await params;
+    const access = await resolveCurrentAccess();
     const project = await prisma.project.findUnique({
       where: { id: parseInt(id) },
       include: projectInclude,
     });
     if (!project) return notFound();
-    return NextResponse.json(serializeProject(project));
+    return NextResponse.json(redactMoney(serializeProject(project), access));
   } catch (err) {
     return serverError((err as Error).message);
   }

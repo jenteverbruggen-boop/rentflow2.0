@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
+import { requireAuth, resolveCurrentAccess, unauthorized, badRequest, serverError } from "@/lib/api-auth";
 import { checkPersonAvailability } from "@/lib/availability";
 import { toNumber } from "@/lib/serialize";
 import { parseDateRange } from "@/lib/parse-date-range";
+import { redactMoney } from "@/lib/redact";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
@@ -19,6 +20,7 @@ export async function GET(req: NextRequest) {
     const range = parseDateRange(from, to);
     if (!range) return badRequest("from en to zijn verplicht en moeten een geldige periode vormen (to na from)");
 
+    const access = await resolveCurrentAccess();
     const people = await prisma.person.findMany({ orderBy: { name: "asc" } });
 
     const overrides = projectId
@@ -36,12 +38,15 @@ export async function GET(req: NextRequest) {
         });
         const basePrice = toNumber(p.dayPrice);
         const effectivePrice = overrideMap.get(p.id) ?? basePrice;
-        return {
-          person: { ...p, dayPrice: effectivePrice, basePrice, hasOverride: overrideMap.has(p.id) },
-          isAvailable: !check.blockingProject,
-          blockingProject: check.blockingProject,
-          sameProjectWarning: check.sameProjectWarning,
-        };
+        return redactMoney(
+          {
+            person: { ...p, dayPrice: effectivePrice, basePrice, hasOverride: overrideMap.has(p.id) },
+            isAvailable: !check.blockingProject,
+            blockingProject: check.blockingProject,
+            sameProjectWarning: check.sameProjectWarning,
+          },
+          access,
+        );
       })
     );
 

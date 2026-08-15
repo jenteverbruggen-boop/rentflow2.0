@@ -51,7 +51,7 @@ export function BundleComponentRow({
       />
       {child && (
         <span className="shrink-0 text-muted-foreground">
-          {formatEUR(child.dayPrice * qty)}/d
+          {formatEUR(child.dayPrice == null ? null : child.dayPrice * qty)}/d
         </span>
       )}
       <Button

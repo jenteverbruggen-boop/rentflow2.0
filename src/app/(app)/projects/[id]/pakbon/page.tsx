@@ -153,9 +153,11 @@ export default function PakbonPage() {
                               </td>
                               <td className="p-1.5 text-right">
                                 {formatEUR(
-                                  b.booking.dayPriceSnapshot *
-                                    days *
-                                    b.booking.quantity,
+                                  b.booking.dayPriceSnapshot == null
+                                    ? null
+                                    : b.booking.dayPriceSnapshot *
+                                        days *
+                                        b.booking.quantity,
                                 )}
                               </td>
                             </tr>

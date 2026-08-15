@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, serverError } from "@/lib/api-auth";
+import { requireAuth, resolveCurrentAccess, unauthorized, serverError } from "@/lib/api-auth";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
+import { redactMoney } from "@/lib/redact";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -10,6 +11,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!user) return unauthorized();
   try {
     const { id } = await params;
+    const access = await resolveCurrentAccess();
     const items = await prisma.stockItem.findMany({
       where: { materialId: parseInt(id) },
       orderBy: { unitNumber: "asc" },
@@ -38,16 +40,21 @@ export async function GET(_req: NextRequest, { params }: Params) {
       },
     });
     return NextResponse.json(
-      items.map((item) => ({
-        ...item,
-        assignments: item.assignments.map((a) => ({
-          ...a,
-          dayPriceSnapshot: toNumber(a.dayPriceSnapshot),
-          setupCostSnapshot: toNumberOrNull(a.setupCostSnapshot),
-          discountPct: toNumberOrNull(a.discountPct),
-          discountAmount: toNumberOrNull(a.discountAmount),
-        })),
-      })),
+      items.map((item) =>
+        redactMoney(
+          {
+            ...item,
+            assignments: item.assignments.map((a) => ({
+              ...a,
+              dayPriceSnapshot: toNumber(a.dayPriceSnapshot),
+              setupCostSnapshot: toNumberOrNull(a.setupCostSnapshot),
+              discountPct: toNumberOrNull(a.discountPct),
+              discountAmount: toNumberOrNull(a.discountAmount),
+            })),
+          },
+          access,
+        ),
+      ),
     );
   } catch (err) {
     return serverError((err as Error).message);

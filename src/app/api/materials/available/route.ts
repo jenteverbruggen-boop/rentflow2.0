@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   requireAuth,
+  resolveCurrentAccess,
   unauthorized,
   badRequest,
   serverError,
@@ -13,6 +14,7 @@ import {
 import { computeSharingMap } from "@/lib/bundle-sharing";
 import { toNumber } from "@/lib/serialize";
 import { parseDateRange } from "@/lib/parse-date-range";
+import { redactMoney } from "@/lib/redact";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
@@ -27,6 +29,7 @@ export async function GET(req: NextRequest) {
     const range = parseDateRange(from, to);
     if (!range) return badRequest("from en to zijn verplicht en moeten een geldige periode vormen (to na from)");
 
+    const access = await resolveCurrentAccess();
     const materials = await prisma.material.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -94,23 +97,26 @@ export async function GET(req: NextRequest) {
             : toNumber(m.bundlePriceOverride);
         const basePrice = m.isBundle ? bundlePrice : toNumber(m.dayPrice);
         const effectivePrice = overrideMap.get(m.id) ?? basePrice;
-        return {
-          material: {
-            id: m.id,
-            name: m.name,
-            category: m.category,
-            notes: m.notes,
-            dayPrice: effectivePrice,
-            basePrice,
-            hasOverride: overrideMap.has(m.id),
-            isBundle: m.isBundle,
-            code: m.code,
+        return redactMoney(
+          {
+            material: {
+              id: m.id,
+              name: m.name,
+              category: m.category,
+              notes: m.notes,
+              dayPrice: effectivePrice,
+              basePrice,
+              hasOverride: overrideMap.has(m.id),
+              isBundle: m.isBundle,
+              code: m.code,
+            },
+            totalStock: m._count.stockItems,
+            availableCount,
+            availableStockItemIds,
+            ...(sharedComponents ? { sharedComponents } : {}),
           },
-          totalStock: m._count.stockItems,
-          availableCount,
-          availableStockItemIds,
-          ...(sharedComponents ? { sharedComponents } : {}),
-        };
+          access,
+        );
       }),
     );
 
