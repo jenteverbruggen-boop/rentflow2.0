@@ -115,7 +115,7 @@ export const config = {
 ```
 
 `PUBLIC_PATHS` (line 6) is an **array**, tested with `.some()` at line 12. `PUBLIC_API_PREFIX` (line 7) is a **single scalar string**, tested with one `.startsWith()` at line 14 — there is nothing to `.push()` into. Two compliant fixes, pick one:
-- **(a)** widen `PUBLIC_API_PREFIX` into `PUBLIC_API_PREFIXES: string[] = ["/api/auth", "/api/calendar"]`, mirroring `PUBLIC_PATHS`'s own shape and checked the same way; or
+- **(a)** widen `PUBLIC_API_PREFIX` into `PUBLIC_API_PREFIXES: string[] = ["/api/auth", "/api/calendar/"]`, mirroring `PUBLIC_PATHS`'s own shape and checked the same way; or
 - **(b)** leave both constants untouched and extend the matcher's negative lookahead at line 31 with `|api/calendar` — precedent already exists there for `api/settings/logo`, a route with its own non-cookie-gated GET.
 
 Whichever fix, **any request whose pathname does not start with `/api/calendar` must still hit the existing branches unchanged** — do not widen the exemption further than the literal prefix, or every other route silently loses its auth check.
@@ -307,7 +307,7 @@ None of Client/Location/Person carry a money column other than `Person.dayPrice`
 
 **Concrete traps**
 - **`src/app/api/materials/route.ts` is 146 lines** — 4 lines under the 150-line cap. Do **not** add the export handler inline here; the design doc already specifies a separate path (`GET /api/materials/export`, §9.3), which as a Next.js route handler is its own file (`src/app/api/materials/export/route.ts`) — confirm this is the plan before writing any code, since inlining would blow the limit immediately.
-- **Q61 vs the design doc: format disagreement, needs sign-off before P2.1 starts.** This brief (P2.1 above) asks for real `.xlsx` via a maintained library; the design doc (§8, §13 risk 5) recommends CSV instead, arguing a hand-rolled xlsx *writer* is materially harder to get right than a reader (styles/shared-strings/content-types parts) and that a well-formed CSV already satisfies "money as real numbers, dates as real dates" with zero new dependency. **Get an explicit answer on this before P2.1** — it changes P2.1's literal deliverable and whether a new dependency enters `package.json` (today: no `xlsx`/`exceljs`/`papaparse`/`sheetjs` — verified, `package.json`'s dependency list has none).
+- **Export format is settled: real `.xlsx`** (Q61). The design doc's §8/§13-risk-5 CSV recommendation is marked superseded in that document. Add one small maintained xlsx *writer* library — `package.json` has none today (verified: no `xlsx`/`exceljs`/`papaparse`/`sheetjs`) — and keep the hand-rolled xlsx *reader* for imports. Record the chosen library and version in the commit body.
 - Export routes must reuse Y1's Decimal→number conversion (already shipped, `schema.prisma:152` example above) — never format a `Decimal` with `.toString()` or string-concatenate it into a cell value, or Excel/the CSV reader receives a string, not a number.
 
 **Verification commands**
@@ -655,6 +655,14 @@ wc -l src/lib/documents.ts "src/app/api/people/[id]/documents/route.ts" src/app/
 ## E5b — 62 mm label-roll variant `S` `optional` `💤 parked on Q8`
 
 Not a blocker and not scheduled — recorded here so it is not lost. E5 already ships **A4 3×8 sticker sheets** (`bce0716`, `src/app/(app)/materials/labels/page.tsx:11,64,107-117`, `@page { size: A4 }`). If the PO later buys a label-roll printer (e.g. Brother 62 mm):
+
+**Files to read before starting:** `src/app/(app)/materials/labels/page.tsx` (132 lines) — the whole item lives here; `@page { size: A4; margin: 10mm }` at `:11`, the heading "Materiaallabels — A4 (3×8)" at `:64`, and the sheet geometry at `:107-117` (`width: "210mm"`, `minHeight: "297mm"`, `padding: "10mm"`, `gridTemplateColumns: repeat(${COLS}, 1fr)`). Also `src/components/print/material-label.tsx` (92 lines) — the individual label, which should need no change.
+
+**Current behaviour:** one hard-coded A4 3×8 sheet. `COLS` is a module constant; page size, margins and label dimensions are inline style literals. Nothing is configurable.
+
+**Trap:** the label *content* (name, code, Code128 barcode, QR) is already sized for an A4 cell. A 62 mm roll is much narrower — the barcode may need a smaller module width or a shorter human-readable line. Verify by printing, not by eyeballing the preview.
+
+**Definition of done:** both presets print correctly at true scale (measure a printed label with a ruler — browser print scaling lies); the A4 output is byte-identical to today for the existing preset; no change to `material-label.tsx`'s content model.
 
 **E5b.1 — `feat(labels): parameterise the label sheet geometry`**
 - Lift the hard-coded A4 grid into named presets — label width/height, columns/rows, page size and margins as CSS variables — with `a4-3x8` as the existing default and `roll-62mm` as a second preset. One `@page` rule per preset.

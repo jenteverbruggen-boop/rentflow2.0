@@ -1138,6 +1138,60 @@ Success (per the design doc's test plan §11, achievable in phase 2's `update`-o
 
 `src/components/project-costs-tab.tsx`'s print view (`:71-79`) does **not** use `DocumentHeader`, so unlike the pakbon and callsheet it prints with no company name, address, BTW number, IBAN or logo. This is the literal answer to "facturen moeten properder", and it ships before the real invoice entity (J2b, phase 3).
 
+**Files to read before starting:**
+
+| File | Why |
+|---|---|
+| `src/components/print/print-layout.tsx` (58 lines) | The wrapper to reuse: injects `PRINT_CSS` (`:6-34`), renders the `.no-print` toolbar with "Afdrukken"/"← Terug" (`:45-50`), wraps children in `.print-paper` which forces light-theme CSS variables for print (`:15-28`) |
+| `src/components/print/document-header.tsx` (109 lines) | The header to reuse: client-side fetch of `/api/settings` (`:32-36`), company block with logo/name/address/phone/**BTW**/**IBAN** (`:41-72`), right-hand meta column — opdrachtgever, locatie, projectnummer, accountmanager, aangemaakt op (`:74-106`) |
+| `src/app/(app)/projects/[id]/pakbon/page.tsx` (204 lines) | The reference implementation of `PrintLayout` + `DocumentHeader` together — copy its structure, not its content |
+| `src/components/project-costs-tab.tsx` (183 lines, over the limit) | The source of the cost table and its **separate, duplicated** `PRINT_CSS` (`:29-49`) and print-only header (`:71-79`) |
+| `src/components/cost-summary.tsx` (105 lines) | `PeriodSubtotals` and `CostSummary` — the subtotal/BTW/total block J1 restructured in phase 0 |
+| `src/components/cost-line-row.tsx` | `PersonCostRow`, `MaterialGroupCostRow`, and the `TravelCostRow` added by J1.2 |
+| `prisma/schema.prisma:21-33` | `Client` already carries `contactName`, `email`, `phone`, `address`, `postalCode`, `city`, `vatNumber` — everything a billing block needs |
+
+**Current behaviour (verified):**
+
+The Kosten tab prints via `window.print()` (`project-costs-tab.tsx:66`) using its own `PRINT_CSS` constant (`:29-49`) — a **second, diverged** stylesheet from `print-layout.tsx:6-34`, using `visibility: hidden/visible` toggling where the other uses `.print-paper` variable overrides. Its print header (`:71-79`, class `print-only`) renders **only** project name, client, location and dates:
+
+```
+{/* print-only header */}
+<div className="print-only">
+  <h1>{project.name}</h1>
+  <p>{project.client} · {project.location}</p>
+  ...
+</div>
+```
+
+No company name, no address, no BTW number, no IBAN, no logo — unlike the pakbon and callsheet, which both mount `DocumentHeader`. That single omission is the whole of "facturen moeten properder" at this stage.
+
+**Traps:**
+
+- `project-costs-tab.tsx` is **183 lines** — already over the 150-line limit, and split in phase 0 (Y3.1). Build on the extracted components; do not re-inflate the parent.
+- **Do not add a fourth print stylesheet.** There are already three (`print-layout.tsx:6-34`, `project-costs-tab.tsx:29-49`, and the labels page). Reuse `PrintLayout`'s. Consolidation is J3 in phase 3 — out of scope here, but do not make it worse.
+- `DocumentHeader` fetches `/api/settings`, which **phase 1 gated at `Instellingen: lezen`** (N2 subtlety 3). Test the print route with a non-admin role that must print; if it 403s, report it rather than loosening the guard.
+- The interactive controls in the cost table (`LinePricePopover`, `BookingDiscountPopover`) must not bleed into print — the existing `.no-print` convention handles this, but verify visually.
+- Travel lines must appear **below the subtotal** per J1 (phase 0). If J1 has not merged, this item is blocked on it.
+
+**Verification:**
+
+```bash
+npx tsc --noEmit && npm run lint
+npm run dev
+# open /projects/1/kosten, then browser print preview (Cmd+P)
+```
+Success: an A4 page showing your company block with logo, the client's billing address, project number and date, the cost lines grouped per period, travel lines below the subtotal, and BTW + total — with no buttons, popovers or navigation visible.
+
+**Definition of done:**
+- [ ] Printable route `/projects/[id]/kosten` renders via `PrintLayout` + `DocumentHeader`
+- [ ] Company block shows name, address, phone, BTW, IBAN and logo from settings
+- [ ] Client billing block shows address, postcode, city and VAT number — not just the name
+- [ ] Project number (= project id) and creation date present
+- [ ] Travel lines itemised below the subtotal; totals match the Kosten tab exactly
+- [ ] No interactive control appears in print preview
+- [ ] No new `@media print` block was introduced
+- [ ] Verified in both light and dark app themes (print must be light regardless)
+
 **J2a.1 — `feat(documents): printable cost overview with company and client details`**
 - New printable route `/projects/[id]/kosten` reusing `PrintLayout` + `DocumentHeader` (`src/components/print/`).
 - Add the client billing block — `Client` already has `address`, `postalCode`, `city`, `vatNumber` (`prisma/schema.prisma:21-33`), but only the name is passed into `meta` today (`document-header.tsx:74-106`).

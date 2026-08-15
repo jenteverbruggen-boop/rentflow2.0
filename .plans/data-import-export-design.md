@@ -378,7 +378,9 @@ All non-negotiable per Q49b; every rule below is enforced server-side, never tru
 
 No xlsx/csv library exists in the project today (`package.json` has no `xlsx`/`exceljs`/`papaparse`/`sheetjs` dependency — verified). The project's own convention is to hand-roll a small CSV parser rather than add a dependency (`prisma/seed.ts:31–79`), and the M1 brief explicitly prefers the same for xlsx (`.plans/tasks-round2/03-phase2.md:261`).
 
-**Recommendation: hand-roll reading (both csv and xlsx); do not hand-roll or dependency-add an xlsx *writer* — use CSV as RentFlow's own export format instead.**
+**Recommendation (SUPERSEDED — see below): hand-roll reading (both csv and xlsx); use CSV as RentFlow's own export format.**
+
+> ⛔ **Superseded by PO decision Q61 (2026-08-15).** RentFlow's own export format is **real `.xlsx`**, produced via one small maintained library; CSV was explicitly rejected as a downgrade given the round-trip requirement. Keep the hand-rolled xlsx **reader** (proven cheap); add a library only for **writing**. Everything else in this section stands.
 
 Reasoning:
 

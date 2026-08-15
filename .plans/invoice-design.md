@@ -594,7 +594,7 @@ An overdue-**and**-partially-paid invoice displays as `vervallen` (priority 4 ov
 
 ## 7. API routes
 
-All routes below live under `src/app/api/invoices/`, follow the `Promise<{ id: string }>` params convention (`CLAUDE.md` Next.js 16 section; example at `src/app/api/projects/[id]/route.ts:12,19`), and every handler opens with `requireModule("Kosten/Facturen", <level>)` once N1/N2 land (phase 1, before this phase runs) — the same position `requireAuth()`/`requireRole()` occupy today (`src/app/api/settings/route.ts:12,23`). Verb → level mapping is fixed by N2's own rule: `GET → read, POST/PUT/PATCH → write, DELETE → delete` (`.plans/2026-08-po-feedback-round2.md:557`). "Kosten/Facturen" is already the module the roadmap assigns to invoice routes (`.plans/2026-08-po-feedback-round2.md:545`).
+All routes below live under `src/app/api/invoices/`, follow the `Promise<{ id: string }>` params convention (`CLAUDE.md` Next.js 16 section; example at `src/app/api/projects/[id]/route.ts:12,19`), and every handler opens with `requireModule("kosten_facturen", <level>)` once N1/N2 land (phase 1, before this phase runs) — the same position `requireAuth()`/`requireRole()` occupy today (`src/app/api/settings/route.ts:12,23`). Verb → level mapping is fixed by N2's own rule: `GET → lezen, POST/PUT/PATCH → wijzigen, DELETE → verwijderen` (`.plans/2026-08-po-feedback-round2.md:557`). "Kosten/Facturen" is already the module the roadmap assigns to invoice routes (`.plans/2026-08-po-feedback-round2.md:545`).
 
 | Method & path | Level | Request | Response |
 |---|---|---|---|

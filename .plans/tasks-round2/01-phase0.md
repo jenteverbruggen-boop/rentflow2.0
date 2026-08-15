@@ -60,7 +60,7 @@ Money keys to handle: `dayPrice`, `setupCost`, `bundlePriceOverride`, `dayPriceS
 `GET`/`POST /api/projects` and `GET /api/projects/[id]` return the Prisma result tree unmodified:
 
 ```ts
-// src/app/api/projects/route.ts:17-22
+// src/app/api/projects/route.ts:18-22
 const projects = await prisma.project.findMany({
   orderBy: { startDate: "asc" },
   include: projectInclude,
@@ -271,7 +271,7 @@ Follow the established pattern: one child component per section, composed in the
 
 ### Concrete traps
 
-- **`material-split-editor.tsx` is 403 lines — the largest over-limit file in the codebase — but it is not in this item's list of five.** H3.1 edits it in the very next item (fixing the same `.slice(0, 10)` bug as `person-split-editor.tsx`, at `:43-44`). The per-commit checklist in `00-README.md` requires "every touched file ≤ 150 lines", which this file cannot satisfy without a split of its own. Flag this to the PO/reviewer rather than silently absorbing a 403-line file into this batch (it is out of this item's stated scope) or silently skipping the checklist item in H3 — either choice is a real deviation from the brief and should be reported, not improvised.
+- **`material-split-editor.tsx` is 403 lines — the largest over-limit file in the codebase.** It was originally outside this batch, but H3.1 edits it in the very next item (fixing the same `.slice(0, 10)` bug, at `:43-44`), and the per-commit checklist requires every touched file to be ≤150 lines. It is therefore **in scope as Y3.6**, added after adversarial review. Split it before H3 starts.
 - `project-costs-tab.tsx`'s `PRINT_CSS` constant (`:29-49`) is duplicated in spirit by `print-layout.tsx:6-34` (per the source plan) — do not merge them in this item (that is J3, phase 3); just don't let the Y3.1 split make the eventual merge harder by scattering the constant further.
 - `planning/page.tsx`'s `countAssignments` and `projectsOnDay` helpers are used by both the grid and the list — decide once whether they live in the page and are passed as props/results, or are duplicated; duplicating them is the "improving logic while moving it" mistake the item's own "Out of scope" line warns against, so prefer passing computed data down.
 - `person-split-editor.tsx`'s `add` mutation reads `p.person.role ?? undefined` (`:151` in the wider codebase, referenced by L2 later) when adding a person — if the available pane is extracted, the `onAdd` callback signature must still let the parent read `p.person.role`; do not simplify this away.
@@ -294,7 +294,7 @@ npm run dev
 - [ ] All five files (`project-costs-tab.tsx`, `planning/page.tsx`, `person-split-editor.tsx`, `projects/[id]/page.tsx`, `material-detail-pane.tsx`) are ≤150 lines
 - [ ] Every new extracted file is also ≤150 lines
 - [ ] No prop renames, no query-key changes, no logic "improvements" — diffed against the pre-split render for each screen
-- [ ] `material-split-editor.tsx`'s 403-line, out-of-batch status is reported explicitly (see trap above), not silently resolved or silently ignored
+- [ ] `material-split-editor.tsx` split via Y3.6 and left ≤150 lines per extracted file
 - [ ] `npx tsc --noEmit`, `npm run lint`, `npm test` green after each of the five commits
 
 **Y3.1 — `refactor(costs): extract cost tab sections into components`**
@@ -321,7 +321,7 @@ Verified drift: `README.md:31,142-163` claims the image comes from Docker Hub, b
 
 ### Files to read before starting
 
-- `README.md` (258 lines) — in particular the Tech Stack table (`:20-31`), the "Docker Compose (Production)" section (`:142-163`) and the CI/CD table (`:241-246`); all reference the real single-container setup and must stay internally consistent after the edit.
+- `README.md` (257 lines) — in particular the Tech Stack table (`:20-31`), the "Docker Compose (Production)" section (`:142-163`) and the CI/CD table (`:241-246`); all reference the real single-container setup and must stay internally consistent after the edit.
 - `docs/docker-compose.md` (253 lines) — read enough to confirm it describes the phantom 3-service stack before deleting it; do not delete on the strength of this brief alone.
 - `.github/prompts/docker.prompt.md` (38 lines) — the whole file; it is short and wrong in almost every line (base images, compose image names, healthcheck examples for a backend/frontend split that doesn't exist).
 - `docker-compose.yml` (20 lines) — the real, current 2-service file; the source of truth to align both docs against.
@@ -331,7 +331,7 @@ Verified drift: `README.md:31,142-163` claims the image comes from Docker Hub, b
 
 ### Current behaviour
 
-`README.md:29-31` (Tech Stack table):
+`README.md:30-31` (Tech Stack table):
 ```md
 | Containerisation | Docker (multi-stage standalone build), Docker Compose |
 | CI/CD | GitHub Actions → Docker Hub |
@@ -339,7 +339,7 @@ Verified drift: `README.md:31,142-163` claims the image comes from Docker Hub, b
 
 `README.md:142-144`:
 ```md
-## Docker Compose (Production)
+> #### Docker Compose (Production) — *quoted from `README.md`, not a section of this brief*
 
 Uses PostgreSQL. The app image is pulled from Docker Hub; the container runs `prisma migrate deploy` on startup.
 ```
@@ -393,11 +393,11 @@ Today: `process.env.JWT_SECRET!` (`src/lib/auth.ts:3`); `new TextEncoder().encod
 
 - `src/lib/auth.ts` (18 lines) — `JWT_SECRET` read at module load (`:3`), used by `signToken`/`verifyToken` (Node runtime, `jsonwebtoken`).
 - `src/proxy.ts` (33 lines) — Edge runtime; `JWT_SECRET` encoded at module load (`:4`); this is the file that must stay Edge-safe after Y5 (no Node built-ins, careful with the `zod` import).
-- `src/components/sidebar.tsx` (85 lines) — Server Component; encodes the same secret independently at `:8` — a second copy of the exact same footgun.
+- `src/components/sidebar.tsx` (84 lines) — Server Component; encodes the same secret independently at `:8` — a second copy of the exact same footgun.
 - `src/lib/prisma.ts` (17 lines) — `DATABASE_URL` read at `:8` with a silent `?? ""` fallback; decides SQLite vs Postgres adapter from the URL shape (`:9-11`).
 - `.env.example` / `.env.local.example` — the two real shapes `DATABASE_URL`/`JWT_SECRET` take in this repo (Postgres connection string vs `file:./prisma/dev.db`; a 30+ character prod secret vs `local-dev-secret-change-in-production`, 33 chars).
 - `package.json` — confirms `zod` is already a dependency (used elsewhere for route validation), so no new package is needed for `env.ts`.
-- `.github/workflows/ci.yml:33-36,43-45` — CI sets `JWT_SECRET: ci-placeholder-secret` (22 chars) and `DATABASE_URL` placeholders for the test and build steps; whatever minimum length Y5 picks must not reject these.
+- `.github/workflows/ci.yml:33-36,43-45` — CI sets `JWT_SECRET: ci-placeholder-secret` (21 chars) and `DATABASE_URL` placeholders for the test and build steps; whatever minimum length Y5 picks must not reject these.
 
 ### Current behaviour
 
@@ -482,7 +482,7 @@ npm run build
 ### Files to read before starting
 
 - `src/components/person-split-editor.tsx` — after Y3.3's split, the `.slice(0, 10)` truncation (`:28-29` today) lives wherever the `range` object is now built (likely still the parent, per Y3.3's instruction to keep the mutations/range logic there).
-- `src/components/material-split-editor.tsx` (403 lines — see the Y3 trap above) — same bug at `:43-44`, in the file that Y3 did **not** split.
+- `src/components/material-split-editor.tsx` (403 lines — see the Y3 trap above) — same bug at `:43-44`, in a file that Y3.6 **has** split — re-locate the range object rather than trusting the line numbers below.
 - `src/lib/availability.ts` — `findAvailableStockItems` (`:10-42`), `checkPersonAvailability` (`:78-105`, strict boundary at `:92`), `checkStockItemSameProject` (`:107-136`). Read the whole file; it is short and every function shares the same `lt`/`gt` shape.
 - `src/lib/availability.test.ts` (76 lines) — the whole file; existing coverage is back-to-back boundaries and a 1-minute overlap, both for `findAvailableStockItems`, plus one `checkPersonAvailability` back-to-back case. No same-day day/evening case exists yet.
 - `src/app/api/people/available/route.ts` (49 lines) — raw `new Date(from)`/`new Date(to)` at `:29-30`, no validation beyond "present" (`:17`).
@@ -588,7 +588,7 @@ curl -s "localhost:3000/api/people/available?from=2026-06-02T00:00:00.000Z&to=20
 - [ ] The PO's exact scenario (08:00-17:00 vs 18:00-23:00 same day → available; vs 14:00-20:00 → busy) is verified and recorded in the H3.1 commit body
 - [ ] `people/available` and `materials/available` reject missing, unparseable and inverted ranges with `badRequest`
 - [ ] `availability.test.ts` covers the same-day non-overlap case and the inverted-range rejection
-- [ ] `material-split-editor.tsx`'s continued over-limit status (403 lines, untouched by Y3) is reported, not silently absorbed
+- [ ] `material-split-editor.tsx`'s continued over-limit status (was 403 lines; **split by Y3.6 before this item runs**, so line numbers below have moved) is reported, not silently absorbed
 - [ ] Verified against Postgres, not only SQLite, per the project's Time rule
 
 **H3.1 — `fix(bookings): send full timestamps when checking availability`**
@@ -616,10 +616,10 @@ Two places create project-spanning periods, which is what actually books a perso
 
 ### Files to read before starting
 
-- `src/components/period-form.tsx` (121 lines) — the whole file; the default-value logic (`:50-64`) and the client-side `.refine` (`:20-23`) both matter to this item.
+- `src/components/period-form.tsx` (120 lines) — the whole file; the default-value logic (`:50-64`) and the client-side `.refine` (`:20-23`) both matter to this item.
 - `src/app/api/projects/route.ts` (75 lines) — `POST` handler, the auto-created `"Hoofdperiode"` (`:58-66`).
-- `src/app/api/projects/[id]/periods/route.ts` (33 lines) — `POST`, raw `new Date(startDate)`/`new Date(endDate)` with no range validation (`:16-22`).
-- `src/app/api/periods/[id]/route.ts` (38 lines) — `PATCH`, same lack of validation (`:13-19`).
+- `src/app/api/projects/[id]/periods/route.ts` (32 lines) — `POST`, raw `new Date(startDate)`/`new Date(endDate)` with no range validation (`:16-22`).
+- `src/app/api/periods/[id]/route.ts` (37 lines) — `PATCH`, same lack of validation (`:13-19`).
 - `src/lib/availability.test.ts` and `src/app/api/periods/[id]/people/route.ts:37-41` — not touched by H4, but worth a glance to confirm the single-day default doesn't change any availability-check assumption.
 
 ### Current behaviour
@@ -889,7 +889,7 @@ Verified: the `Dockerfile` has **no `USER` directive**, so the app container run
 
 - `Dockerfile` (30 lines) — the whole file, all three stages (`deps`, `builder`, `runner`).
 - `docker-compose.yml` (20 lines) — the whole file, both services.
-- `docker-entrypoint.sh` (17 lines) — the whole file; this is what `depends_on: condition: service_healthy` must actually protect.
+- `docker-entrypoint.sh` (16 lines) — the whole file; this is what `depends_on: condition: service_healthy` must actually protect.
 - `src/proxy.ts:6` — `PUBLIC_PATHS = ["/login"]`, the one unauthenticated page-level route, relevant to picking an app healthcheck target.
 - `src/app/api/auth/login/route.ts` — confirms only `POST` exists (no `GET`), so this route is not directly probeable with a plain `GET`/`wget` healthcheck.
 - `.github/prompts/docker.prompt.md` — already corrected by Y4 (same phase) to describe the real single-container setup; re-read it after Y4 lands so the healthcheck example you add matches what that file now documents. If Y4 has not merged yet when you start P1, do not depend on its content — read the real `Dockerfile`/`docker-compose.yml` directly.

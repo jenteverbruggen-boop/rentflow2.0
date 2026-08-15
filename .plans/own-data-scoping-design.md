@@ -1,5 +1,9 @@
 # Own-data-only scoping (N5) — design doc
 
+> **Resolved 2026-08-15 (was flagged for PO sign-off).** Two denials in this document were inferences rather than stated decisions. Both are now decided, consistently with Q53 (a scoped user sees no money) and Q59 (standalone catalogues are denied):
+> 1. **Person documents:** a scoped user may read **their own** attesten (`GET /api/people/[id]/documents` and `GET /api/documents/[id]` where the record belongs to their linked person), and is denied everyone else's. Denying their own would be user-hostile — they are their own certificates. Writes stay denied by the read-only rule (Q55).
+> 2. **`/api/stats` (Cijfers):** denied outright for `scope: own`, regardless of the matrix. Business figures are company-level and money-bearing; a per-freelancer version is a different feature nobody asked for.
+
 > Status: draft for approval. Blocks N5 only; N1–N4 may proceed without this doc (`.plans/tasks-round2/02-phase1.md:6`).
 > Source decisions: `.plans/2026-08-po-feedback-round2.md` Q40, C1 (own-data scoping in scope, matrix seeded fully open); `.plans/tasks-round2/02-phase1.md` N5 (`:248-262`) and N1–N4 (`:49-246`).
 > No implementation code below — this settles the mechanism, the exhaustive surface, and the edge cases per the phase-1 brief's requirement (`02-phase1.md:6,254`).
@@ -224,7 +228,7 @@ A `scope: own` user whose `User.personId` (`schema.prisma:16`) is `null` has no 
 - **Bucket (c) and (w) routes**: calling as a `scope: own` user (any matrix level, including a deliberately-misconfigured `verwijderen`) returns 403.
 - **Money-anywhere test**: reuse N2.1's "walk the JSON, don't eyeball it" technique (`02-phase1.md:175`) against every bucket-(a) response for a `scope: own` caller, asserting none of the money keys from §4's table appear anywhere in the tree — run this **both** with the role's `Kosten/Facturen` at `geen` and, deliberately, at `verwijderen`, to prove the money-override in §3 actually overrides rather than merely agreeing with a sensible default.
 - **No-linked-person test**: a `scope: own` user with `personId: null` gets `[]` from every bucket-(a) list route (not a 500, not an unfiltered list) and `linkedPersonMissing: true` from `/api/auth/me`.
-- **Forward placeholders** (so the exemption/coverage list cannot silently go stale, per N2.5's own reasoning): `/api/stats`, `/api/calendar/*` (company feed), and each phase-4 export route are added to the same enumeration **as soon as they exist**, each asserted 403 for `scope: own`.
+- **Forward placeholders** (so the exemption/coverage list cannot silently go stale, per N2.5's own reasoning): `/api/stats`, `/api/calendar/` (company feed), and each phase-4 export route are added to the same enumeration **as soon as they exist**, each asserted 403 for `scope: own`.
 
 ### Decided: a scoped user requesting a project they are **not** booked on, by id, gets **404, not 403**
 

@@ -32,12 +32,15 @@ DDL-3 (alone, first: invoice models + chart seed data)
 
 **Branch:** `ddl3-invoices` · **one commit** (two if the seed volume makes review unwieldy — then `feat(db):` then `chore(seed):`)
 
-**`feat(db): add invoice models`**
+**`feat(db): add invoice models`** — and a **second, separate schema commit** in this phase:
+
+**`feat(db): snapshot bundle component ratios`** — `PeriodBundleBookingComponent` serves **K4 payback (Q48), not invoicing**. It is deliberately *not* part of the invoice-design-gated commit above: the PO approved that migration for invoices, and payback schema riding along inside it would be a change they never reviewed. Land it as its own commit, before or after the invoice models, but not merged into them.
 
 Exact model shape comes from `.plans/invoice-design.md` (approved before this starts). Both schemas + seed. The design doc's data-model section is authoritative; this brief only records the constraints it must satisfy:
 
 - **Four models, not two** (the design doc found `Payment` and `InvoiceCounter` missing from this list — J2b's own commits never touch the schema, so they must land here): `Invoice`, `InvoiceLine`, `Payment` (partial payments, Q52) and `InvoiceCounter` (the two gapless series, Q51).
 - **Deposit + final invoicing (Q50):** a project carries several invoices; an `kind` field separates voorschot / eindfactuur / creditnota, and the final invoice deducts what was already invoiced. Credit notes use a **separate number series** (`CN-`).
+- **Status model (refined by the design doc, approved with it):** the roadmap's original single 5-value `status` is split into two orthogonal fields — `kind` (`factuur`|`creditnota`) and `status` (`concept`|`verzonden`|`betaald`, **three values only**). `vervallen` and `gedeeltelijk betaald` are **derived at read time**, never persisted, because they are time- and arithmetic-dependent. Anywhere the roadmap still implies a 5-value column, this split wins.
 - `Invoice` and `InvoiceLine`, with `number String @unique`, invoice/due dates, `status` (String + TS union + zod — **no Prisma enum**), snapshotted client identity (name, address, VAT) so a later client edit cannot rewrite a sent invoice, `creditNoteOfId` self-relation, and money as `Decimal` (PG) / `Float` (dev).
 - **`InvoiceLine.vatRate` per line**, even though Q25a chose a single global setting — this is what makes per-line VAT a later config change rather than a migration.
 - A numbering counter mechanism per the design doc (gapless, sequential, generated inside the finalising transaction).
@@ -273,7 +276,7 @@ model InvoiceCounter {
 }
 ```
 
-`PeriodBundleBookingComponent` is **not** in the design doc's own model list (§1.1/§1.2 above list only four models) — it is this brief's own addition (line 46 above), so its exact shape is this worker's to finalise. Minimum viable shape, matching the sketch already given: `{ id Int @id @default(autoincrement()), bundleBookingId Int, materialId Int, quantity Int, dayPriceAtBooking Decimal (PG) / Float (dev), bundleBooking PeriodBundleBooking @relation(...), material Material @relation(...) }`, with `@@index([bundleBookingId])`. Write one row per component **per booking call** (not per unit) inside `bookBundleMaterial` (`booking.ts:116-163`), snapshotting the resolved child `dayPrice` at that moment — mirrors the same snapshot-at-booking-time convention already used one line above it for `dayPriceSnapshot: 0`.
+`PeriodBundleBookingComponent` is **not** in the design doc's own model list (§1.1/§1.2 above list only four models) — it is this brief's own addition (line 46 above), so its shape is specified here rather than in the doc. **Use exactly this — do not redesign it:** `{ id Int @id @default(autoincrement()), bundleBookingId Int, materialId Int, quantity Int, dayPriceAtBooking Decimal (PG) / Float (dev), bundleBooking PeriodBundleBooking @relation(...), material Material @relation(...) }`, with `@@index([bundleBookingId])`. Write one row per component **per booking call** (not per unit) inside `bookBundleMaterial` (`booking.ts:116-163`), snapshotting the resolved child `dayPrice` at that moment — mirrors the same snapshot-at-booking-time convention already used one line above it for `dayPriceSnapshot: 0`.
 
 **Traps:**
 - The K4-critical fields `Material.archived`, `Material.costPrice`, `Material.listPrice`, `Material.revenueBefore`, `StockItem.costPrice` **do not exist in `prisma/schema.prisma` today** (grepped, zero hits). They are added by phase 2's M1 item (`.plans/tasks-round2/03-phase2.md:49-50`: `Material` gains `archived Boolean @default(false)`, `costPrice Decimal?`, `listPrice Decimal?`, `revenueBefore Decimal?`; `StockItem` gains `costPrice Decimal?`). Phase 2 merging is DDL-3's own gate, so they should exist by the time you start — **re-read the actual schema for their exact names before writing K4's SQL/Prisma calls against them**; do not trust this brief's spelling blindly, since a different worker authored that migration.
@@ -306,10 +309,17 @@ Success = `db:dev:reset` completes with the described volumes; `tsc` zero errors
 
 ## J2b — Real invoices `XL` `design doc first` `expect multiple sessions`
 
-**Branch:** `j2b-invoices` · ⛔ **two gates before the first commit:**
-1. **`.plans/invoice-design.md` approved** by the PO.
-2. **The accountant has answered on Peppol (Q25c).** Belgium's structured B2B e-invoicing mandate started 1 January 2026. If it applies to these invoices, J2b is a *compliance* project — structured UBL over an access point, delivery status tracking — not the document project described below, and it must be re-scoped with its own design round before any code. If it does not apply, proceed exactly as written; the model is Peppol-shaped either way so nothing is wasted.
-3. **The accountant has answered on travel-cost VAT (Q22).** J1 (phase 0) already implemented the decided treatment in one configurable place; confirm it before invoices reach clients, and adjust that one place if the answer differs.
+**Branch:** `j2b-invoices` · ⛔ **one gate before the first commit:** `.plans/invoice-design.md` approved by the PO.
+
+**Peppol is explicitly future work (PO decision, 2026-08-15).** Do not treat it as a gate and do not wait on the accountant. **Shape the database schema for it now; build the integration later.** Concretely, that means J2b must persist everything a UBL document would later need, because adding these fields after invoices exist means migrating frozen historical records:
+- Client identity **snapshotted onto the invoice** — legal name, full billing address, VAT number — not joined live from `Client`.
+- **Per-line VAT rate** (`InvoiceLine.vatRate`), even though Q25a chose a single global setting.
+- **Per-line unit codes** (`dag`/`uur`/`stuk` mapped to a standard code list), quantity and unit price as separate columns rather than a pre-multiplied total.
+- A **payment reference** field and the invoice/due dates.
+- Document generation **behind an interface**, so an XML emitter can be added beside the PDF one without touching routes.
+Do **not** build: an access-point integration, UBL serialisation, delivery-status tracking, or any outbound network call. Those are a later project on top of this schema.
+
+**Travel-cost VAT (Q22)** likewise does not gate this item. J1 (phase 0) implemented the decided treatment in one configurable place; confirm with the accountant before invoices reach real clients and adjust that one place if the answer differs.
 
 Decided: RentFlow becomes the invoicing system (Q23) — numbered invoices, invoice/due dates, status, **frozen** amounts, credit notes, an overview page. Lines **grouped per period** (Q24). BTW from a setting but stored per line (Q25a). **Peppol-shaped but not Peppol-connected** (Q25c). Travel outside the subtotal, inside the total (Q22).
 
@@ -468,7 +478,7 @@ Success = the Postgres test's resulting `number` set is exactly `{"2026-0001", �
 - [ ] Freezing: the mandatory create→finalize→mutate-project→assert-unchanged test passes
 - [ ] Deposit/final worked example reproduced exactly in tests (€1 110/€233.10/€1 343.10 → €2 590 net/€543.90/€3 133.90 → running balance €1 110→€3 700)
 - [ ] Credit note arithmetic (−€300/−€63/−€363) and `netInvoicedExcl` non-double-counting both tested
-- [ ] Every route opens with `requireModule("Kosten/Facturen", ...)`
+- [ ] Every route opens with `requireModule("kosten_facturen", ...)`
 - [ ] `facturen/page.tsx`, `facturen/[id]/page.tsx`, `facturen/[id]/print/page.tsx` all render; sidebar link added
 - [ ] `settings-form.tsx` and `project-costs-tab.tsx` end this item at or under 150 lines
 
@@ -551,7 +561,7 @@ Success = the printed check is `true` (no stringified Decimal anywhere in the pa
 - [ ] `scope: own` denied outright per `.plans/own-data-scoping-design.md:192`, recorded in the exit report
 - [ ] Credit notes verified not to double-count (shared `netInvoicedExcl`)
 - [ ] Archived materials excluded from `topMaterials`
-- [ ] `requireModule("Cijfers", "read")` guards the route; N2.5's enumeration test passes with it added
+- [ ] `requireModule("cijfers", "lezen")` guards the route; N2.5's enumeration test passes with it added
 
 ---
 

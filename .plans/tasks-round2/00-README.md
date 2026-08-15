@@ -34,12 +34,23 @@ The PO reviews **commit by commit**. Every commit must therefore be a single, se
 - [ ] `npx tsc --noEmit` zero errors
 - [ ] `npm run lint` clean
 - [ ] `npm test` green (and any new tests actually assert the intended behaviour, not just that code runs)
+  - ⚠️ `npm test -- <keyword>` is `vitest run <filter>`, which **exits 1 with "No test files found"** when nothing matches. Only use a filter when that commit actually creates a matching `*.test.ts`; otherwise run bare `npm test`.
 - [ ] Every touched file ≤ **150 lines** (extract rather than exceed)
 - [ ] No raw `Decimal` returned from an API route; no `+` on an unconverted wire value (see Y1)
 - [ ] Schema change? Landed in **both** `prisma/schema.prisma` (Decimal money) **and** `prisma/schema.dev.prisma` (Float money) **and** `prisma/seed.ts`
 - [ ] New route? Has `requireAuth()`/`requireModule()` first and uses the response helpers from `src/lib/api-auth.ts` — never an inline `NextResponse.json({error}, {status})`
 - [ ] UI change? `design` skill applied; readable in light **and** dark; Dutch copy (nl-BE)
 - [ ] Commit type matches the release effect you intend
+
+## Canonical permission vocabulary (phase 1 onward)
+
+`src/lib/modules.ts` (N1.1) is the single source of truth. **Module keys are lowercase snake_case; access levels are Dutch.** Any brief or design doc using `"Cijfers"`, `"Kosten/Facturen"`, `"read"`, `"write"` or `"delete"` in a `requireModule(...)` call is wrong and will not type-check:
+
+| Module keys | `projecten` · `planning` · `personen` · `materialen` · `klanten` · `locaties` · `kosten_facturen` · `cijfers` · `gebruikers` · `instellingen` |
+|---|---|
+| Access levels | `geen` · `lezen` · `wijzigen` · `verwijderen` |
+| Verb mapping | `GET` → `lezen` · `POST`/`PUT`/`PATCH` → `wijzigen` · `DELETE` → `verwijderen` |
+| ICS exemption prefix | exactly `/api/calendar/` — no glob, no missing trailing slash |
 
 ## Non-negotiable project conventions
 
@@ -64,13 +75,13 @@ Most phases have exactly one schema commit. **Two do not, deliberately:** phase 
 
 | Phase | Items | Commits | Brief | Gate to start |
 |---|---|---|---|---|
-| **0 — foundations & quick wins** | Y1, Y3, Y4, Y5, H3, H4, J1, P1 | ~26 | `01-phase0.md` | ✅ none — ready now |
-| **1 — item 8 in full** | N1, N2, N3, N4, N5 | ~21 | `02-phase1.md` | PO reviewed phase 0 · **N5 design doc approved** |
-| **2 — items 1, 3, 7** | DDL-2, H1, H2, H5/L5, L1, L2, L3, M1, J2a | ~27 | `03-phase2.md` | phase 1 merged · **PO retest of H3/H4/J1** |
-| **3 — invoices & figures** | DDL-3, J2b, K1, K4, K2, K3, I1, I2, I3, J3 | ~25 | `04-phase3.md` | phase 2 merged · **J2b design doc approved** |
-| **4 — later** | O1, P2, P3, L4, Y2 | ~14 | `05-phase4.md` | phase 3 merged · **P3 design doc approved** |
+| **0 — foundations & quick wins** | Y1, Y3, Y4, Y5, H3, H4, J1, P1 | 27 | `01-phase0.md` | ✅ none — ready now |
+| **1 — item 8 in full** | N1, N2, N3, N4, N5 | 21 | `02-phase1.md` | PO reviewed phase 0 · **N5 design doc approved** |
+| **2 — items 1, 3, 7** | DDL-2, H1, H2, H5/L5, L1, L2, L3, M1, J2a | 27 | `03-phase2.md` | phase 1 merged · **PO retest of H3/H4/J1** |
+| **3 — invoices & figures** | DDL-3, J2b, K1, K4, K2, K3, I1, I2, I3, J3 | 27 | `04-phase3.md` | phase 2 merged · **J2b design doc approved** |
+| **4 — later** | O1, P2, P3, L4, Y2 | 15 | `05-phase4.md` | phase 3 merged · **P3 design doc approved** |
 
-~113 commits total (26 · 21 · 27 · 25 · 14). Each phase brief lists its items in dependency order with the exact commit sequence per item.
+**117 commits total** (27 · 21 · 27 · 27 · 15), counted directly from the commit headings in each brief after enrichment and review. Each phase brief lists its items in dependency order with the exact commit sequence per item.
 
 ### Outstanding prerequisites (not code)
 
