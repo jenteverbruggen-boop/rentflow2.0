@@ -1,10 +1,13 @@
 import { ArrowLeft, ChevronDown, ChevronRight } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatEUR, personLineCost } from "@/lib/pricing";
+import { AssignmentHoursPopover } from "@/components/assignment-hours-popover";
 import type { PeriodPerson } from "@/types";
 
 interface Props {
+  periodId: number;
   periodName: string;
   hasAnyPeople: boolean;
   assignedByRole: [string, PeriodPerson[]][];
@@ -12,11 +15,18 @@ interface Props {
   onToggle: (role: string) => void;
   days: number;
   onRemove: (assignmentId: number) => void;
+  invalidateKey: readonly unknown[];
+}
+
+function formatWindow(pp: PeriodPerson): string | null {
+  if (!pp.startAt || !pp.endAt) return null;
+  return `${format(new Date(pp.startAt), "HH:mm")}–${format(new Date(pp.endAt), "HH:mm")}`;
 }
 
 /** "In &lt;periode&gt;" (assigned) pane, extracted from
  * person-split-editor.tsx (Y3.3) — pure move, no behaviour change. */
 export function PersonAssignedPane({
+  periodId,
   periodName,
   hasAnyPeople,
   assignedByRole,
@@ -24,6 +34,7 @@ export function PersonAssignedPane({
   onToggle,
   days,
   onRemove,
+  invalidateKey,
 }: Props) {
   return (
     <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
@@ -65,8 +76,16 @@ export function PersonAssignedPane({
                           <p className="font-medium truncate">{pp.person.name}</p>
                           <p className="text-[10px] text-muted-foreground">
                             {formatEUR(personLineCost(pp, days))}
+                            {formatWindow(pp) && ` · ${formatWindow(pp)}`}
                           </p>
                         </div>
+                        <AssignmentHoursPopover
+                          periodId={periodId}
+                          assignmentId={pp.id}
+                          startAt={pp.startAt}
+                          endAt={pp.endAt}
+                          invalidateKey={invalidateKey}
+                        />
                       </div>
                     ))}
                   </div>

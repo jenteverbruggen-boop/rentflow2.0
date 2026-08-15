@@ -214,7 +214,7 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | `DELETE` | `/api/periods/:id/materials/:assignmentId` | Remove a stock-item booking |
 | `POST` | `/api/periods/:id/people` | Book `{ personId, role?, functionId?, discountPct?, discountAmount? }` — snapshots the effective day price through the five-level cascade (project override → client rate card → person-function rate → function default → person's `dayPrice` → 0, `src/lib/effective-price.ts`), returns `{ assignment, warnings }`. Returns `409` if the person is already assigned to this period or is blocked by an overlapping booking on another project. A DB unique constraint on `(periodId, personId)` enforces the per-period uniqueness |
 | `GET` | `/api/periods/:id/people/preview-price?personId&functionId` | Resolve `{ dayPriceSnapshot, source }` for a candidate booking before confirming it — same cascade as the POST above, no write |
-| `PATCH` | `/api/periods/:id/people/:assignmentId` | Update role, discount, or re-snapshot price |
+| `PATCH` | `/api/periods/:id/people/:assignmentId` | Update role, discount, re-snapshot price, or set a custom `{ startAt, endAt }` window (both `null` to clear back to the whole period; both must be provided together, and must fall inside the period with `endAt` after `startAt`) |
 | `DELETE` | `/api/periods/:id/people/:assignmentId` | Remove a person booking |
 | `GET`/`POST` | `/api/periods/:id/people/:assignmentId/travel` | List / add travel-cost lines for a person's booking (`{ label?, unitCost, quantity }`). Total per line = `unitCost × quantity` (e.g. transport 4× or overnight 2×) |
 | `PATCH`/`DELETE` | `/api/periods/:id/people/:assignmentId/travel/:travelId` | Edit or remove a travel-cost line |

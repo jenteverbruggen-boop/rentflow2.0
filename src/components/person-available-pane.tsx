@@ -9,6 +9,7 @@ interface Props {
   search: string;
   onSearchChange: (value: string) => void;
   byRole: [string, PersonAvailability[]][];
+  assignedIds: Set<number>;
   collapsed: Set<string>;
   onToggle: (role: string) => void;
   onAdd: (person: PersonAvailability) => void;
@@ -23,6 +24,7 @@ export function PersonAvailablePane({
   search,
   onSearchChange,
   byRole,
+  assignedIds,
   collapsed,
   onToggle,
   onAdd,
@@ -53,25 +55,39 @@ export function PersonAvailablePane({
                 </button>
                 {!isCollapsed && (
                   <div className="space-y-1 mt-1 ml-4">
-                    {items.map((p) => (
-                      <div key={p.person.id} className="flex items-center gap-1.5 bg-muted/30 rounded px-2 py-1 text-xs">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{p.person.name}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">
-                            {p.isAvailable ? "Beschikbaar" : `Bezet (${p.blockingProject?.name})`} · {formatEUR(p.person.dayPrice)}/d
-                          </p>
-                        </div>
-                        <Button
-                          size="icon"
-                          className="h-7 w-7"
-                          disabled={!p.isAvailable || addPending}
-                          onClick={() => onAdd(p)}
-                          title="Toevoegen aan periode"
+                    {items.map((p) => {
+                      const alreadyAssigned = assignedIds.has(p.person.id);
+                      let statusText: string;
+                      if (alreadyAssigned) {
+                        statusText = "Al toegewezen — pas de uren aan op de bestaande boeking";
+                      } else if (p.isAvailable) {
+                        statusText = "Beschikbaar";
+                      } else {
+                        statusText = `Bezet (${p.blockingProject?.name})`;
+                      }
+                      return (
+                        <div
+                          key={p.person.id}
+                          className="flex items-center gap-1.5 bg-muted/30 rounded px-2 py-1 text-xs"
                         >
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ))}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{p.person.name}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {statusText} · {formatEUR(p.person.dayPrice)}/d
+                            </p>
+                          </div>
+                          <Button
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={alreadyAssigned || !p.isAvailable || addPending}
+                            onClick={() => onAdd(p)}
+                            title={alreadyAssigned ? "Al toegewezen aan deze periode" : "Toevoegen aan periode"}
+                          >
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

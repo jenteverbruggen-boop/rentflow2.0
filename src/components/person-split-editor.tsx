@@ -43,17 +43,20 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
     [period.people],
   );
 
+  // H1.3 — an already-assigned person stays in this list (disabled,
+  // with an explanation) instead of being silently removed; the unique
+  // constraint (one window per person per period) stays, so hiding
+  // them made the API's own conflict() message unreachable.
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return (persons.data ?? []).filter((p) => {
-      if (assignedIds.has(p.person.id)) return false;
       if (!q) return true;
       return (
         p.person.name.toLowerCase().includes(q) ||
         (p.person.role ?? "").toLowerCase().includes(q)
       );
     });
-  }, [persons.data, search, assignedIds]);
+  }, [persons.data, search]);
 
   const byRole = useMemo(() => groupAvailableByRole(filtered), [filtered]);
 
@@ -113,12 +116,14 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
             search={search}
             onSearchChange={setSearch}
             byRole={byRole}
+            assignedIds={assignedIds}
             collapsed={collapsedLeft}
             onToggle={toggleLeft}
             onAdd={setPendingAdd}
             addPending={add.isPending}
           />
           <PersonAssignedPane
+            periodId={period.id}
             periodName={period.name}
             hasAnyPeople={period.people.length > 0}
             assignedByRole={assignedByRole}
@@ -126,6 +131,7 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
             onToggle={toggleRight}
             days={days}
             onRemove={(id) => remove.mutate(id)}
+            invalidateKey={["project", String(project.id)]}
           />
         </div>
       </CardContent>
