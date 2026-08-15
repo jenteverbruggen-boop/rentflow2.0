@@ -38,7 +38,17 @@ export function materialLineCost(line: PeriodStockItem, days: number): number {
   return Math.round((rental + setup) * 100) / 100;
 }
 
+// H5.1 — bills per hour or per day; signature unchanged. Rate
+// precedence: rateSnapshot ?? dayPriceSnapshot — every existing row has
+// rateSnapshot: null, billingUnit: "dag", so this is byte-identical to
+// the pre-H5 call for every historical booking. An "uur" row with no
+// startAt/endAt (H1) bills a day like everything else (Q19 fallback).
 export function personLineCost(line: PeriodPerson, days: number): number {
+  if (line.billingUnit === "uur" && line.startAt && line.endAt) {
+    const hours = (new Date(line.endAt).getTime() - new Date(line.startAt).getTime()) / 3_600_000;
+    const rate = line.rateSnapshot ?? line.dayPriceSnapshot;
+    return lineCost(rate, hours, line);
+  }
   return lineCost(line.dayPriceSnapshot, days, line);
 }
 
