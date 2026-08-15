@@ -4,15 +4,14 @@ import { jwtVerify } from "jose";
 import { LogoutButton } from "./logout-button";
 import { ThemeToggle } from "./theme-toggle";
 import { Separator } from "./ui/separator";
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
+import { JWT_SECRET_BYTES } from "@/lib/env";
 
 async function getRole(): Promise<string | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("rentflow_token")?.value;
     if (!token) return null;
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, JWT_SECRET_BYTES);
     return (payload.role as string | undefined) ?? null;
   } catch {
     return null;

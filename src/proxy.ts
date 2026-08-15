@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
+import { JWT_SECRET_BYTES } from "@/lib/env";
 
 const PUBLIC_PATHS = ["/login"];
 const PUBLIC_API_PREFIX = "/api/auth";
@@ -17,7 +16,7 @@ export async function proxy(request: NextRequest) {
   if (!token) return NextResponse.redirect(new URL("/login", request.url));
 
   try {
-    await jwtVerify(token, JWT_SECRET);
+    await jwtVerify(token, JWT_SECRET_BYTES);
     return NextResponse.next();
   } catch {
     const response = NextResponse.redirect(new URL("/login", request.url));

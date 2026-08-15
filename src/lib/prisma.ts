@@ -1,11 +1,12 @@
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
+import { env } from "@/lib/env";
 
 // Prisma 7 connects through a driver adapter instead of reading the URL from
 // schema.prisma. Pick the adapter from the connection string: a `file:` URL is
 // the local SQLite dev database, anything else is the production Postgres DB.
-const url = process.env.DATABASE_URL ?? "";
+const url = env.DATABASE_URL;
 const adapter = url.startsWith("file:")
   ? new PrismaLibSql({ url })
   : new PrismaPg({ connectionString: url });
