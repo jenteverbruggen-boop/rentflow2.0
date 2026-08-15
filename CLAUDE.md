@@ -115,6 +115,7 @@ Production migrations use `prisma migrate deploy` (run automatically by Docker C
 - No `useEffect` + `useState` for data fetching — use `useQuery`.
 - Every API route handler calls `requireAuth()` first and uses response helpers from `api-auth.ts` (never inline `NextResponse.json({error:...}, {status:400})`).
 - Auth is cookie-based — never touch `localStorage` for auth state.
+- **Money rule**: `prisma/schema.prisma` (Postgres, production) types money fields `Decimal`; `prisma/schema.dev.prisma` (SQLite, dev) types the same fields `Float`. `Prisma.Decimal.toJSON()` returns a **string**, so a route or component that adds an unconverted wire value (`number + apiResponse.dayPrice`) silently string-concatenates in production while working fine in dev — dev/CI run entirely on SQLite and cannot reproduce this. Never return a raw Decimal from an API route and never `+` an unconverted wire value; convert at the route boundary with `toNumber()`/`toNumberOrNull()` from `src/lib/serialize.ts` (or the `serializeProject()` tree mapper in `src/lib/serialize-project.ts` for the `/api/projects*` payload). An eslint rule (`no-restricted-syntax` in `eslint.config.mjs`) flags a direct `+` on a `*Price`/`*Snapshot`/`*Cost` member expression as a recurrence guard.
 
 ## Skills
 
