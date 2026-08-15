@@ -12,6 +12,7 @@ const USER_SELECT = {
   name: true,
   role: true,
   roleId: true,
+  roleRel: { select: { id: true, key: true, label: true } },
   personId: true,
   createdAt: true,
 } as const;

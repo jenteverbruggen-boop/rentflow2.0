@@ -63,7 +63,7 @@ export default function UsersPage() {
               <TableCell>{u.email}</TableCell>
               <TableCell>
                 <Badge variant={u.role === "ADMIN" ? "default" : "secondary"}>
-                  {u.role}
+                  {u.roleRel?.label ?? u.role}
                 </Badge>
               </TableCell>
               <TableCell className="text-muted-foreground text-sm">

@@ -26,6 +26,8 @@ export interface User {
   email: string;
   name: string;
   role: string;
+  roleId: number | null;
+  roleRel: { id: number; key: string; label: string } | null;
   personId: number | null;
   createdAt: string;
 }
