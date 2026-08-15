@@ -28,7 +28,7 @@ A rental-planning tool for managing **projects**, **periods**, **people**, and *
 | Database | PostgreSQL 15 (prod) / SQLite (local dev) |
 | Auth | JWT via httpOnly cookie (`jose` + `jsonwebtoken`), bcryptjs |
 | Containerisation | Docker (multi-stage standalone build), Docker Compose |
-| CI/CD | GitHub Actions → Docker Hub |
+| CI/CD | GitHub Actions → GHCR (`ghcr.io`) |
 
 ---
 
@@ -141,7 +141,7 @@ npm run dev
 
 ## Docker Compose (Production)
 
-Uses PostgreSQL. The app image is pulled from Docker Hub; the container runs `prisma migrate deploy` on startup.
+Uses PostgreSQL. The app image is pulled from GHCR (`ghcr.io/jenteverbruggen-boop/rentflow2.0`); the container runs `prisma migrate deploy` on startup. Production runs on the PO's own server/VPS, not a managed platform.
 
 ```bash
 # 1. Copy and configure env
