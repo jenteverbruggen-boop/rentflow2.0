@@ -99,7 +99,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       }
     }
 
-    const snapshotPrice = await effectiveMaterialPrice(period.projectId, parseInt(materialId));
+    const price = await effectiveMaterialPrice(period.projectId, parseInt(materialId));
+    const snapshotPrice = price.amount;
     const setupSnapshot = toNumber(material.setupCost ?? 0);
     try {
       const result = await bookFlatMaterial({

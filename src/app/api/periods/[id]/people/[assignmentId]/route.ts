@@ -25,7 +25,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         include: { period: true },
       });
       if (!current) return notFound();
-      data.dayPriceSnapshot = await effectivePersonPrice(current.period.projectId, current.personId);
+      const price = await effectivePersonPrice(current.period.projectId, current.personId);
+      data.dayPriceSnapshot = price.amount;
     }
     if (discountPct !== undefined) data.discountPct = discountPct != null ? toNumber(discountPct) : null;
     if (discountAmount !== undefined) data.discountAmount = discountAmount != null ? toNumber(discountAmount) : null;

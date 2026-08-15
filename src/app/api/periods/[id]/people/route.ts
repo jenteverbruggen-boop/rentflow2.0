@@ -46,12 +46,13 @@ export async function POST(req: NextRequest, { params }: Params) {
       warnings.push(`${person.name} staat ook in een andere periode van dit project`);
     }
 
+    const price = await effectivePersonPrice(period.projectId, parseInt(personId));
     const assignment = await prisma.periodPerson.create({
       data: {
         periodId,
         personId: parseInt(personId),
         role: role ?? null,
-        dayPriceSnapshot: await effectivePersonPrice(period.projectId, parseInt(personId)),
+        dayPriceSnapshot: price.amount,
         discountPct: discountPct != null ? toNumber(discountPct) : null,
         discountAmount: discountAmount != null ? toNumber(discountAmount) : null,
       },
