@@ -95,6 +95,11 @@ interface ComponentSpec {
   childId: number;
   quantity: number;
   childName?: string;
+  /** DDL-3 — the component's own day-price at the moment of booking,
+   * snapshotted onto PeriodBundleBookingComponent so K4's payback
+   * pro-rata split has a historical weight to divide by instead of
+   * the live (and later possibly changed) Material.dayPrice. */
+  dayPrice: number;
 }
 
 interface BookBundleArgs {
@@ -141,6 +146,18 @@ export async function bookBundleMaterial(args: BookBundleArgs): Promise<BookBund
         quantity: args.quantity,
         dayPriceSnapshot: args.dayPriceSnapshot,
       },
+    });
+
+    // DDL-3 — one weight row per component per booking call (not per
+    // unit), so K4's payback can later reconstruct each component's
+    // pro-rata share of this specific bundle booking's revenue.
+    await txClient.periodBundleBookingComponent.createMany({
+      data: args.components.map((comp) => ({
+        bundleBookingId: bBooking.id,
+        materialId: comp.childId,
+        quantity: comp.quantity,
+        dayPriceAtBooking: comp.dayPrice,
+      })),
     });
 
     for (const comp of args.components) {

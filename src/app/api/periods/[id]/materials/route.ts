@@ -77,7 +77,11 @@ export async function POST(req: NextRequest, { params }: Params) {
         const result = await bookBundleMaterial({
           periodId, materialId: material.id, quantity: qty,
           from: period.startDate, to: period.endDate, dayPriceSnapshot,
-          components: material.components.map((c) => ({ childId: c.childId, quantity: c.quantity })),
+          components: material.components.map((c) => ({
+            childId: c.childId,
+            quantity: c.quantity,
+            dayPrice: toNumber(c.child.dayPrice),
+          })),
         });
         return NextResponse.json(
           redactMoney(

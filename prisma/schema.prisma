@@ -205,6 +205,7 @@ model Material {
   components          MaterialComponent[]    @relation("BundleParent")
   usedInBundles       MaterialComponent[]    @relation("BundleChild")
   bundleBookings      PeriodBundleBooking[]
+  bundleBookingWeights PeriodBundleBookingComponent[]
 }
 
 model StockItem {
@@ -269,6 +270,29 @@ model PeriodBundleBooking {
   period           Period          @relation(fields: [periodId], references: [id], onDelete: Cascade)
   material         Material        @relation(fields: [materialId], references: [id], onDelete: Cascade)
   stockItems       PeriodStockItem[]
+  components       PeriodBundleBookingComponent[]
+}
+
+// DDL-3 — snapshots each component's own day-price weight at the
+// moment a set is booked (one row per component per booking call, not
+// per unit). Serves K4's payback pro-rata split, not invoicing — kept
+// as its own migration commit, separate from the invoice models, since
+// the PO approved that migration for invoices specifically and this
+// piggybacking in would be an unreviewed change. Component lines
+// inside a bundle booking are always snapshotted at dayPriceSnapshot: 0
+// on PeriodStockItem (see bookBundleMaterial) — this table is the only
+// place a bundle's per-component value is ever recorded, and it must
+// never be recomputed from the live Material.dayPrice later.
+model PeriodBundleBookingComponent {
+  id                Int                 @id @default(autoincrement())
+  bundleBookingId   Int
+  materialId        Int
+  quantity          Int
+  dayPriceAtBooking Decimal             @db.Decimal(10, 2)
+  bundleBooking     PeriodBundleBooking @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
+  material          Material            @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@index([bundleBookingId])
 }
 
 model PeriodPerson {

@@ -205,6 +205,7 @@ model Material {
   components          MaterialComponent[]    @relation("BundleParent")
   usedInBundles       MaterialComponent[]    @relation("BundleChild")
   bundleBookings      PeriodBundleBooking[]
+  bundleBookingWeights PeriodBundleBookingComponent[]
 }
 
 model StockItem {
@@ -269,6 +270,21 @@ model PeriodBundleBooking {
   period           Period          @relation(fields: [periodId], references: [id], onDelete: Cascade)
   material         Material        @relation(fields: [materialId], references: [id], onDelete: Cascade)
   stockItems       PeriodStockItem[]
+  components       PeriodBundleBookingComponent[]
+}
+
+// DDL-3 — mirrors schema.prisma's PeriodBundleBookingComponent
+// (Decimal -> Float, dev-only).
+model PeriodBundleBookingComponent {
+  id                Int                 @id @default(autoincrement())
+  bundleBookingId   Int
+  materialId        Int
+  quantity          Int
+  dayPriceAtBooking Float
+  bundleBooking     PeriodBundleBooking @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
+  material          Material            @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@index([bundleBookingId])
 }
 
 model PeriodPerson {

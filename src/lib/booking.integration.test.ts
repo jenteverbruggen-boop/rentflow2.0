@@ -105,8 +105,8 @@ async function bookBlack(qty: number, periodId: number) {
     to: T1.end,
     dayPriceSnapshot: 7,
     components: [
-      { childId: ids.table, quantity: 1 },
-      { childId: ids.blackCover, quantity: 1 },
+      { childId: ids.table, quantity: 1, dayPrice: 5 },
+      { childId: ids.blackCover, quantity: 1, dayPrice: 2 },
     ],
     client,
   });
@@ -121,8 +121,8 @@ async function bookWhite(qty: number, periodId: number) {
     to: T1.end,
     dayPriceSnapshot: 7,
     components: [
-      { childId: ids.table, quantity: 1 },
-      { childId: ids.whiteCover, quantity: 1 },
+      { childId: ids.table, quantity: 1, dayPrice: 5 },
+      { childId: ids.whiteCover, quantity: 1, dayPrice: 2 },
     ],
     client,
   });
@@ -198,5 +198,18 @@ describe("booking integration — shared component stock", () => {
     const flatAfter = await freeStockItemIds(client, ids.table, T1.start, T1.end);
     expect(flatAfter).toHaveLength(flatCount - 2);
     expect(bundleAvail).toBeLessThanOrEqual(flatAfter.length);
+  });
+
+  it("DDL-3: bookBundleMaterial snapshots each component's own day-price weight", async () => {
+    const { bundleBooking } = await bookBlack(1, ids.periodT1);
+    const weights = await client.periodBundleBookingComponent.findMany({
+      where: { bundleBookingId: (bundleBooking as { id: number }).id },
+      orderBy: { materialId: "asc" },
+    });
+    expect(weights).toHaveLength(2);
+    const byMaterial = new Map(weights.map((w) => [w.materialId, w]));
+    expect(byMaterial.get(ids.table)?.dayPriceAtBooking).toBe(5);
+    expect(byMaterial.get(ids.table)?.quantity).toBe(1);
+    expect(byMaterial.get(ids.blackCover)?.dayPriceAtBooking).toBe(2);
   });
 });
