@@ -8,19 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
-
-const NAV_LINKS = [
-  { href: "/", label: "Dashboard", icon: "🏠" },
-  { href: "/projects", label: "Projecten", icon: "📁" },
-  { href: "/planning", label: "Planning", icon: "📅" },
-  { href: "/people", label: "Personen", icon: "👥" },
-  { href: "/materials", label: "Materialen", icon: "📦" },
-  { href: "/users", label: "Gebruikers", icon: "👤" },
-] as const;
+import { useAuthMe } from "@/hooks/use-auth-me";
+import { visibleNavLinks } from "@/lib/nav-links";
 
 export function MobileTopBar() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const { data: me } = useAuthMe();
+  // While permissions are still resolving, show only the always-visible
+  // links (Dashboard) rather than flashing the full list then narrowing it.
+  const links = visibleNavLinks(me?.permissions ?? {});
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -44,7 +41,7 @@ export function MobileTopBar() {
             <SheetTitle className="text-xl font-bold text-primary text-left">RentFlow</SheetTitle>
           </SheetHeader>
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-            {NAV_LINKS.map(({ href, label, icon }) => (
+            {links.map(({ href, label, icon }) => (
               <Link
                 key={href}
                 href={href}
