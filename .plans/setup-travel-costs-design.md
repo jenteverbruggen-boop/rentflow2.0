@@ -53,12 +53,12 @@ Nested CRUD under the person booking:
 
 ### Pricing (`src/lib/pricing.ts`)
 - New `periodTravelCost(period)` = `Σ over people, over travelCosts (unitCost × quantity)`.
-- `projectCostSummary` grows a third bucket: `{ people, materials, travel, total }` — a separate **Reiskosten** line (aggregated across all people).
-- `periodTotal` includes travel.
+- `projectCostSummary` returns `{ people, materials, subtotal, travel, total }` (round 2, Q22/J1) — `subtotal = people + materials`, **excluding** travel; `total = subtotal + travel`. Travel stays inside `total` deliberately (Q22) — it is not VAT-exempt or excluded, pending the accountant's confirmation (a one-line change at `periodTotal`/`projectCostSummary` plus the single `BTW_RATE` application site if that changes).
+- `periodTotal` includes travel — unchanged since this doc was first written; only the *labelling* of the pre-travel figure changed (it is now also exposed as `periodSubtotal`/`subtotal`, not folded silently into what used to be called "Subtotaal excl. BTW" in the UI).
 
 ### UI
 - Period **Personen** tab: each booked-person row gets a small "Reiskosten" editor (add/edit/remove lines: omschrijving, bedrag, aantal). Shown inline or in a popover.
-- Period/project **Kosten** tab: a "Reiskosten" line alongside Personen and Materialen.
+- Period/project **Kosten** tab (round 2, Q22/J1): each travel line renders as its own itemised row (`TravelCostRow` in `cost-line-row.tsx`, `{quantity} × {formatEUR(unitCost)}` per entry) below the person/material rows — not only the original rolled-up "Reiskosten: €X" figure this doc originally described. The rolled-up figure still exists too, in `PeriodSubtotals`/`CostSummary`.
 
 ---
 
