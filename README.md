@@ -237,6 +237,8 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | `PUT` | `/api/people/:id` | Update a person |
 | `DELETE` | `/api/people/:id` | Delete a person |
 | `GET` | `/api/people/available?from&to&excludePeriodId&sameProjectId&projectId` | Per-person `{ isAvailable, blockingProject?, sameProjectWarning? }`. When `projectId` is supplied, `person.dayPrice` is the effective price for that project and `person.basePrice` + `person.hasOverride` are also returned |
+| `GET`/`POST` | `/api/clients/:id/rates` | List / add a client's per-function rate card (`{ functionId, dayRate?, hourRate? }`) — module `Kosten/Facturen`. No rows means the booking picker offers every function at its normal rate (L3.2) |
+| `PUT`/`DELETE` | `/api/clients/:id/rates/:functionId` | Edit or remove one rate-card row |
 
 ---
 
