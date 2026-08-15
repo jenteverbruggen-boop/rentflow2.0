@@ -12,6 +12,11 @@ import { findRejectedMoneyWrite, redactMoney } from "@/lib/redact";
 export async function GET() {
   const access = await requireModule("personen", "lezen").catch(() => null);
   if (!access) return forbidden();
+  // scope: own — Person carries no project/period FK, so there is no
+  // "my own people" query to express; deny the whole standalone
+  // catalogue outright (own-data-scoping-design.md §5, Personen). Crew
+  // on the caller's own periods is visible embedded via /api/projects.
+  if (access.scope === "own") return forbidden();
 
   try {
     const people = await prisma.person.findMany({
@@ -38,6 +43,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const access = await requireModule("personen", "wijzigen").catch(() => null);
   if (!access) return forbidden();
+  // Already unreachable for scope: own (requireModule's read-only rule,
+  // N5.1) — kept explicit for the same reason as GET above: one
+  // identical, mechanically reviewable rule everywhere in this file.
+  if (access.scope === "own") return forbidden();
 
   try {
     const body = await req.json();

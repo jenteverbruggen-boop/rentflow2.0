@@ -15,6 +15,10 @@ const schema = z.object({ name: z.string().min(1, "Naam is verplicht") });
 export async function GET() {
   const access = await requireModule("personen", "lezen").catch(() => null);
   if (!access) return forbidden();
+  // scope: own — deny the standalone catalogue; function names for the
+  // caller's own crew still arrive embedded via PeriodPerson.role
+  // (own-data-scoping-design.md §5, Personen).
+  if (access.scope === "own") return forbidden();
   try {
     const functions = await prisma.function.findMany({
       orderBy: { name: "asc" },
@@ -30,6 +34,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const access = await requireModule("personen", "wijzigen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
   try {
     const body = await req.json();
     const parsed = schema.safeParse(body);

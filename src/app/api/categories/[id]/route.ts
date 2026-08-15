@@ -20,6 +20,7 @@ const schema = z.object({
 export async function PUT(req: NextRequest, { params }: Params) {
   const access = await requireModule("materialen", "wijzigen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
   try {
     const { id } = await params;
     const body = await req.json();
@@ -38,6 +39,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   const access = await requireModule("materialen", "verwijderen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
   try {
     const { id } = await params;
     const cat = await prisma.category.findUnique({

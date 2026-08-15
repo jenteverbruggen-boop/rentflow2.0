@@ -24,6 +24,7 @@ const schema = z.object({
 export async function GET(_req: NextRequest, { params }: Params) {
   const access = await requireModule("locaties", "lezen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
   try {
     const { id } = await params;
     const loc = await prisma.location.findUnique({
@@ -40,6 +41,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PUT(req: NextRequest, { params }: Params) {
   const access = await requireModule("locaties", "wijzigen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
   try {
     const { id } = await params;
     const body = await req.json();
@@ -58,6 +60,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   const access = await requireModule("locaties", "verwijderen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
   try {
     const { id } = await params;
     const count = await prisma.project.count({

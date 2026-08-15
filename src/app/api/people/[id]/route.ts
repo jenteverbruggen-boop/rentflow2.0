@@ -14,6 +14,10 @@ type Params = { params: Promise<{ id: string }> };
 export async function PUT(req: NextRequest, { params }: Params) {
   const access = await requireModule("personen", "wijzigen").catch(() => null);
   if (!access) return forbidden();
+  // Already unreachable for scope: own (requireModule's read-only rule,
+  // N5.1) — kept explicit per own-data-scoping-design.md §5/§8's
+  // uniform, mechanical rule across this file list.
+  if (access.scope === "own") return forbidden();
 
   try {
     const { id } = await params;
@@ -76,6 +80,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 export async function DELETE(_req: NextRequest, { params }: Params) {
   const access = await requireModule("personen", "verwijderen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
 
   try {
     const { id } = await params;

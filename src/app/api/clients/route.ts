@@ -23,6 +23,10 @@ const schema = z.object({
 export async function GET() {
   const access = await requireModule("klanten", "lezen").catch(() => null);
   if (!access) return forbidden();
+  // scope: own — deny the whole company-wide catalogue
+  // (own-data-scoping-design.md §5, Klanten). The caller's own
+  // project's client is visible embedded via /api/projects' clientRel.
+  if (access.scope === "own") return forbidden();
   try {
     const clients = await prisma.client.findMany({
       orderBy: { name: "asc" },
@@ -37,6 +41,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const access = await requireModule("klanten", "wijzigen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
   try {
     const body = await req.json();
     const parsed = schema.safeParse(body);

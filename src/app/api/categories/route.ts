@@ -16,6 +16,7 @@ const schema = z.object({
 export async function GET() {
   const access = await requireModule("materialen", "lezen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
   try {
     const cats = await prisma.category.findMany({
       orderBy: { name: "asc" },
@@ -30,6 +31,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const access = await requireModule("materialen", "wijzigen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
   try {
     const body = await req.json();
     const parsed = schema.safeParse(body);

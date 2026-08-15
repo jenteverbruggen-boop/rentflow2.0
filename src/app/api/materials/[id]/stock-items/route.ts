@@ -9,6 +9,13 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, { params }: Params) {
   const access = await requireModule("materialen", "lezen").catch(() => null);
   if (!access) return forbidden();
+  // scope: own — deny outright. This is also a direct cross-project
+  // leak vector regardless of scope reasoning: `assignments` returns
+  // every period/project a unit has ever been booked into, including
+  // ones the caller isn't booked on (own-data-scoping-design.md §5,
+  // Materialen) — denying the whole route is simpler and safer than
+  // filtering the nested assignments array.
+  if (access.scope === "own") return forbidden();
   try {
     const { id } = await params;
     const items = await prisma.stockItem.findMany({
@@ -63,6 +70,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function POST(req: NextRequest, { params }: Params) {
   const access = await requireModule("materialen", "wijzigen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
   try {
     const { id } = await params;
     const materialId = parseInt(id);

@@ -14,6 +14,11 @@ import { serializeMaterialsList } from "@/lib/materials-list";
 export async function GET(req: NextRequest) {
   const access = await requireModule("materialen", "lezen").catch(() => null);
   if (!access) return forbidden();
+  // scope: own — Material carries no project/period FK; deny the whole
+  // standalone catalogue (own-data-scoping-design.md §5, Materialen).
+  // Materials on the caller's own periods arrive embedded via
+  // /api/projects instead.
+  if (access.scope === "own") return forbidden();
 
   try {
     const code = new URL(req.url).searchParams.get("code");
@@ -51,6 +56,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const access = await requireModule("materialen", "wijzigen").catch(() => null);
   if (!access) return forbidden();
+  if (access.scope === "own") return forbidden();
 
   try {
     const body = await req.json();

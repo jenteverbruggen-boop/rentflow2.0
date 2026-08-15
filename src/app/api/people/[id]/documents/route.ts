@@ -11,6 +11,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!access) return forbidden();
   try {
     const { id } = await params;
+    // scope: own may read their own attesten only — resolved 2026-08-15
+    // in own-data-scoping-design.md's opening note (Q53/Q59-consistent:
+    // denying a freelancer their own certificates would be user-hostile).
+    // Everyone else's documents are denied, same as every other
+    // standalone catalogue in this phase.
+    if (access.scope === "own" && access.personId !== parseInt(id)) {
+      return forbidden();
+    }
     const docs = await listDocuments(parseInt(id));
     return NextResponse.json(docs);
   } catch (err) {

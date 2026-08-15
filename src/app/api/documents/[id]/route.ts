@@ -11,6 +11,11 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const { id } = await params;
     const doc = await getDocument(parseInt(id));
     if (!doc) return notFound();
+    // scope: own may read their own attesten only — see the identical
+    // note in people/[id]/documents/route.ts.
+    if (access.scope === "own" && access.personId !== doc.meta.personId) {
+      return forbidden();
+    }
     return new NextResponse(doc.data.buffer as ArrayBuffer, {
       headers: {
         "Content-Type": doc.meta.mimeType,
