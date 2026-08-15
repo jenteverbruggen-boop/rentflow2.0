@@ -7,6 +7,20 @@ export type ProjectStatus =
 
 export type Role = "ADMIN" | "PLANNER" | "VIEWER";
 
+export type ModuleKey =
+  | "projecten"
+  | "planning"
+  | "personen"
+  | "materialen"
+  | "klanten"
+  | "locaties"
+  | "kosten_facturen"
+  | "cijfers"
+  | "gebruikers"
+  | "instellingen";
+
+export type AccessLevel = "geen" | "lezen" | "wijzigen" | "verwijderen";
+
 export interface User {
   id: number;
   email: string;
