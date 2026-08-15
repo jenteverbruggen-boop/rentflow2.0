@@ -81,14 +81,12 @@ export async function checkPersonAvailability(
   args: RangeArgs & { sameProjectId?: number },
   client: PrismaClient = defaultPrisma,
 ): Promise<{
-  blockingProject?: { id: number; name: string };
+  blockingProject?: { id: number; name: string; from: Date; to: Date };
   sameProjectWarning?: { projectId: number; projectName: string };
 }> {
-  // `client` accepts a `tx` handle (H1.2, mirrors bundleAvailableCount
-  // above) so a re-check runs inside the same transaction as the write
-  // it guards. Coarse period-level pre-filter, then the precise
-  // effectiveWindow() comparison in JS — a window is always inside its
-  // own period, so nothing real is excluded by the coarse filter.
+  // `client` accepts a `tx` handle (H1.2/bundleAvailableCount pattern).
+  // Coarse period-level pre-filter, then the precise effectiveWindow()
+  // comparison in JS — a window is always inside its own period.
   const candidates = await client.periodPerson.findMany({
     where: {
       personId,
@@ -112,36 +110,15 @@ export async function checkPersonAvailability(
       sameProjectWarning: { projectId: project.id, projectName: project.name },
     };
   }
-  return { blockingProject: { id: project.id, name: project.name } };
-}
-
-export async function checkStockItemSameProject(
-  stockItemIds: number[],
-  args: {
-    from: Date;
-    to: Date;
-    excludePeriodId?: number;
-    sameProjectId: number;
-  },
-): Promise<{ warnings: string[] }> {
-  if (stockItemIds.length === 0) return { warnings: [] };
-  const conflicts = await defaultPrisma.periodStockItem.findMany({
-    where: {
-      stockItemId: { in: stockItemIds },
-      ...(args.excludePeriodId != null
-        ? { NOT: { periodId: args.excludePeriodId } }
-        : {}),
-      period: {
-        projectId: args.sameProjectId,
-        AND: [{ startDate: { lt: args.to } }, { endDate: { gt: args.from } }],
-      },
-    },
-    include: { stockItem: { include: { material: true } }, period: true },
-  });
+  // H2.1 — names the window too, not just the project, so the confirm
+  // dialog can say when the conflict is.
+  const conflictWindow = effectiveWindow(conflict);
   return {
-    warnings: conflicts.map(
-      (c) =>
-        `${c.stockItem.material.name} #${c.stockItem.unitNumber} staat ook in periode "${c.period.name}"`,
-    ),
+    blockingProject: {
+      id: project.id,
+      name: project.name,
+      from: conflictWindow.from,
+      to: conflictWindow.to,
+    },
   };
 }

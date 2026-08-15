@@ -82,25 +82,15 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
     queryClient.invalidateQueries({ queryKey: ["available"] });
   };
 
-  const add = useMutation({
-    mutationFn: async (args: { personId: number; role?: string; functionId: number | null }) => {
-      const res = await fetch(`/api/periods/${period.id}/people`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(args),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Toevoegen mislukt");
-      return data as { warnings: string[] };
-    },
-    onSuccess: (data) => {
-      onWarnings(data.warnings ?? []);
-      onError("");
-      invalidate();
-      setPendingAdd(null);
-    },
-    onError: (err) => onError((err as Error).message),
-  });
+  // H2.1 — BookPersonDialog now owns the POST itself (it needs to retry
+  // with allowOverlap after showing the user the conflict), so this
+  // component only reacts once a booking actually succeeds.
+  function handleBooked(warnings: string[]) {
+    onWarnings(warnings);
+    onError("");
+    invalidate();
+    setPendingAdd(null);
+  }
 
   const remove = useMutation({
     mutationFn: (assignmentId: number) =>
@@ -120,7 +110,6 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
             collapsed={collapsedLeft}
             onToggle={toggleLeft}
             onAdd={setPendingAdd}
-            addPending={add.isPending}
           />
           <PersonAssignedPane
             periodId={period.id}
@@ -139,9 +128,8 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
         person={pendingAdd}
         periodId={period.id}
         clientId={project.clientId}
-        onConfirm={(args) => add.mutate(args)}
+        onBooked={handleBooked}
         onClose={() => setPendingAdd(null)}
-        isPending={add.isPending}
       />
     </Card>
   );

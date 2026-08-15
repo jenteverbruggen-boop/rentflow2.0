@@ -103,6 +103,79 @@ describe("checkPersonAvailability against assignment windows, real DB (H1.4)", (
   });
 });
 
+describe("bookPersonAssignment — explicit double-booking override (H2.1)", () => {
+  it("refuses an overlapping booking without allowOverlap, naming the conflicting project", async () => {
+    const projectC = await client.project.create({
+      data: { name: "Project C", startDate: new Date("2026-09-01"), endDate: new Date("2026-09-01") },
+    });
+    const period = await client.period.create({
+      data: {
+        projectId: projectC.id,
+        name: "Evening gig",
+        startDate: new Date("2026-09-01T19:00:00Z"),
+        endDate: new Date("2026-09-01T22:00:00Z"),
+      },
+    });
+
+    await expect(
+      bookPersonAssignment({
+        periodId: period.id,
+        personId: ids.person,
+        personName: "Bob",
+        role: null,
+        functionId: null,
+        dayPriceSnapshot: 300,
+        discountPct: null,
+        discountAmount: null,
+        from: period.startDate,
+        to: period.endDate,
+        excludePeriodId: period.id,
+        sameProjectId: projectC.id,
+        client,
+      }),
+    ).rejects.toMatchObject({
+      code: "BLOCKED",
+      blockingProject: { name: "Project A" },
+    });
+
+    const rows = await client.periodPerson.findMany({ where: { periodId: period.id } });
+    expect(rows).toHaveLength(0);
+  });
+
+  it("with allowOverlap: true, the same booking succeeds and persists overlapAck: true", async () => {
+    const projectC = await client.project.create({
+      data: { name: "Project D", startDate: new Date("2026-09-01"), endDate: new Date("2026-09-01") },
+    });
+    const period = await client.period.create({
+      data: {
+        projectId: projectC.id,
+        name: "Evening gig 2",
+        startDate: new Date("2026-09-01T19:00:00Z"),
+        endDate: new Date("2026-09-01T22:00:00Z"),
+      },
+    });
+
+    const { assignment } = await bookPersonAssignment({
+      periodId: period.id,
+      personId: ids.person,
+      personName: "Bob",
+      role: null,
+      functionId: null,
+      dayPriceSnapshot: 300,
+      discountPct: null,
+      discountAmount: null,
+      from: period.startDate,
+      to: period.endDate,
+      excludePeriodId: period.id,
+      sameProjectId: projectC.id,
+      allowOverlap: true,
+      client,
+    });
+
+    expect(assignment.overlapAck).toBe(true);
+  });
+});
+
 describe("bookPersonAssignment — transactional race protection (H1.4)", () => {
   it("two concurrent bookings of the same person on the same period: exactly one succeeds", async () => {
     const period = await client.period.create({

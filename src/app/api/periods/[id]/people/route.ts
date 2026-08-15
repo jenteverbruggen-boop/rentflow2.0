@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModule, forbidden, badRequest, conflict, notFound, serverError } from "@/lib/api-auth";
 import { effectivePersonPrice } from "@/lib/effective-price";
-import { bookPersonAssignment } from "@/lib/person-booking";
+import { bookPersonAssignment, type BlockedError } from "@/lib/person-booking";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
 import { redactMoney } from "@/lib/redact";
 
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
     const periodId = parseInt(id);
-    const { personId, role, functionId, discountPct, discountAmount } = await req.json();
+    const { personId, role, functionId, discountPct, discountAmount, allowOverlap } = await req.json();
     if (!personId) return badRequest("personId is verplicht");
 
     const period = await prisma.period.findUnique({ where: { id: periodId } });
@@ -44,10 +44,21 @@ export async function POST(req: NextRequest, { params }: Params) {
         to: period.endDate,
         excludePeriodId: periodId,
         sameProjectId: period.projectId,
+        allowOverlap: allowOverlap === true,
       });
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
-      if (err.code === "DUPLICATE" || err.code === "BLOCKED") return conflict(err.message ?? "Conflict");
+      if (err.code === "BLOCKED") {
+        // H2.1 — the client must see the exact conflicting project and
+        // window to render a meaningful confirm dialog, so this one case
+        // returns a structured 409 instead of conflict()'s plain message.
+        const blocked = err as BlockedError;
+        return NextResponse.json(
+          { error: blocked.message, blockingProject: blocked.blockingProject },
+          { status: 409 },
+        );
+      }
+      if (err.code === "DUPLICATE") return conflict(err.message ?? "Conflict");
       if (err.code === "P2002") return conflict("Conflict bij gelijktijdige boeking — probeer opnieuw");
       throw e;
     }

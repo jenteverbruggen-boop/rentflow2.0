@@ -30,7 +30,16 @@ interface BookPersonArgs {
   to: Date;
   excludePeriodId: number;
   sameProjectId: number;
+  /** H2.1 — the client can only pass this after already having seen the
+   * BLOCKED conflict once and asked the user to confirm it; the API
+   * still refuses without it, this flag is never trusted on its own. */
+  allowOverlap?: boolean;
   client?: PrismaClient;
+}
+
+export interface BlockedError extends Error {
+  code: "BLOCKED";
+  blockingProject: { id: number; name: string; from: Date; to: Date };
 }
 
 /**
@@ -66,11 +75,12 @@ export async function bookPersonAssignment(args: BookPersonArgs) {
       { from: args.from, to: args.to, excludePeriodId: args.excludePeriodId, sameProjectId: args.sameProjectId },
       txClient,
     );
-    if (check.blockingProject) {
+    if (check.blockingProject && !args.allowOverlap) {
       const err = new Error(
         `${args.personName} staat al ingepland op project "${check.blockingProject.name}" tijdens deze periode`,
-      ) as Error & { code: string };
+      ) as BlockedError;
       err.code = "BLOCKED";
+      err.blockingProject = check.blockingProject;
       throw err;
     }
 
@@ -88,6 +98,9 @@ export async function bookPersonAssignment(args: BookPersonArgs) {
         dayPriceSnapshot: args.dayPriceSnapshot,
         discountPct: args.discountPct,
         discountAmount: args.discountAmount,
+        // H2.1 — only ever true when the caller explicitly confirmed a
+        // real conflict; never set when there was nothing to override.
+        overlapAck: !!(check.blockingProject && args.allowOverlap),
       },
       include: { person: true, function: true },
     });

@@ -13,7 +13,6 @@ interface Props {
   collapsed: Set<string>;
   onToggle: (role: string) => void;
   onAdd: (person: PersonAvailability) => void;
-  addPending: boolean;
 }
 
 /** "Beschikbaar" pane, extracted from person-split-editor.tsx (Y3.3).
@@ -28,7 +27,6 @@ export function PersonAvailablePane({
   collapsed,
   onToggle,
   onAdd,
-  addPending,
 }: Props) {
   return (
     <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
@@ -79,7 +77,7 @@ export function PersonAvailablePane({
                           <Button
                             size="icon"
                             className="h-7 w-7"
-                            disabled={alreadyAssigned || !p.isAvailable || addPending}
+                            disabled={alreadyAssigned || !p.isAvailable}
                             onClick={() => onAdd(p)}
                             title={alreadyAssigned ? "Al toegewezen aan deze periode" : "Toevoegen aan periode"}
                           >
