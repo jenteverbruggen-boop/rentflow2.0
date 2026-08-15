@@ -32,11 +32,13 @@ export function MaterialSplitEditor({
   const [collapsedRight, setCollapsedRight] = useState<Set<string>>(new Set());
   const [qtyMap, setQtyMap] = useState<Record<number, number>>({});
 
-  // Deliberately kept as-is — H3 fixes this .slice(0, 10) range bug, and
-  // mixing that fix into this pure-refactor commit makes both unreviewable.
+  // Full ISO timestamps (with offset) — do not truncate to date-only with
+  // .slice(0, 10). A date-only string parses as UTC midnight, so a
+  // single-day period's from === to produced a zero-width overlap window
+  // and everyone showed "available" regardless of actual bookings (H3).
   const range = {
-    from: period.startDate.slice(0, 10),
-    to: period.endDate.slice(0, 10),
+    from: period.startDate,
+    to: period.endDate,
     sameProjectId: project.id,
     projectId: project.id,
   };
