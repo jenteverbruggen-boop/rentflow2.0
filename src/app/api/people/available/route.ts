@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
 import { checkPersonAvailability } from "@/lib/availability";
 import { toNumber } from "@/lib/serialize";
+import { parseDateRange } from "@/lib/parse-date-range";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
@@ -15,7 +16,8 @@ export async function GET(req: NextRequest) {
     const excludePeriodId = searchParams.get("excludePeriodId");
     const sameProjectId = searchParams.get("sameProjectId");
     const projectId = searchParams.get("projectId") ?? sameProjectId;
-    if (!from || !to) return badRequest("from en to zijn verplicht");
+    const range = parseDateRange(from, to);
+    if (!range) return badRequest("from en to zijn verplicht en moeten een geldige periode vormen (to na from)");
 
     const people = await prisma.person.findMany({ orderBy: { name: "asc" } });
 
@@ -27,8 +29,8 @@ export async function GET(req: NextRequest) {
     const results = await Promise.all(
       people.map(async (p) => {
         const check = await checkPersonAvailability(p.id, {
-          from: new Date(from),
-          to: new Date(to),
+          from: range.from,
+          to: range.to,
           excludePeriodId: excludePeriodId ? parseInt(excludePeriodId) : undefined,
           sameProjectId: sameProjectId ? parseInt(sameProjectId) : undefined,
         });

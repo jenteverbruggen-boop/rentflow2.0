@@ -12,6 +12,7 @@ import {
 } from "@/lib/availability";
 import { computeSharingMap } from "@/lib/bundle-sharing";
 import { toNumber } from "@/lib/serialize";
+import { parseDateRange } from "@/lib/parse-date-range";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
@@ -23,7 +24,8 @@ export async function GET(req: NextRequest) {
     const to = searchParams.get("to");
     const excludePeriodId = searchParams.get("excludePeriodId");
     const projectId = searchParams.get("projectId");
-    if (!from || !to) return badRequest("from en to zijn verplicht");
+    const range = parseDateRange(from, to);
+    if (!range) return badRequest("from en to zijn verplicht en moeten een geldige periode vormen (to na from)");
 
     const materials = await prisma.material.findMany({
       orderBy: { name: "asc" },
@@ -58,8 +60,8 @@ export async function GET(req: NextRequest) {
     const results = await Promise.all(
       materials.map(async (m) => {
         const rangeArgs = {
-          from: new Date(from),
-          to: new Date(to),
+          from: range.from,
+          to: range.to,
           excludePeriodId: excludePeriodId
             ? parseInt(excludePeriodId)
             : undefined,
