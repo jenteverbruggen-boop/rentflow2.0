@@ -167,6 +167,18 @@ describe("effectivePersonPrice — five-level resolution order (L1.2, Q30/Q32b)"
     expect(result).toEqual({ amount: 0, source: "none", unit: "dag" });
   });
 
+  // L1.4 — a client rate card row missing the specific requested unit's
+  // rate is not a match at all; resolution must fall through to the
+  // next level, not stop at "client" with a null/0 amount.
+  it("a client rate card with only a dayRate falls through to person-function for an hourly request", async () => {
+    await client.clientFunctionRate.create({
+      data: { clientId: ids.clientId, functionId: ids.fnElec, dayRate: 300, hourRate: null },
+    });
+    const result = await effectivePersonPrice(ids.project, ids.person, ids.fnElec, "uur");
+    expect(result).toEqual({ amount: 38, source: "person-function", unit: "uur" });
+    await client.clientFunctionRate.deleteMany({ where: { clientId: ids.clientId, functionId: ids.fnElec } });
+  });
+
   it("with no functionId (every pre-L2 caller), resolution is the old 2-level order: project override, then Person.dayPrice", async () => {
     const result = await effectivePersonPrice(ids.project, ids.person);
     expect(result).toEqual({ amount: 300, source: "person", unit: "dag" });
