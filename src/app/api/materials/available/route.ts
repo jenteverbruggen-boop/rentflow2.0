@@ -18,6 +18,9 @@ import { redactMoney } from "@/lib/redact";
 export async function GET(req: NextRequest) {
   const access = await requireModule("planning", "lezen").catch(() => null);
   if (!access) return forbidden();
+  // scope: own — same reasoning as people/available/route.ts: a
+  // whole-catalogue availability computation, not owned data.
+  if (access.scope === "own") return forbidden();
 
   try {
     const { searchParams } = new URL(req.url);

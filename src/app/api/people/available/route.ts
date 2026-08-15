@@ -9,6 +9,12 @@ import { redactMoney } from "@/lib/redact";
 export async function GET(req: NextRequest) {
   const access = await requireModule("planning", "lezen").catch(() => null);
   if (!access) return forbidden();
+  // scope: own — denied regardless of Planning level, same as every
+  // other standalone catalogue (own-data-scoping-design.md §5,
+  // Planning): a read-only user has no booking workflow this endpoint
+  // serves, and it's a whole-roster + price disclosure (every person
+  // in the company, priced) rather than owned data.
+  if (access.scope === "own") return forbidden();
 
   try {
     const { searchParams } = new URL(req.url);

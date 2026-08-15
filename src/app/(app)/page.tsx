@@ -7,6 +7,7 @@ import { nl } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { statusVariant } from "@/lib/utils";
+import { useAuthMe } from "@/hooks/use-auth-me";
 import type { Project, Person, Material } from "@/types";
 
 async function get<T>(url: string): Promise<T> {
@@ -16,16 +17,27 @@ async function get<T>(url: string): Promise<T> {
 }
 
 export default function DashboardPage() {
+  const { data: me } = useAuthMe();
+  // While scope is still resolving, treat as scoped (no company-wide
+  // fetch) rather than briefly firing it then discarding the result —
+  // same conservative default as mobile-sidebar.tsx's nav links (N4.2).
+  const isScoped = me === undefined || me.scope === "own";
+
   const [projectsQuery, peopleQuery, materialsQuery] = useQueries({
     queries: [
       {
         queryKey: ["projects"],
         queryFn: () => get<Project[]>("/api/projects"),
       },
-      { queryKey: ["people"], queryFn: () => get<Person[]>("/api/people") },
+      {
+        queryKey: ["people"],
+        queryFn: () => get<Person[]>("/api/people"),
+        enabled: !isScoped,
+      },
       {
         queryKey: ["materials"],
         queryFn: () => get<Material[]>("/api/materials"),
+        enabled: !isScoped,
       },
     ],
   });
@@ -35,32 +47,38 @@ export default function DashboardPage() {
     .filter((p) => new Date(p.startDate) >= new Date())
     .slice(0, 5);
 
-  const stats = [
-    {
-      label: "Projecten",
-      value: projects.length,
-      icon: "📁",
-      href: "/projects",
-    },
-    {
-      label: "Personen",
-      value: peopleQuery.data?.length ?? 0,
-      icon: "👥",
-      href: "/people",
-    },
-    {
-      label: "Materialen",
-      value: materialsQuery.data?.length ?? 0,
-      icon: "📦",
-      href: "/materials",
-    },
-  ];
+  // scope: own — people/materials/route.ts deny outright (N5.2b), so
+  // there is no legal data source for those two tiles anymore. Rather
+  // than fetch the company-wide catalogues and hide the count (still a
+  // network-level leak even if never rendered), replace them with a
+  // scope-native figure computed from the already-scoped projects
+  // response: how many of the caller's own periods start today or
+  // later, across every project they're booked on
+  // (own-data-scoping-design.md's Dashboard section).
+  const upcomingPeriodCount = projects.reduce(
+    (sum, p) =>
+      sum + p.periods.filter((per) => new Date(per.startDate) >= new Date()).length,
+    0,
+  );
+
+  const stats = isScoped
+    ? [
+        { label: "Projecten", value: projects.length, icon: "📁", href: "/projects" },
+        { label: "Komende periodes", value: upcomingPeriodCount, icon: "🗓️", href: "/planning" },
+      ]
+    : [
+        { label: "Projecten", value: projects.length, icon: "📁", href: "/projects" },
+        { label: "Personen", value: peopleQuery.data?.length ?? 0, icon: "👥", href: "/people" },
+        { label: "Materialen", value: materialsQuery.data?.length ?? 0, icon: "📦", href: "/materials" },
+      ];
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Dashboard</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div
+        className={`grid grid-cols-1 gap-4 ${isScoped ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}
+      >
         {stats.map((s) => (
           <Link
             key={s.label}
