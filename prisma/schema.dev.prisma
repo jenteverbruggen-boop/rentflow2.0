@@ -52,6 +52,7 @@ model Client {
   notes         String?
   projects      Project[]
   functionRates ClientFunctionRate[]
+  invoices      Invoice[]
 }
 
 model Location {
@@ -128,6 +129,7 @@ model Project {
   periods        Period[]
   materialPrices ProjectMaterialPrice[]
   personPrices   ProjectPersonPrice[]
+  invoices       Invoice[]
 }
 
 model ProjectMaterialPrice {
@@ -298,4 +300,95 @@ model PersonTravelCost {
   unitCost       Float
   quantity       Int          @default(1)
   periodPerson   PeriodPerson @relation(fields: [periodPersonId], references: [id], onDelete: Cascade)
+}
+
+// DDL-3 — invoice models, mirroring schema.prisma's Invoice/InvoiceLine/
+// Payment/InvoiceCounter field-for-field (Decimal -> Float, dev-only).
+model Invoice {
+  id                Int       @id @default(autoincrement())
+  kind              String    @default("invoice")
+  series            String    @default("invoice")
+  status            String    @default("concept")
+  invoiceRole       String    @default("standalone")
+  number            String?
+  year              Int?
+  projectId         Int?
+  clientId          Int
+  creditNoteOfId    Int?
+  clientName        String
+  clientAddress     String?
+  clientPostalCode  String?
+  clientCity        String?
+  clientVatNumber   String?
+  invoiceDate       DateTime?
+  dueDate           DateTime?
+  paymentReference  String?
+  currency          String    @default("EUR")
+  subtotalExcl      Float     @default(0)
+  travelExcl        Float     @default(0)
+  deductionExcl     Float     @default(0)
+  vatAmount         Float     @default(0)
+  totalIncl         Float     @default(0)
+  depositType       String?
+  depositPercentage Float?
+  depositBasisExcl  Float?
+  notes             String?
+  footer            String?
+  createdAt         DateTime  @default(now())
+  finalizedAt       DateTime?
+
+  client            Client        @relation(fields: [clientId], references: [id])
+  project           Project?      @relation(fields: [projectId], references: [id])
+  creditNoteOf      Invoice?      @relation("CreditNoteOf", fields: [creditNoteOfId], references: [id])
+  creditNotes       Invoice[]     @relation("CreditNoteOf")
+  lines             InvoiceLine[]
+  payments          Payment[]
+
+  @@index([projectId])
+  @@index([clientId])
+  @@index([status])
+  @@index([creditNoteOfId])
+}
+
+model InvoiceLine {
+  id             Int      @id @default(autoincrement())
+  invoiceId      Int
+  section        String?
+  kind           String
+  description    String
+  quantity       Float
+  unit           String
+  unitPrice      Float
+  vatRate        Float
+  lineTotalExcl  Float
+  sortOrder      Int
+  sourceKind     String?
+  sourceId       Int?
+
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id          Int       @id @default(autoincrement())
+  invoiceId   Int
+  amount      Float
+  paidAt      DateTime
+  method      String?
+  reference   String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  invoice     Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model InvoiceCounter {
+  series   String
+  year     Int
+  lastSeq  Int     @default(0)
+
+  @@id([series, year])
 }

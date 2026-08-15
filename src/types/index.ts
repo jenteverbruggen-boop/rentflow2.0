@@ -324,3 +324,97 @@ export interface BookingResponse<T> {
   assignment: T;
   warnings: string[];
 }
+
+// DDL-3 — hand-maintained mirror of the Invoice/InvoiceLine/Payment
+// models (.plans/invoice-design.md §1.3). Never generated; extend here
+// whenever the Prisma schema's invoice models change.
+export type InvoiceKind = "invoice" | "creditnota";
+export type InvoiceStatus = "concept" | "verzonden" | "betaald"; // persisted
+export type InvoiceRole = "deposit" | "final" | "standalone";
+export type InvoiceLineKind =
+  | "person"
+  | "material"
+  | "bundle"
+  | "travel"
+  | "deduction"
+  | "deposit"
+  | "manual";
+export type InvoiceLineUnit = "dag" | "uur" | "stuk";
+export type DepositType = "fixed" | "percentage";
+
+// Derived-only (src/lib/invoice-status.ts), never sent as `status` on
+// the wire — see the design doc §6.
+export type InvoiceDisplayStatus =
+  | "concept"
+  | "verzonden"
+  | "gedeeltelijk_betaald"
+  | "betaald"
+  | "vervallen"
+  | "creditnota";
+
+export interface InvoiceLine {
+  id: number;
+  invoiceId: number;
+  section: string | null;
+  kind: InvoiceLineKind;
+  description: string;
+  quantity: number;
+  unit: InvoiceLineUnit;
+  unitPrice: number;
+  vatRate: number;
+  lineTotalExcl: number;
+  sortOrder: number;
+  sourceKind: string | null;
+  sourceId: number | null;
+}
+
+export interface Payment {
+  id: number;
+  invoiceId: number;
+  amount: number;
+  paidAt: string;
+  method: string | null;
+  reference: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface Invoice {
+  id: number;
+  kind: InvoiceKind;
+  series: "invoice" | "credit";
+  status: InvoiceStatus;
+  invoiceRole: InvoiceRole;
+  number: string | null;
+  year: number | null;
+  projectId: number | null;
+  clientId: number;
+  creditNoteOfId: number | null;
+  clientName: string;
+  clientAddress: string | null;
+  clientPostalCode: string | null;
+  clientCity: string | null;
+  clientVatNumber: string | null;
+  invoiceDate: string | null;
+  dueDate: string | null;
+  paymentReference: string | null;
+  currency: string;
+  subtotalExcl: number;
+  travelExcl: number;
+  deductionExcl: number;
+  vatAmount: number;
+  totalIncl: number;
+  depositType: DepositType | null;
+  depositPercentage: number | null;
+  depositBasisExcl: number | null;
+  notes: string | null;
+  footer: string | null;
+  createdAt: string;
+  finalizedAt: string | null;
+  lines: InvoiceLine[];
+  payments: Payment[];
+  creditNotes?: Invoice[];
+  // computed, added by the API, never persisted (design doc §6):
+  displayStatus: InvoiceDisplayStatus;
+  remainingBalance: number;
+}

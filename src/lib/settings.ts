@@ -8,6 +8,13 @@ const SETTING_KEYS = [
   "companyPhone",
   "companyVat",
   "companyIban",
+  // DDL-3 (invoice-design.md §1.4) — invoice/payment settings.
+  "invoicePaymentTermDays",
+  "invoiceBankAccountHolder",
+  "invoiceNumberFormat",
+  "invoiceFooter",
+  "btwRate",
+  "defaultDepositPercentage",
 ] as const;
 export type SettingKey = (typeof SETTING_KEYS)[number];
 
