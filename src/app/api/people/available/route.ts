@@ -5,6 +5,7 @@ import { checkPersonAvailability } from "@/lib/availability";
 import { toNumber } from "@/lib/serialize";
 import { parseDateRange } from "@/lib/parse-date-range";
 import { redactMoney } from "@/lib/redact";
+import { serializePersonFunction } from "@/app/api/people/route";
 
 export async function GET(req: NextRequest) {
   const access = await requireModule("planning", "lezen").catch(() => null);
@@ -26,7 +27,10 @@ export async function GET(req: NextRequest) {
     const range = parseDateRange(from, to);
     if (!range) return badRequest("from en to zijn verplicht en moeten een geldige periode vormen (to na from)");
 
-    const people = await prisma.person.findMany({ orderBy: { name: "asc" } });
+    const people = await prisma.person.findMany({
+      orderBy: { name: "asc" },
+      include: { functions: { include: { function: true } } },
+    });
 
     const overrides = projectId
       ? await prisma.projectPersonPrice.findMany({ where: { projectId: parseInt(projectId) } })
@@ -45,7 +49,13 @@ export async function GET(req: NextRequest) {
         const effectivePrice = overrideMap.get(p.id) ?? basePrice;
         return redactMoney(
           {
-            person: { ...p, dayPrice: effectivePrice, basePrice, hasOverride: overrideMap.has(p.id) },
+            person: {
+              ...p,
+              dayPrice: effectivePrice,
+              basePrice,
+              hasOverride: overrideMap.has(p.id),
+              functions: p.functions.map(serializePersonFunction),
+            },
             isAvailable: !check.blockingProject,
             blockingProject: check.blockingProject,
             sameProjectWarning: check.sameProjectWarning,

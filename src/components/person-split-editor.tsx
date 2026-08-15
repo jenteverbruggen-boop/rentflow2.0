@@ -8,7 +8,8 @@ import { periodDays } from "@/lib/pricing";
 import { groupAvailableByRole, groupAssignedByRole } from "@/lib/person-grouping";
 import { PersonAvailablePane } from "@/components/person-available-pane";
 import { PersonAssignedPane } from "@/components/person-assigned-pane";
-import type { Period, Project } from "@/types";
+import { BookPersonDialog } from "@/components/book-person-dialog";
+import type { Period, Project, PersonAvailability } from "@/types";
 
 interface Props {
   period: Period;
@@ -22,6 +23,7 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
   const [search, setSearch] = useState("");
   const [collapsedLeft, setCollapsedLeft] = useState<Set<string>>(new Set());
   const [collapsedRight, setCollapsedRight] = useState<Set<string>>(new Set());
+  const [pendingAdd, setPendingAdd] = useState<PersonAvailability | null>(null);
 
   // Full ISO timestamps (with offset) — do not truncate to date-only with
   // .slice(0, 10). A date-only string parses as UTC midnight, so a
@@ -78,7 +80,7 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
   };
 
   const add = useMutation({
-    mutationFn: async (args: { personId: number; role?: string }) => {
+    mutationFn: async (args: { personId: number; role?: string; functionId: number | null }) => {
       const res = await fetch(`/api/periods/${period.id}/people`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,7 +90,12 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
       if (!res.ok) throw new Error(data.error ?? "Toevoegen mislukt");
       return data as { warnings: string[] };
     },
-    onSuccess: (data) => { onWarnings(data.warnings ?? []); onError(""); invalidate(); },
+    onSuccess: (data) => {
+      onWarnings(data.warnings ?? []);
+      onError("");
+      invalidate();
+      setPendingAdd(null);
+    },
     onError: (err) => onError((err as Error).message),
   });
 
@@ -108,7 +115,7 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
             byRole={byRole}
             collapsed={collapsedLeft}
             onToggle={toggleLeft}
-            onAdd={(args) => add.mutate(args)}
+            onAdd={setPendingAdd}
             addPending={add.isPending}
           />
           <PersonAssignedPane
@@ -122,6 +129,13 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
           />
         </div>
       </CardContent>
+      <BookPersonDialog
+        person={pendingAdd}
+        periodId={period.id}
+        onConfirm={(args) => add.mutate(args)}
+        onClose={() => setPendingAdd(null)}
+        isPending={add.isPending}
+      />
     </Card>
   );
 }

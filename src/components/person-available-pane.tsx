@@ -11,12 +11,14 @@ interface Props {
   byRole: [string, PersonAvailability[]][];
   collapsed: Set<string>;
   onToggle: (role: string) => void;
-  onAdd: (args: { personId: number; role?: string }) => void;
+  onAdd: (person: PersonAvailability) => void;
   addPending: boolean;
 }
 
-/** "Beschikbaar" pane, extracted from person-split-editor.tsx (Y3.3) — pure
- * move, no behaviour change. */
+/** "Beschikbaar" pane, extracted from person-split-editor.tsx (Y3.3).
+ * `onAdd` (L2.2) hands back the whole candidate rather than booking
+ * immediately — the parent opens a confirm dialog to pick a function
+ * and show the resolved rate first. */
 export function PersonAvailablePane({
   search,
   onSearchChange,
@@ -63,7 +65,7 @@ export function PersonAvailablePane({
                           size="icon"
                           className="h-7 w-7"
                           disabled={!p.isAvailable || addPending}
-                          onClick={() => onAdd({ personId: p.person.id, role: p.person.role ?? undefined })}
+                          onClick={() => onAdd(p)}
                           title="Toevoegen aan periode"
                         >
                           <ArrowRight className="h-3.5 w-3.5" />
