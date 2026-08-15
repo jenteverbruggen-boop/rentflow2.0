@@ -2,6 +2,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import type { ParsedMaterialRow, MaterialParseError } from "@/lib/import/material-adapter";
 import { nextCode } from "@/lib/material-code";
+import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
 export interface ApplyMaterialImportResult {
   created: number;
@@ -78,11 +79,16 @@ async function applyRow(
   };
 
   if (existing) {
+    // Postgres types dayPrice/costPrice/listPrice `Decimal`; SQLite (dev)
+    // types them `Float`. `Decimal !== number` never compiles as a plain
+    // `!==` against the Postgres client (CI's Decimal-drift guard,
+    // Y1.5) — coerce both sides through toNumber()/toNumberOrNull()
+    // rather than comparing raw values.
     const changed =
       existing.name !== data.name ||
-      existing.dayPrice !== data.dayPrice ||
-      existing.costPrice !== data.costPrice ||
-      existing.listPrice !== data.listPrice ||
+      toNumber(existing.dayPrice) !== data.dayPrice ||
+      toNumberOrNull(existing.costPrice) !== data.costPrice ||
+      toNumberOrNull(existing.listPrice) !== data.listPrice ||
       existing.isBundle !== data.isBundle ||
       existing.archived !== data.archived ||
       existing.notes !== data.notes;
