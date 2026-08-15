@@ -136,6 +136,7 @@ npm run dev
 | `npm run db:dev:seed` | Seed the SQLite dev DB with demo users, projects, periods, stock items |
 | `npm run db:dev:studio` | Open Prisma Studio against the local SQLite DB |
 | `npm run db:dev:generate` | Regenerate the Prisma client from the dev schema |
+| `npm run backfill:functions` | One-off: match existing bookings' legacy `role` text against `Function.name` and populate `functionId` where it matches exactly (L2.1); logs every unmatched row instead of guessing |
 
 ---
 

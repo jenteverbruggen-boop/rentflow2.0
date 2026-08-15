@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
     const periodId = parseInt(id);
-    const { personId, role, discountPct, discountAmount } = await req.json();
+    const { personId, role, functionId, discountPct, discountAmount } = await req.json();
     if (!personId) return badRequest("personId is verplicht");
 
     const period = await prisma.period.findUnique({ where: { id: periodId } });
@@ -46,17 +46,19 @@ export async function POST(req: NextRequest, { params }: Params) {
       warnings.push(`${person.name} staat ook in een andere periode van dit project`);
     }
 
-    const price = await effectivePersonPrice(period.projectId, parseInt(personId));
+    const resolvedFunctionId = functionId != null ? parseInt(functionId) : null;
+    const price = await effectivePersonPrice(period.projectId, parseInt(personId), resolvedFunctionId);
     const assignment = await prisma.periodPerson.create({
       data: {
         periodId,
         personId: parseInt(personId),
         role: role ?? null,
+        functionId: resolvedFunctionId,
         dayPriceSnapshot: price.amount,
         discountPct: discountPct != null ? toNumber(discountPct) : null,
         discountAmount: discountAmount != null ? toNumber(discountAmount) : null,
       },
-      include: { person: true },
+      include: { person: true, function: true },
     });
     return NextResponse.json(
       redactMoney(
@@ -67,6 +69,13 @@ export async function POST(req: NextRequest, { params }: Params) {
             discountPct: toNumberOrNull(assignment.discountPct),
             discountAmount: toNumberOrNull(assignment.discountAmount),
             person: { ...assignment.person, dayPrice: toNumber(assignment.person.dayPrice) },
+            function: assignment.function
+              ? {
+                  ...assignment.function,
+                  dayRate: toNumberOrNull(assignment.function.dayRate),
+                  hourRate: toNumberOrNull(assignment.function.hourRate),
+                }
+              : null,
           },
           warnings,
         },
