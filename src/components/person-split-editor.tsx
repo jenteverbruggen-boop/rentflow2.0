@@ -2,14 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronRight } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePersonAvailability } from "@/hooks/use-availability";
-import { formatEUR, periodDays, personLineCost } from "@/lib/pricing";
-import type { Period, PersonAvailability, Project } from "@/types";
+import { periodDays } from "@/lib/pricing";
+import { groupAvailableByRole, groupAssignedByRole } from "@/lib/person-grouping";
+import { PersonAvailablePane } from "@/components/person-available-pane";
+import { PersonAssignedPane } from "@/components/person-assigned-pane";
+import type { Period, Project } from "@/types";
 
 interface Props {
   period: Period;
@@ -24,6 +23,8 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
   const [collapsedLeft, setCollapsedLeft] = useState<Set<string>>(new Set());
   const [collapsedRight, setCollapsedRight] = useState<Set<string>>(new Set());
 
+  // Deliberately kept as-is — H3 fixes this .slice(0, 10) range bug, and
+  // mixing that fix into this pure-refactor commit makes both unreviewable.
   const range = {
     from: period.startDate.slice(0, 10),
     to: period.endDate.slice(0, 10),
@@ -50,15 +51,7 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
     });
   }, [persons.data, search, assignedIds]);
 
-  const byRole = useMemo(() => {
-    const map = new Map<string, PersonAvailability[]>();
-    for (const p of filtered) {
-      const role = p.person.role ?? "Overig";
-      if (!map.has(role)) map.set(role, []);
-      map.get(role)!.push(p);
-    }
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filtered]);
+  const byRole = useMemo(() => groupAvailableByRole(filtered), [filtered]);
 
   const toggle = (side: "L" | "R") => (role: string) => {
     const setter = side === "L" ? setCollapsedLeft : setCollapsedRight;
@@ -72,15 +65,10 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
   const toggleLeft = toggle("L");
   const toggleRight = toggle("R");
 
-  const assignedByRole = useMemo(() => {
-    const map = new Map<string, typeof period.people>();
-    for (const pp of period.people) {
-      const role = pp.role ?? pp.person.role ?? "Overig";
-      if (!map.has(role)) map.set(role, []);
-      map.get(role)!.push(pp);
-    }
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [period]);
+  const assignedByRole = useMemo(
+    () => groupAssignedByRole(period.people),
+    [period],
+  );
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["project", String(project.id)] });
@@ -112,117 +100,24 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
     <Card>
       <CardContent className="pt-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
-            <div className="bg-muted/60 px-3 py-2.5 border-b border-border md:hidden">
-              <h4 className="text-sm font-semibold">Beschikbaar</h4>
-            </div>
-            <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">Beschikbaar</h4>
-            <div className="p-3 space-y-2 md:p-0">
-            <Input placeholder="Zoeken op naam of functie..." value={search} onChange={(e) => setSearch(e.target.value)} />
-            <ScrollArea className="h-[400px] pr-2">
-              <div className="space-y-2">
-                {byRole.map(([role, items]) => {
-                  const isCollapsed = collapsedLeft.has(role);
-                  return (
-                    <div key={role}>
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 text-xs font-semibold uppercase text-muted-foreground w-full hover:text-foreground"
-                        onClick={() => toggleLeft(role)}
-                      >
-                        {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                        <span>{role}</span>
-                        <span className="font-normal normal-case ml-1">({items.length})</span>
-                      </button>
-                      {!isCollapsed && (
-                        <div className="space-y-1 mt-1 ml-4">
-                          {items.map((p) => (
-                            <div key={p.person.id} className="flex items-center gap-1.5 bg-muted/30 rounded px-2 py-1 text-xs">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{p.person.name}</p>
-                                <p className="text-[10px] text-muted-foreground truncate">
-                                  {p.isAvailable ? "Beschikbaar" : `Bezet (${p.blockingProject?.name})`} · {formatEUR(p.person.dayPrice)}/d
-                                </p>
-                              </div>
-                              <Button
-                                size="icon"
-                                className="h-7 w-7"
-                                disabled={!p.isAvailable || add.isPending}
-                                onClick={() => add.mutate({ personId: p.person.id, role: p.person.role ?? undefined })}
-                                title="Toevoegen aan periode"
-                              >
-                                <ArrowRight className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {byRole.length === 0 && (
-                  <p className="text-xs text-muted-foreground py-6 text-center">Geen personen beschikbaar</p>
-                )}
-              </div>
-            </ScrollArea>
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
-            <div className="bg-muted/60 px-3 py-2.5 border-b border-border md:hidden">
-              <h4 className="text-sm font-semibold">In &quot;{period.name}&quot;</h4>
-            </div>
-            <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">In &quot;{period.name}&quot;</h4>
-            <div className="hidden md:block h-9" aria-hidden />
-            <div className="p-3 md:p-0">
-            <ScrollArea className="h-[400px] pr-2">
-              <div className="space-y-2">
-                {assignedByRole.map(([role, items]) => {
-                  const isCollapsed = collapsedRight.has(role);
-                  return (
-                    <div key={role}>
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 text-xs font-semibold uppercase text-muted-foreground w-full hover:text-foreground"
-                        onClick={() => toggleRight(role)}
-                      >
-                        {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                        <span>{role}</span>
-                        <span className="font-normal normal-case ml-1">({items.length})</span>
-                      </button>
-                      {!isCollapsed && (
-                        <div className="space-y-1 mt-1 ml-4">
-                          {items.map((pp) => (
-                            <div key={pp.id} className="flex items-center gap-1.5 bg-muted/40 rounded px-2 py-1 text-xs">
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="h-7 w-7"
-                                onClick={() => remove.mutate(pp.id)}
-                                title="Verwijderen"
-                              >
-                                <ArrowLeft className="h-3.5 w-3.5" />
-                              </Button>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{pp.person.name}</p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {formatEUR(personLineCost(pp, days))}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {period.people.length === 0 && (
-                  <p className="text-xs text-muted-foreground py-6 text-center">Nog geen personen in deze periode</p>
-                )}
-              </div>
-            </ScrollArea>
-            </div>
-          </section>
+          <PersonAvailablePane
+            search={search}
+            onSearchChange={setSearch}
+            byRole={byRole}
+            collapsed={collapsedLeft}
+            onToggle={toggleLeft}
+            onAdd={(args) => add.mutate(args)}
+            addPending={add.isPending}
+          />
+          <PersonAssignedPane
+            periodName={period.name}
+            hasAnyPeople={period.people.length > 0}
+            assignedByRole={assignedByRole}
+            collapsed={collapsedRight}
+            onToggle={toggleRight}
+            days={days}
+            onRemove={(id) => remove.mutate(id)}
+          />
         </div>
       </CardContent>
     </Card>
