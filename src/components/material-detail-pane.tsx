@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { InlineEditField } from "@/components/inline-edit-field";
 import { MaterialStockList } from "@/components/material-stock-list";
@@ -10,6 +9,7 @@ import { MaterialCodes } from "@/components/material-codes";
 import { BundleComponentEditor } from "@/components/bundle-component-editor";
 import { BundleStockSummary } from "@/components/bundle-stock-summary";
 import { MaterialSummaryGrid } from "@/components/material-summary-grid";
+import { MaterialDetailHeader } from "@/components/material-detail-header";
 import { useMaterialUpdate } from "@/hooks/use-material-update";
 import type { Material, StockItem } from "@/types";
 
@@ -48,33 +48,11 @@ export function MaterialDetailPane({
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle>
-              {material.isBundle && "🎁 "}
-              {material.name}
-            </CardTitle>
-            {material.isBundle && (
-              <span className="text-xs text-muted-foreground">Set / bundel</span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant={material.isBundle ? "default" : "outline"}
-              onClick={() => saveField("isBundle", String(!material.isBundle))}
-            >
-              {material.isBundle ? "🎁 Set" : "Markeer als set"}
-            </Button>
-            {!material.isBundle && (
-              <Button size="sm" variant="outline" onClick={onManageUnits}>
-                Beheer units
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardHeader>
+      <MaterialDetailHeader
+        material={material}
+        onToggleBundle={() => saveField("isBundle", String(!material.isBundle))}
+        onManageUnits={onManageUnits}
+      />
 
       <CardContent className="space-y-4">
         <MaterialSummaryGrid material={material} onSave={saveField} />
