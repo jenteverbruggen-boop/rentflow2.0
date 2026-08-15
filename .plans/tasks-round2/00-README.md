@@ -74,14 +74,16 @@ Most phases have exactly one schema commit. **Two do not, deliberately:** phase 
 
 ### Outstanding prerequisites (not code)
 
-| Prerequisite | Blocks | Status |
-|---|---|---|
-| `.plans/invoice-design.md` | J2b (phase 3) | ⛔ to write |
-| `.plans/own-data-scoping-design.md` | N5 (phase 1) | ⛔ to write |
-| `.plans/data-import-export-design.md` | M1 detail (phase 2), P2/P3 (phase 4) | ⛔ to write |
-| PO's accountant on travel-cost VAT | J2b document correctness | open — J1 ships regardless, the treatment is configurable |
-| PO's accountant on Peppol applicability | whether J2b is a compliance project | open — reopen J2b before building if the mandate applies |
-| Q8 label roll variant | nothing — **E5 already shipped as A4 3×8** (`bce0716`, `src/app/(app)/materials/labels/page.tsx`) | optional enhancement only |
+Each open prerequisite is also folded into the item it gates, so a worker meets it at the right moment rather than only here.
+
+| Prerequisite | Blocks | Resolve by | Owner | Status |
+|---|---|---|---|---|
+| `.plans/invoice-design.md` | J2b + DDL-3 (phase 3) | before phase 3 starts | PO reads, you approve | ✅ **written** |
+| `.plans/own-data-scoping-design.md` | N5 (phase 1) | before N5 starts (N1–N4 unaffected) | PO reads, you approve | ✅ **written** |
+| `.plans/data-import-export-design.md` | M1 (phase 2), P2/P3 (phase 4) | before M1 starts | PO reads, you approve | ✅ **written** |
+| **Accountant: travel-cost VAT** | J2b invoices going to clients | **before the first real invoice is sent**, not before J2b is built | PO → accountant | ⚠️ open — J1 (phase 0) ships regardless; the treatment is a single configurable place |
+| **Accountant: Peppol applicability** | whether J2b is a document project or a compliance project | **before phase 3 starts** — this one can change the scope of J2b | PO → accountant | ⚠️ open — the model is built Peppol-shaped either way, but if the B2B mandate applies, stop and re-scope J2b |
+| Q8 label roll variant | nothing — **E5 already ships A4 3×8** (`bce0716`) | whenever a roll printer is bought | PO | 💤 parked — tracked as an optional item in phase 4 |
 
 ## How a worker runs an item
 

@@ -64,6 +64,18 @@
 | Q48 | Bundle revenue for payback | **Split a bundle booking back to its components, pro-rata by each component's own day price.** Verified exact against live data: `Cocktailtafel` €5 + `cocktailtafelhoes` €3 = `cocktailtafel met hoes` €8, and the buffet set likewise — so the split reconstructs reality rather than approximating it. |
 | Q49 | Truncate scope | **Per entity only.** Replacing materials wipes and reloads materials; projects, bookings, invoices and people are untouched. **No system-wide reset action.** |
 | Q49b | Replace blast radius | **Refuse and list the blockers.** A replace that would remove records still referenced by bookings stops and reports exactly what blocks it. No cascade, no archiving fallback. |
+| Q50 | Invoicing granularity | **Deposit + final invoice.** A project carries several invoices: a *voorschot* (fixed amount **or** percentage, chosen per invoice) and an *eindfactuur* billing the remainder minus what was already invoiced. |
+| Q51 | Credit-note numbering | **Separate series** (`2026-0001` for invoices, `CN-2026-0001` for credit notes). Both gapless and sequential. |
+| Q52 | Payments | **Mark-as-paid with partial payments** — an invoice can be partly paid and shows a remaining balance. No bank connection. |
+| Q53 | Freelancer visibility | On their own periods they see **crew names + functions, crew phone/contact, the materials, and the client + location**. **No money at all.** |
+| Q54 | Freelancer scope depth | **All periods of a project they are booked on**, not only their own periods. |
+| Q55 | Freelancer write access | **Read-only.** `scope: own` denies writes regardless of the module matrix — including their own hours and travel costs. |
+| Q56 | Import scope | **Everything RentFlow exports is importable in the same format** — materials, people, clients, locations. Export and import are one contract per entity, not two. |
+| Q57 | Rentman format | The material adapter **also** accepts the 82-column Rentman export layout, alongside RentFlow's own. |
+| Q58 | Duplicate code `9998-902` | **Lowest ID keeps the code; the other gets the next free code**, both listed in the import report. The import never fails on it. *(Verified: only this one code is a genuine collision — ID 707 "Vorken (vis)" vs ID 708 "Messen (Vis)". The other four apparent duplicates are the same item repeated across its serial-number rows.)* |
+| Q59 | Freelancer catalogues | **Deny the standalone Materialen/Personen/Klanten/Locaties pages** for scoped roles — those models carry no project link, so they cannot be filtered. Crew and equipment remain visible embedded in their own periods. |
+| Q60 | Freelancer privacy | Also hide colleagues' **home address and internal notes**; name, function and phone stay visible. |
+| Q61 | Export format | **Real `.xlsx`**, via one small maintained library. CSV was rejected as a downgrade given the round-trip requirement. |
 | Q8 | Label format | **Moot — E5 already shipped as A4 3×8 sticker sheets** (commit `bce0716`, `src/app/(app)/materials/labels/page.tsx:11,64,107-117`, `@page { size: A4 }`). The round-1 plan still lists E5 as blocked; that is stale. Q8 survives only as an optional "add a 62 mm roll variant", which the PO parked. |
 
 ### Accepted risks and consequences (PO informed, decisions reaffirmed)
@@ -486,9 +498,9 @@ Both share an identical **82-column** layout — that is why they "look similar"
 |---|---|---|
 | `Code` | `Material.code` (`@unique`) | 5 duplicates in the normal file → must dedupe deterministically **before** insert, as round 1 did for `9998-902`. Never let one bad row abort the file |
 | `Name (in database)` | `Material.name` | |
-| `Folder (Folder)` = `0501-Tenten` | `Category.prefix` = `0501`, `Category.name` = `Tenten` | 11 categories; matches round-1 `Category { name, prefix }` exactly. Auto-create per Q36 |
+| `Folder (Folder)` = `0501-Tenten` | `Category.prefix` = `0501` (**full four digits**), `Category.name` = `Tenten` | 11 categories, auto-created per Q36b. ⚠️ **`nextCode()` must be fixed first**: `src/lib/material-code.ts:2` matches `^{prefix}01-(\d{3})$`, i.e. a 2-digit prefix plus a hard-coded `"01"` subgroup. Real folders use the full four digits as the prefix (`9997`, `9998`, `9999` all truncate to `"99"` and collide). Change the pattern to `^{prefix}-(\d{3})$` and store four digits — that reproduces every existing code (`0501-003`, `9998-902`) exactly |
 | `Rental-/Sales price` | `Material.dayPrice` | 4 zero-priced rows in the normal file |
-| `Type of equipment` | `Material.isBundle` | "Physical/Virtual combination" → true (4 rows in the normal file). **The export contains no component/content rows** (`Combination structure` is empty in both files), so bundles import as empty shells — their contents must still be entered by hand. Say this to the PO |
+| `Type of equipment` | `Material.isBundle` | **Only `Virtual combination` → true** (3 rows: `Tap + aciet`, `cocktailtafel met hoes`, `Buffettafel met hoes`). `Physical combination` is an ordinary physical asset that can hold content (`Schepijs vriezer`, qty 1, €55; and **all 287 rows of the advanced file**) — mapping those to bundles would create 288 empty, unbookable recipes. **The export contains no component rows** (`Combination structure` empty in both files), so the 3 real sets import as empty shells whose contents must be entered by hand |
 | `Stock calculation method` + `Current quantity` | `StockItem` rows | Serialized → one `StockItem` per serial row, `identifier` from `Manufacturer serial number (Serial number)` / `Display name (Serial number)`; Bulk → generate `Current quantity` units |
 | `Internal remark` | `Material.notes` | populated on 2 rows |
 | `Archived` | **no target column exists** | Needs `Material.archived Boolean @default(false)`, or skip archived rows on import. Blocks the "advanced" file entirely — see Q34b |
