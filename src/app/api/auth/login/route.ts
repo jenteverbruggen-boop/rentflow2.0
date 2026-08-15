@@ -28,7 +28,6 @@ export async function POST(req: NextRequest) {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
     });
 
     const response = NextResponse.json({
@@ -36,7 +35,6 @@ export async function POST(req: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
       },
     });
     response.cookies.set("rentflow_token", token, {
