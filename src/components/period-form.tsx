@@ -55,10 +55,13 @@ export function PeriodForm({ open, onOpenChange, defaultValues, project, onSubmi
         endDate: toDateTimeLocal(defaultValues.endDate),
       });
     } else {
+      // A new period defaults to a single day (the project's start date),
+      // not the full project span — defaulting to the whole range is what
+      // actually books a person solid for the entire project (H4).
       form.reset({
         name: "",
         startDate: format(new Date(project.startDate), "yyyy-MM-dd") + "T08:00",
-        endDate: format(new Date(project.endDate), "yyyy-MM-dd") + "T17:00",
+        endDate: format(new Date(project.startDate), "yyyy-MM-dd") + "T17:00",
       });
     }
   }, [defaultValues, project, form]);
