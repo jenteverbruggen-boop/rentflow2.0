@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { requireRole, badRequest, notFound, conflict, serverError, forbidden } from "@/lib/api-auth";
+import { requireModule, badRequest, notFound, conflict, serverError, forbidden } from "@/lib/api-auth";
 import { resolveRoleAssignment } from "@/lib/role-assignment";
 
 type Params = { params: Promise<{ id: string }> };
@@ -18,7 +18,7 @@ const USER_SELECT = {
 } as const;
 
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const auth = await requireRole("ADMIN").catch(() => null);
+  const auth = await requireModule("gebruikers", "wijzigen").catch(() => null);
   if (!auth) return forbidden();
 
   try {
@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const auth = await requireRole("ADMIN").catch(() => null);
+  const auth = await requireModule("gebruikers", "verwijderen").catch(() => null);
   if (!auth) return forbidden();
 
   try {

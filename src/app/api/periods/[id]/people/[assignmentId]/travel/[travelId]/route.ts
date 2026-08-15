@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  unauthorized,
+  requireModule,
+  forbidden,
   badRequest,
   notFound,
   serverError,
@@ -19,8 +19,8 @@ const schema = z.object({
 });
 
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("kosten_facturen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { travelId } = await params;
     const parsed = schema.safeParse(await req.json());
@@ -40,8 +40,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("kosten_facturen", "verwijderen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { travelId } = await params;
     await prisma.personTravelCost.delete({ where: { id: parseInt(travelId) } });

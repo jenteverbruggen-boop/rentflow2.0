@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  requireAuth,
-  unauthorized,
+  requireModule,
+  forbidden,
   badRequest,
   serverError,
 } from "@/lib/api-auth";
@@ -9,9 +9,12 @@ import { getLogo, setLogo, deleteLogo } from "@/lib/settings";
 
 const MAX_SIZE = 1 * 1024 * 1024;
 
+// Excluded from the proxy.ts matcher (print views fetch it without going
+// through the page-level auth redirect) but NOT exempt from module gating
+// here — this route does its own requireModule() call (subtlety 3).
 export async function GET() {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const user = await requireModule("instellingen", "lezen").catch(() => null);
+  if (!user) return forbidden();
   try {
     const logo = await getLogo();
     if (!logo) return new NextResponse(null, { status: 404 });
@@ -24,8 +27,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const user = await requireModule("instellingen", "wijzigen").catch(() => null);
+  if (!user) return forbidden();
   try {
     const formData = await req.formData();
     const file = formData.get("logo") as File | null;
@@ -43,8 +46,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE() {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const user = await requireModule("instellingen", "verwijderen").catch(() => null);
+  if (!user) return forbidden();
   try {
     await deleteLogo();
     return NextResponse.json({ success: true });

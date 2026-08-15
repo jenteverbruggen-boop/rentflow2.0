@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  unauthorized,
+  requireModule,
+  forbidden,
   badRequest,
   notFound,
   serverError,
@@ -19,8 +19,8 @@ const schema = z.object({
 });
 
 export async function GET(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("kosten_facturen", "lezen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { assignmentId } = await params;
     const travel = await prisma.personTravelCost.findMany({
@@ -36,8 +36,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("kosten_facturen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { assignmentId } = await params;
     const periodPersonId = parseInt(assignmentId);

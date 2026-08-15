@@ -12,20 +12,6 @@ export async function requireAuth(): Promise<TokenPayload> {
   return verifyToken(token);
 }
 
-export async function requireRole(...roles: string[]): Promise<TokenPayload> {
-  const payload = await requireAuth();
-  let role = payload.role;
-  if (!role) {
-    const user = await prisma.user.findUnique({
-      where: { id: payload.id },
-      select: { role: true },
-    });
-    role = user?.role;
-  }
-  if (!role || !roles.includes(role)) throw new Error("Forbidden");
-  return { ...payload, role };
-}
-
 /**
  * The resolved permission set for one request. `scope`/`personId` are not
  * read by anything until N5, but the shape is fixed now so N5 does not

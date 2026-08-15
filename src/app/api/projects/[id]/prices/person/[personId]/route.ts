@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, badRequest, serverError } from "@/lib/api-auth";
 import { toNumber } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string; personId: string }> };
 
 export async function PUT(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("kosten_facturen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { id, personId } = await params;
@@ -38,8 +38,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("kosten_facturen", "verwijderen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { id, personId } = await params;

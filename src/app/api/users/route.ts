@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import {
-  requireRole,
-  unauthorized,
+  requireModule,
   badRequest,
   conflict,
   serverError,
@@ -23,10 +22,8 @@ const USER_SELECT = {
 } as const;
 
 export async function GET() {
-  const auth = await requireRole("ADMIN", "PLANNER", "VIEWER").catch(
-    () => null,
-  );
-  if (!auth) return unauthorized();
+  const auth = await requireModule("gebruikers", "lezen").catch(() => null);
+  if (!auth) return forbidden();
 
   try {
     const users = await prisma.user.findMany({
@@ -40,7 +37,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireRole("ADMIN").catch(() => null);
+  const auth = await requireModule("gebruikers", "wijzigen").catch(() => null);
   if (!auth) return forbidden();
 
   try {
