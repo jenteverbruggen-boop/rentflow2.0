@@ -10,7 +10,6 @@ const USER_SELECT = {
   id: true,
   email: true,
   name: true,
-  role: true,
   roleId: true,
   roleRel: { select: { id: true, key: true, label: true } },
   personId: true,
@@ -26,29 +25,20 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const userId = parseInt(id, 10);
     const body = await req.json();
 
-    // No self-promotion allowed — covers both the legacy role string and
-    // the new roleId column, so an admin can't bypass this via either field.
-    if (
-      (body.role !== undefined || body.roleId !== undefined) &&
-      auth.id === userId
-    ) {
+    // No self-promotion allowed.
+    if (body.roleId !== undefined && auth.id === userId) {
       return badRequest("Je kunt je eigen rol niet wijzigen");
     }
 
     const data: {
-      role?: string;
       roleId?: number;
       password?: string;
       personId?: number | null;
     } = {};
-    if (body.role !== undefined || body.roleId !== undefined) {
-      const resolved = await resolveRoleAssignment({
-        role: body.role,
-        roleId: body.roleId,
-      });
+    if (body.roleId !== undefined) {
+      const resolved = await resolveRoleAssignment({ roleId: body.roleId });
       if (resolved && "error" in resolved) return badRequest(resolved.error);
       if (resolved) {
-        data.role = resolved.role;
         data.roleId = resolved.roleId;
       }
     }

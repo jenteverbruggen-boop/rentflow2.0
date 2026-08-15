@@ -5,8 +5,6 @@ export type ProjectStatus =
   | "afgerond"
   | "geannuleerd";
 
-export type Role = "ADMIN" | "PLANNER" | "VIEWER";
-
 export type ModuleKey =
   | "projecten"
   | "planning"
@@ -25,9 +23,8 @@ export interface User {
   id: number;
   email: string;
   name: string;
-  role: string;
-  roleId: number | null;
-  roleRel: { id: number; key: string; label: string } | null;
+  roleId: number;
+  roleRel: { id: number; key: string; label: string };
   personId: number | null;
   createdAt: string;
 }

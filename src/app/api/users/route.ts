@@ -14,7 +14,6 @@ const USER_SELECT = {
   id: true,
   email: true,
   name: true,
-  role: true,
   roleId: true,
   roleRel: { select: { id: true, key: true, label: true } },
   personId: true,
@@ -41,16 +40,21 @@ export async function POST(req: NextRequest) {
   if (!auth) return forbidden();
 
   try {
-    const { email, name, password, role, roleId } = await req.json();
+    const { email, name, password, roleId } = await req.json();
     if (!email || !name || !password)
       return badRequest("email, naam en wachtwoord zijn verplicht");
 
-    const resolved = await resolveRoleAssignment({
-      role: roleId === undefined ? (role ?? "PLANNER") : undefined,
-      roleId,
-    });
-    if (!resolved || "error" in resolved) {
-      return badRequest(resolved?.error ?? "Ongeldige rol");
+    let resolvedRoleId: number;
+    if (roleId !== undefined) {
+      const resolved = await resolveRoleAssignment({ roleId });
+      if (!resolved || "error" in resolved) {
+        return badRequest(resolved?.error ?? "Ongeldige rol");
+      }
+      resolvedRoleId = resolved.roleId;
+    } else {
+      const planner = await prisma.role.findUnique({ where: { key: "PLANNER" } });
+      if (!planner) return serverError("Standaardrol PLANNER ontbreekt");
+      resolvedRoleId = planner.id;
     }
 
     const exists = await prisma.user.findUnique({ where: { email } });
@@ -62,8 +66,7 @@ export async function POST(req: NextRequest) {
         email,
         name,
         password: hashed,
-        role: resolved.role,
-        roleId: resolved.roleId,
+        roleId: resolvedRoleId,
       },
       select: USER_SELECT,
     });

@@ -12,12 +12,11 @@ model User {
   email     String   @unique
   password  String
   name      String
-  role      String   @default("PLANNER")
-  roleId    Int?
+  roleId    Int
   personId  Int?     @unique
   createdAt DateTime @default(now())
   person    Person?  @relation(fields: [personId], references: [id])
-  roleRel   Role?    @relation(fields: [roleId], references: [id])
+  roleRel   Role     @relation(fields: [roleId], references: [id])
 }
 
 model Role {

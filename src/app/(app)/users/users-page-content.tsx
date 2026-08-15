@@ -65,8 +65,8 @@ export function UsersPageContent() {
               <TableCell className="font-medium">{u.name}</TableCell>
               <TableCell>{u.email}</TableCell>
               <TableCell>
-                <Badge variant={u.role === "ADMIN" ? "default" : "secondary"}>
-                  {u.roleRel?.label ?? u.role}
+                <Badge variant={u.roleRel.key === "ADMIN" ? "default" : "secondary"}>
+                  {u.roleRel.label}
                 </Badge>
               </TableCell>
               <TableCell className="text-muted-foreground text-sm">
