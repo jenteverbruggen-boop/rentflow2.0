@@ -17,7 +17,10 @@ const schema = z.object({
   name: z.string().min(1, "Naam is verplicht"),
   startDate: z.string().min(1, "Verplicht"),
   endDate: z.string().min(1, "Verplicht"),
-}).refine((v) => new Date(v.endDate) >= new Date(v.startDate), {
+}).refine((v) => new Date(v.endDate) > new Date(v.startDate), {
+  // Strict > (H4.3, matching the server): a zero-duration period is
+  // nonsensical for booking and inconsistent with availability's own
+  // strict lt/gt semantics (H3). Was >= before this change.
   message: "Einddatum moet na startdatum liggen",
   path: ["endDate"],
 });

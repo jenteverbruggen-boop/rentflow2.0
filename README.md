@@ -201,12 +201,12 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | `GET` | `/api/projects/:id` | Get project with periods, bookings, stock items, persons |
 | `PUT` | `/api/projects/:id` | Update a project |
 | `DELETE` | `/api/projects/:id` | Delete a project (cascades to periods + bookings) |
-| `POST` | `/api/projects/:id/periods` | Create a period on a project |
+| `POST` | `/api/projects/:id/periods` | Create a period on a project. `endDate` must be strictly after `startDate` and the period must overlap the project's own date range, or `400` |
 | `PUT` | `/api/projects/:id/prices/material/:materialId` | Upsert a project-scoped day-price override for a material — body `{ dayPrice }`. Cascades: re-snapshots every existing `PeriodStockItem` of this material in this project to the new price |
 | `DELETE` | `/api/projects/:id/prices/material/:materialId` | Remove the project-scoped material override. Cascades: re-snapshots every existing `PeriodStockItem` of this material in this project back to the material's global `dayPrice` |
 | `PUT` | `/api/projects/:id/prices/person/:personId` | Upsert a project-scoped day-price override for a person — body `{ dayPrice }`. Cascades: re-snapshots every existing `PeriodPerson` for this person in this project to the new price |
 | `DELETE` | `/api/projects/:id/prices/person/:personId` | Remove the project-scoped person override. Cascades: re-snapshots every existing `PeriodPerson` for this person in this project back to the person's global `dayPrice` |
-| `PATCH` | `/api/periods/:id` | Rename / re-schedule a period |
+| `PATCH` | `/api/periods/:id` | Rename / re-schedule a period. Same `endDate`/overlap validation as create, or `400` |
 | `DELETE` | `/api/periods/:id` | Delete a period (cascades to its bookings) |
 | `POST` | `/api/periods/:id/materials` | Book `{ materialId, quantity, discountPct?, discountAmount? }` — auto-assigns units not already booked in any overlapping period (including this one), snapshots the effective day price (project override if set, otherwise the material's `dayPrice`) and the material's `setupCost` per unit, returns `{ assignments, warnings }`. Returns `409` if `quantity` exceeds available units. A DB unique constraint on `(periodId, stockItemId)` prevents the same unit from being assigned to the same period twice |
 | `PATCH` | `/api/periods/:id/materials/:assignmentId` | Update discount or re-snapshot price (`{ resnapshotPrice: true }`) |
