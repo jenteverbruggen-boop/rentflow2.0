@@ -10,6 +10,7 @@ import {
 import { projectInclude } from "@/lib/project-include";
 import { serializeProject } from "@/lib/serialize-project";
 import { redactMoney } from "@/lib/redact";
+import { scopeFilter } from "@/lib/scope-filter";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -19,8 +20,12 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   try {
     const { id } = await params;
+    // Ownership folded into the same where as the id lookup — "not
+    // booked on it" and "doesn't exist" both resolve to null through
+    // one code path, so a scope: own caller gets 404, never 403, and
+    // there is no separate branch to forget (design doc §7).
     const project = await prisma.project.findUnique({
-      where: { id: parseInt(id) },
+      where: { ...(scopeFilter(access) ?? {}), id: parseInt(id) },
       include: projectInclude,
     });
     if (!project) return notFound();

@@ -10,6 +10,7 @@ import { projectInclude } from "@/lib/project-include";
 import { serializeProject } from "@/lib/serialize-project";
 import { brusselsWallClockToUtc } from "@/lib/brussels-time";
 import { redactMoney } from "@/lib/redact";
+import { scopeFilter } from "@/lib/scope-filter";
 
 export async function GET() {
   const access = await requireModule("projecten", "lezen").catch(() => null);
@@ -17,6 +18,7 @@ export async function GET() {
 
   try {
     const projects = await prisma.project.findMany({
+      where: scopeFilter(access),
       orderBy: { startDate: "asc" },
       include: projectInclude,
     });
