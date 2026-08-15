@@ -7,11 +7,19 @@ import {
   badRequest,
   serverError,
 } from "@/lib/api-auth";
+import { findRejectedField, redactMoney } from "@/lib/redact";
 
-const schema = z.object({ name: z.string().min(1, "Naam is verplicht") });
+const RATE_FIELDS = ["dayRate", "hourRate"] as const;
 
-// TODO(L1): phase 2 adds Function.dayRate/hourRate — redact those two
-// fields here for callers without Kosten/Facturen: lezen once they exist.
+const schema = z.object({
+  name: z.string().min(1, "Naam is verplicht"),
+  dayRate: z.coerce.number().nonnegative().nullable().optional(),
+  hourRate: z.coerce.number().nonnegative().nullable().optional(),
+});
+
+// L1.1: resolves the phase-1 TODO(L1) markers — dayRate/hourRate landed
+// on Function in DDL-2, redacted here for callers without
+// Kosten/Facturen: lezen and rejected on write without :wijzigen.
 export async function GET() {
   const access = await requireModule("personen", "lezen").catch(() => null);
   if (!access) return forbidden();
@@ -23,14 +31,12 @@ export async function GET() {
     const functions = await prisma.function.findMany({
       orderBy: { name: "asc" },
     });
-    return NextResponse.json(functions);
+    return NextResponse.json(functions.map((f) => redactMoney(f, access)));
   } catch (err) {
     return serverError((err as Error).message);
   }
 }
 
-// TODO(L1): phase 2 adds Function.dayRate/hourRate — reject those two
-// fields on write for callers without Kosten/Facturen: wijzigen.
 export async function POST(req: NextRequest) {
   const access = await requireModule("personen", "wijzigen").catch(() => null);
   if (!access) return forbidden();
@@ -39,8 +45,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.issues[0].message);
+    if (findRejectedField(body, access, RATE_FIELDS)) {
+      return forbidden();
+    }
     const fn = await prisma.function.create({ data: parsed.data });
-    return NextResponse.json(fn);
+    return NextResponse.json(redactMoney(fn, access));
   } catch (err) {
     return serverError((err as Error).message);
   }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
   requireModule,
@@ -8,6 +9,21 @@ import {
 } from "@/lib/api-auth";
 import { toNumber } from "@/lib/serialize";
 import { findRejectedMoneyWrite, redactMoney } from "@/lib/redact";
+
+// L1.1: the only person-entity route with no zod schema before this —
+// every other entity route in the codebase validates with one.
+export const personSchema = z.object({
+  name: z.string().min(1, "naam is verplicht"),
+  role: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  dayPrice: z.coerce.number().optional(),
+  address: z.string().optional().nullable(),
+  postalCode: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  country: z.string().optional().nullable(),
+  functionIds: z.array(z.number().int()).optional(),
+});
 
 export async function GET() {
   const access = await requireModule("personen", "lezen").catch(() => null);
@@ -51,35 +67,23 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     if (findRejectedMoneyWrite(body, access)) return forbidden();
-    const {
-      name,
-      role,
-      email,
-      phone,
-      dayPrice,
-      address,
-      postalCode,
-      city,
-      country,
-      functionIds,
-    } = body;
-    if (!name) return badRequest("naam is verplicht");
+    const parsed = personSchema.safeParse(body);
+    if (!parsed.success) return badRequest(parsed.error.issues[0].message);
+    const { name, role, email, phone, dayPrice, address, postalCode, city, country, functionIds } = parsed.data;
     const person = await prisma.person.create({
       data: {
         name,
         role,
         email,
         phone,
-        dayPrice: Number(dayPrice) || 0,
+        dayPrice: dayPrice ?? 0,
         address,
         postalCode,
         city,
         country,
         functions: functionIds?.length
           ? {
-              create: (functionIds as number[]).map((id) => ({
-                functionId: id,
-              })),
+              create: functionIds.map((id) => ({ functionId: id })),
             }
           : undefined,
       },

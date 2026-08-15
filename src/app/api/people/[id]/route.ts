@@ -8,6 +8,8 @@ import {
 } from "@/lib/api-auth";
 import { toNumber } from "@/lib/serialize";
 import { findRejectedMoneyWrite, redactMoney } from "@/lib/redact";
+import { diffFunctionIds } from "@/lib/person-functions-diff";
+import { personSchema } from "../route";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -21,44 +23,47 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   try {
     const { id } = await params;
+    const personId = parseInt(id);
     const body = await req.json();
-    const {
-      name,
-      role,
-      email,
-      phone,
-      dayPrice,
-      address,
-      postalCode,
-      city,
-      country,
-      functionIds,
-    } = body;
-    if (!name) return badRequest("naam is verplicht");
 
     if (findRejectedMoneyWrite(body, access)) return forbidden();
 
+    const parsed = personSchema.safeParse(body);
+    if (!parsed.success) return badRequest(parsed.error.issues[0].message);
+    const { name, role, email, phone, dayPrice, address, postalCode, city, country, functionIds } = parsed.data;
+
+    // L1.1: diff instead of deleteMany+create — the old destructive
+    // write would wipe every PersonFunction row (and, since DDL-2, its
+    // per-person rate override) on any save that merely touches an
+    // unrelated field. Rows for functions that stay assigned are left
+    // untouched; only the actual add/remove set is written.
+    let functionsWrite;
+    if (functionIds !== undefined) {
+      const existing = await prisma.personFunction.findMany({
+        where: { personId },
+        select: { functionId: true },
+      });
+      const existingIds = existing.map((e) => e.functionId);
+      const { toAdd, toRemove } = diffFunctionIds(existingIds, functionIds);
+      functionsWrite = {
+        deleteMany: { functionId: { in: toRemove } },
+        create: toAdd.map((fid) => ({ functionId: fid })),
+      };
+    }
+
     const person = await prisma.person.update({
-      where: { id: parseInt(id) },
+      where: { id: personId },
       data: {
         name,
         role,
         email,
         phone,
-        dayPrice: Number(dayPrice) || 0,
+        dayPrice: dayPrice ?? 0,
         address,
         postalCode,
         city,
         country,
-        functions:
-          functionIds !== undefined
-            ? {
-                deleteMany: {},
-                create: (functionIds as number[]).map((fid) => ({
-                  functionId: fid,
-                })),
-              }
-            : undefined,
+        functions: functionsWrite,
       },
       include: { functions: { include: { function: true } } },
     });

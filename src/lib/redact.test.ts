@@ -66,7 +66,9 @@ function moneyFixture() {
             dayPriceSnapshot: 300,
             discountPct: null,
             discountAmount: 50,
+            rateSnapshot: 45,
             person: { id: 1, name: "Alice", dayPrice: 300 },
+            function: { id: 1, name: "Electrician", dayRate: 320, hourRate: 45 },
             travelCosts: [{ id: 1, label: "Transport", unitCost: 30, quantity: 4 }],
           },
         ],
@@ -98,6 +100,7 @@ const MONEY_KEYS = [
   "dayPrice", "dayPriceSnapshot", "setupCost", "setupCostSnapshot",
   "bundlePriceOverride", "discountPct", "discountAmount", "unitCost",
   "basePrice", "setPrice", "costPrice", "listPrice", "revenueBefore",
+  "dayRate", "hourRate", "rateSnapshot",
 ];
 const ARRAY_KEYS = ["materialPrices", "personPrices", "travelCosts"];
 const OBJECT_KEYS = ["bundleStock"];

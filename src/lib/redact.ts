@@ -52,6 +52,11 @@ const SCALAR_DENYLIST = new Set([
   "costPrice",
   "listPrice",
   "revenueBefore",
+  // L1 (phase 2): Function/PersonFunction/ClientFunctionRate rates.
+  "dayRate",
+  "hourRate",
+  // H5/L5 (phase 2): the unit rate snapshotted onto a booking.
+  "rateSnapshot",
 ]);
 
 // hasOverride is a boolean, not a price — but "an override exists" is
