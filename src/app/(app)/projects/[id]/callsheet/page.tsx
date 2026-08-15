@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { PrintLayout } from "@/components/print/print-layout";
 import { DocumentHeader } from "@/components/print/document-header";
+import { Badge } from "@/components/ui/badge";
 import type { Project } from "@/types";
 
 function fmtDT(d: string) {
@@ -104,7 +105,12 @@ export default function CallsheetPage() {
                 <tbody>
                   {period.people.map((pp) => (
                     <tr key={pp.id}>
-                      <td className="p-2">{pp.person.name}</td>
+                      <td className="p-2">
+                        {pp.person.name}
+                        {pp.overlapAck && (
+                          <Badge variant="destructive" className="ml-1.5 text-[10px]">dubbel geboekt</Badge>
+                        )}
+                      </td>
                       <td className="p-2">
                         {pp.function?.name ?? pp.role ?? pp.person.role ?? "—"}
                       </td>

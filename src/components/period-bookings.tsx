@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LinePricePopover } from "@/components/line-price-popover";
@@ -48,7 +49,10 @@ export function PeriodBookings({ period, project }: Props) {
                   <div key={pp.id} className="rounded-md bg-muted/40 px-3 py-1.5">
                     <div className="flex items-center gap-2 text-sm">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{pp.person.name}</p>
+                        <p className="font-medium truncate flex items-center gap-1.5">
+                          {pp.person.name}
+                          {pp.overlapAck && <Badge variant="destructive" className="text-[10px]">dubbel geboekt</Badge>}
+                        </p>
                         <p className="text-xs text-muted-foreground">{pp.role ?? pp.person.role}</p>
                       </div>
                       <LinePricePopover
