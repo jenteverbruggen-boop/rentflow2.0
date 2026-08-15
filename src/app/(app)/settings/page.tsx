@@ -4,6 +4,7 @@ import { SettingsForm } from "@/components/settings-form";
 import { LogoUpload } from "@/components/logo-upload";
 import { RolesManager } from "@/components/roles-manager";
 import { PermissionMatrix } from "@/components/permission-matrix";
+import { OpenPermissionsBanner } from "@/components/open-permissions-banner";
 
 export default function SettingsPage() {
   return (
@@ -12,6 +13,7 @@ export default function SettingsPage() {
       <SettingsForm />
       <LogoUpload />
       <RolesManager />
+      <OpenPermissionsBanner />
       <PermissionMatrix />
     </div>
   );
