@@ -13,6 +13,7 @@ import {
 } from "@/components/materials-tree-pane";
 import { StockItemsSheet } from "@/components/stock-items-sheet";
 import { CameraScanner } from "@/components/camera-scanner";
+import { MaterialImportDialog } from "@/components/material-import-dialog";
 import { useMaterials } from "@/hooks/use-materials";
 import { useMaterialFilters } from "@/hooks/use-material-filters";
 import type { Material } from "@/types";
@@ -32,6 +33,7 @@ function MaterialsPageContent() {
   const [formOpen, setFormOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     const paramId = searchParams.get("materialId");
@@ -74,6 +76,9 @@ function MaterialsPageContent() {
           <Link href="/materials/labels">
             <Button variant="outline">🏷️ Labels</Button>
           </Link>
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            ⬆️ Importeren
+          </Button>
           <Button onClick={() => setFormOpen(true)}>+ Nieuw materiaal</Button>
         </div>
       </div>
@@ -124,6 +129,8 @@ function MaterialsPageContent() {
       />
 
       <CameraScanner open={scanOpen} onOpenChange={setScanOpen} />
+
+      <MaterialImportDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

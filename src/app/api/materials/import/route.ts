@@ -12,6 +12,9 @@ import { applyMaterialImport } from "@/lib/import/apply-material-import";
  * deliberately no "apply straight from upload" shortcut anywhere else —
  * the UI (M1.5) always routes through /preview first.
  */
+// M1.5 — same 20 MB ceiling as the preview route.
+const MAX_SIZE = 20 * 1024 * 1024;
+
 export async function POST(req: NextRequest) {
   const access = await requireModule("materialen", "wijzigen").catch(() => null);
   if (!access) return forbidden();
@@ -21,6 +24,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     if (!file) return badRequest("Geen bestand ontvangen");
+    if (file.size > MAX_SIZE) return badRequest("Bestand is te groot (max. 20 MB)");
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const { headers, rows } = await parseImportFile(buffer, file.name);

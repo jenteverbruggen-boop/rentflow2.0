@@ -12,6 +12,11 @@ import { toNumberOrNull } from "@/lib/serialize";
 // handler declares one, but doesn't check *which* module/level, so the
 // preview/apply pairing being identical is a design choice worth
 // recording here, not just inferable from the code.
+// M1.5 — a 20 MB ceiling, same convention as the logo/document upload
+// routes (1 MB / 10 MB respectively) sized up for a full equipment
+// export's worth of rows.
+const MAX_SIZE = 20 * 1024 * 1024;
+
 export async function POST(req: NextRequest) {
   const access = await requireModule("materialen", "wijzigen").catch(() => null);
   if (!access) return forbidden();
@@ -21,6 +26,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     if (!file) return badRequest("Geen bestand ontvangen");
+    if (file.size > MAX_SIZE) return badRequest("Bestand is te groot (max. 20 MB)");
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const { headers, rows } = await parseImportFile(buffer, file.name);
