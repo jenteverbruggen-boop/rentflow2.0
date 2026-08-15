@@ -18,7 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatEUR } from "@/lib/pricing";
-import type { PersonAvailability } from "@/types";
+import { scopeFunctionsToClientRates } from "@/lib/scope-functions-to-client";
+import type { ClientFunctionRate, PersonAvailability } from "@/types";
 
 const SOURCE_LABELS: Record<string, string> = {
   project: "projectafspraak",
@@ -32,27 +33,42 @@ const SOURCE_LABELS: Record<string, string> = {
 interface Props {
   person: PersonAvailability | null;
   periodId: number;
+  clientId: number | null;
   onConfirm: (args: { personId: number; role?: string; functionId: number | null }) => void;
   onClose: () => void;
   isPending: boolean;
 }
 
-/** L2.2 — confirmation step for booking a person: defaults to their
- * sole function, requires an explicit choice when they have several
- * (Q19/L1), and shows the resolved rate + its source (L1.2, via the
- * preview-price endpoint) before the booking is actually created. */
-export function BookPersonDialog({ person, periodId, onConfirm, onClose, isPending }: Props) {
+/** L2.2/L3.2 — confirmation step for booking a person: defaults to
+ * their sole function, requires an explicit choice when they have
+ * several (Q19/L1), and shows the resolved rate + its source (L1.2,
+ * via the preview-price endpoint) before the booking is actually
+ * created. When the project's client has rate-card rows (L3), the
+ * choice is further scoped to only the functions that client has
+ * negotiated a rate for — a client with zero rows (the default state
+ * every client starts in) must still offer every one of the person's
+ * functions, never none. */
+export function BookPersonDialog({ person, periodId, clientId, onConfirm, onClose, isPending }: Props) {
   const [functionId, setFunctionId] = useState<number | null>(null);
-  const fns = person?.person.functions ?? [];
+  const allFns = person?.person.functions ?? [];
+
+  const { data: clientRates } = useQuery<ClientFunctionRate[]>({
+    queryKey: ["client-rates", clientId],
+    queryFn: () => fetch(`/api/clients/${clientId}/rates`).then((r) => r.json()),
+    enabled: clientId != null,
+  });
+
+  const fns = scopeFunctionsToClientRates(allFns, clientRates ?? []);
 
   useEffect(() => {
     if (person) {
       setFunctionId(fns.length === 1 ? fns[0].functionId : null);
     }
-    // fns is derived from `person` every render — depending on it directly
-    // would re-run on every render since it's a fresh array each time.
+    // fns is derived from `person`/`clientRates` every render — depending
+    // on it directly would re-run on every render since it's a fresh
+    // array each time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [person]);
+  }, [person, clientRates]);
 
   const { data: preview } = useQuery({
     queryKey: ["preview-price", periodId, person?.person.id, functionId],

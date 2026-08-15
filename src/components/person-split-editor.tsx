@@ -132,6 +132,7 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
       <BookPersonDialog
         person={pendingAdd}
         periodId={period.id}
+        clientId={project.clientId}
         onConfirm={(args) => add.mutate(args)}
         onClose={() => setPendingAdd(null)}
         isPending={add.isPending}
