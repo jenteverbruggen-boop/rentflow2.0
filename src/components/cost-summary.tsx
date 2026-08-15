@@ -56,7 +56,8 @@ interface CostSummaryProps {
 }
 
 export function CostSummary({ periods }: CostSummaryProps) {
-  const { people, materials, travel, total } = projectCostSummary(periods);
+  const { people, materials, subtotal, travel, total } =
+    projectCostSummary(periods);
   return (
     <div className="flex justify-end">
       <div className="text-right space-y-1 print-grand-total min-w-48">
@@ -73,6 +74,10 @@ export function CostSummary({ periods }: CostSummaryProps) {
             <span className="tabular-nums">{formatEUR(materials)}</span>
           </div>
         )}
+        <div className="flex justify-between gap-6 text-sm">
+          <span className="text-muted-foreground">Subtotaal</span>
+          <span className="tabular-nums">{formatEUR(subtotal)}</span>
+        </div>
         {travel > 0 && (
           <div className="flex justify-between gap-6 text-sm">
             <span className="text-muted-foreground">Reiskosten</span>
@@ -81,7 +86,7 @@ export function CostSummary({ periods }: CostSummaryProps) {
         )}
         <Separator className="my-1" />
         <div className="flex justify-between gap-6 text-sm">
-          <span className="text-muted-foreground">Subtotaal excl. BTW</span>
+          <span className="text-muted-foreground">Totaal excl. BTW</span>
           <span className="tabular-nums">{formatEUR(total)}</span>
         </div>
         <div className="flex justify-between gap-6 text-sm">
