@@ -254,6 +254,72 @@ describe("B6 cost split", () => {
   });
 });
 
+describe("string-input coercion (Decimal-as-string from production Postgres)", () => {
+  // These simulate what a raw, unconverted Prisma.Decimal.toJSON() value
+  // looks like on the wire in production: a numeric string, not a number.
+  // CI runs on SQLite (Float), so this is the only test shape that can
+  // catch the prod/dev divergence Y1 fixes.
+
+  it("lineCost: string snapshot/discount give identical results to numbers", () => {
+    expect(lineCost("100" as unknown as number, 3, {})).toBe(
+      lineCost(100, 3, {}),
+    );
+    expect(
+      lineCost("100" as unknown as number, 3, {
+        discountPct: "10" as unknown as number,
+      }),
+    ).toBe(lineCost(100, 3, { discountPct: 10 }));
+    expect(
+      lineCost("100" as unknown as number, 3, {
+        discountAmount: "50" as unknown as number,
+      }),
+    ).toBe(lineCost(100, 3, { discountAmount: 50 }));
+  });
+
+  it("materialLineCost: string dayPriceSnapshot/setupCostSnapshot match number results", () => {
+    const numberLine = makeStockItem(50, { setupCostSnapshot: 85 });
+    const stringLine: PeriodStockItem = {
+      ...numberLine,
+      dayPriceSnapshot: "50" as unknown as number,
+      setupCostSnapshot: "85" as unknown as number,
+    };
+    expect(materialLineCost(stringLine, 5)).toBe(materialLineCost(numberLine, 5));
+  });
+
+  it('"0" as a string setup cost converts to 0, not NaN', () => {
+    const line: PeriodStockItem = {
+      ...makeStockItem(50),
+      setupCostSnapshot: "0" as unknown as number,
+    };
+    expect(materialLineCost(line, 2)).toBe(100);
+  });
+
+  it("personLineCost: string dayPriceSnapshot matches number result", () => {
+    const numberLine = makePerson(200);
+    const stringLine: PeriodPerson = {
+      ...numberLine,
+      dayPriceSnapshot: "200" as unknown as number,
+    };
+    expect(personLineCost(stringLine, 3)).toBe(personLineCost(numberLine, 3));
+  });
+
+  it("periodTravelCost: string unitCost matches number result", () => {
+    const numberPerson = makePerson(0, {
+      travelCosts: [{ unitCost: 30, quantity: 4 }],
+    });
+    const stringPerson: PeriodPerson = {
+      ...numberPerson,
+      travelCosts: (numberPerson.travelCosts ?? []).map((t) => ({
+        ...t,
+        unitCost: "30" as unknown as number,
+      })),
+    };
+    const numberPeriod = makePeriod("2026-05-01", "2026-05-01", [], [numberPerson]);
+    const stringPeriod = makePeriod("2026-05-01", "2026-05-01", [], [stringPerson]);
+    expect(periodTravelCost(stringPeriod)).toBe(periodTravelCost(numberPeriod));
+  });
+});
+
 describe("travel costs", () => {
   it("sums unitCost × quantity across a person's travel lines", () => {
     const person = makePerson(0, {

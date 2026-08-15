@@ -1,5 +1,6 @@
 import { differenceInCalendarDays } from "date-fns";
 import type { Period, PeriodPerson, PeriodStockItem, Project } from "@/types";
+import { toNumber } from "@/lib/serialize";
 
 type PriceCarrier = Pick<Project, "materialPrices" | "personPrices">;
 
@@ -39,19 +40,23 @@ export function lineCost(
   days: number,
   discount: { discountPct?: number | null; discountAmount?: number | null },
 ): number {
-  const gross = snapshot * days;
+  // Belt-and-braces: coerce even though Y1.3 also fixes this at the API
+  // boundary — a raw Decimal string reaching this far must not silently
+  // string-concatenate into a wrong total.
+  const snapshotNum = toNumber(snapshot);
+  const gross = snapshotNum * days;
   let net = gross;
   if (discount.discountPct != null) {
-    net = gross * (1 - discount.discountPct / 100);
+    net = gross * (1 - toNumber(discount.discountPct) / 100);
   } else if (discount.discountAmount != null) {
-    net = gross - discount.discountAmount;
+    net = gross - toNumber(discount.discountAmount);
   }
   return Math.max(0, Math.round(net * 100) / 100);
 }
 
 export function materialLineCost(line: PeriodStockItem, days: number): number {
   const rental = lineCost(line.dayPriceSnapshot, days, line);
-  const setup = line.setupCostSnapshot ?? 0;
+  const setup = toNumber(line.setupCostSnapshot);
   return Math.round((rental + setup) * 100) / 100;
 }
 
@@ -72,7 +77,10 @@ export function periodTravelCost(period: Period): number {
   const total = period.people.reduce(
     (acc, p) =>
       acc +
-      (p.travelCosts ?? []).reduce((s, t) => s + t.unitCost * t.quantity, 0),
+      (p.travelCosts ?? []).reduce(
+        (s, t) => s + toNumber(t.unitCost) * t.quantity,
+        0,
+      ),
     0,
   );
   return Math.round(total * 100) / 100;
@@ -137,19 +145,6 @@ export function projectTotal(periods: Period[]): number {
   );
 }
 
-export const BTW_RATE = 0.21;
-
-export function btwAmount(amountExcl: number): number {
-  return Math.round(amountExcl * BTW_RATE * 100) / 100;
-}
-
-export function withBtw(amountExcl: number): number {
-  return Math.round(amountExcl * (1 + BTW_RATE) * 100) / 100;
-}
-
-export function formatEUR(amount: number): string {
-  return new Intl.NumberFormat("nl-BE", {
-    style: "currency",
-    currency: "EUR",
-  }).format(amount);
-}
+// Split into money-format.ts to keep this file under the 150-line limit
+// (Y1.2) — re-exported so existing import sites are unaffected.
+export { BTW_RATE, btwAmount, withBtw, formatEUR } from "@/lib/money-format";
