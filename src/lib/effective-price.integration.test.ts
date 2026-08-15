@@ -125,12 +125,24 @@ describe("effectivePersonPrice — five-level resolution order (L1.2, Q30/Q32b)"
     await client.projectPersonPrice.deleteMany({ where: { projectId: ids.project, personId: ids.person } });
   });
 
-  it("client rate card wins over a higher person-function rate", async () => {
+  it("client rate card wins over the person-function rate", async () => {
     await client.clientFunctionRate.create({
       data: { clientId: ids.clientId, functionId: ids.fnElec, dayRate: 300, hourRate: 42 },
     });
     const result = await effectivePersonPrice(ids.project, ids.person, ids.fnElec, "dag");
     expect(result).toEqual({ amount: 300, source: "client", unit: "dag" });
+    await client.clientFunctionRate.deleteMany({ where: { clientId: ids.clientId, functionId: ids.fnElec } });
+  });
+
+  // L3.3 — the precedence order must win by *rule*, not by picking the
+  // larger number: the person's own override here (280) is deliberately
+  // higher than the client's rate (150), yet the client still wins.
+  it("client rate card wins even when the person's own rate is deliberately higher", async () => {
+    await client.clientFunctionRate.create({
+      data: { clientId: ids.clientId, functionId: ids.fnElec, dayRate: 150, hourRate: 20 },
+    });
+    const result = await effectivePersonPrice(ids.project, ids.person, ids.fnElec, "dag");
+    expect(result).toEqual({ amount: 150, source: "client", unit: "dag" });
     await client.clientFunctionRate.deleteMany({ where: { clientId: ids.clientId, functionId: ids.fnElec } });
   });
 
