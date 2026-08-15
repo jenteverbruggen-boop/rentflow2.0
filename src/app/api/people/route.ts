@@ -6,6 +6,7 @@ import {
   badRequest,
   serverError,
 } from "@/lib/api-auth";
+import { toNumber } from "@/lib/serialize";
 
 export async function GET() {
   const user = await requireAuth().catch(() => null);
@@ -19,6 +20,7 @@ export async function GET() {
     return NextResponse.json(
       people.map((p) => ({
         ...p,
+        dayPrice: toNumber(p.dayPrice),
         functions: p.functions.map((f) => f.function),
       })),
     );
@@ -68,6 +70,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({
       ...person,
+      dayPrice: toNumber(person.dayPrice),
       functions: person.functions.map((f) => f.function),
     });
   } catch (err) {

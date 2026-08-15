@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
+import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string; materialId: string }> };
 
@@ -15,7 +16,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const { dayPrice } = await req.json();
     if (dayPrice == null || Number(dayPrice) < 0) return badRequest("dayPrice >= 0 is verplicht");
 
-    const price = Number(dayPrice);
+    const price = toNumber(dayPrice);
     const override = await prisma.projectMaterialPrice.upsert({
       where: { projectId_materialId: { projectId, materialId: matId } },
       create: { projectId, materialId: matId, dayPrice: price },
@@ -26,7 +27,16 @@ export async function PUT(req: NextRequest, { params }: Params) {
       where: { period: { projectId }, stockItem: { materialId: matId } },
       data: { dayPriceSnapshot: price },
     });
-    return NextResponse.json(override);
+    return NextResponse.json({
+      ...override,
+      dayPrice: toNumber(override.dayPrice),
+      material: {
+        ...override.material,
+        dayPrice: toNumber(override.material.dayPrice),
+        setupCost: toNumberOrNull(override.material.setupCost),
+        bundlePriceOverride: toNumberOrNull(override.material.bundlePriceOverride),
+      },
+    });
   } catch (err) {
     return serverError((err as Error).message);
   }
@@ -47,7 +57,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     if (material) {
       await prisma.periodStockItem.updateMany({
         where: { period: { projectId }, stockItem: { materialId: matId } },
-        data: { dayPriceSnapshot: Number(material.dayPrice) },
+        data: { dayPriceSnapshot: toNumber(material.dayPrice) },
       });
     }
     return NextResponse.json({ success: true });

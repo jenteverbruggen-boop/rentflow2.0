@@ -8,6 +8,7 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { projectInclude } from "@/lib/project-include";
+import { serializeProject } from "@/lib/serialize-project";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -22,7 +23,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       include: projectInclude,
     });
     if (!project) return notFound();
-    return NextResponse.json(project);
+    return NextResponse.json(serializeProject(project));
   } catch (err) {
     return serverError((err as Error).message);
   }

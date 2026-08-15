@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, serverError, notFound } from "@/lib/api-auth";
 import { effectivePersonPrice } from "@/lib/effective-price";
+import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string; assignmentId: string }> };
 
@@ -21,15 +22,21 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       if (!current) return notFound();
       data.dayPriceSnapshot = await effectivePersonPrice(current.period.projectId, current.personId);
     }
-    if (discountPct !== undefined) data.discountPct = discountPct != null ? Number(discountPct) : null;
-    if (discountAmount !== undefined) data.discountAmount = discountAmount != null ? Number(discountAmount) : null;
+    if (discountPct !== undefined) data.discountPct = discountPct != null ? toNumber(discountPct) : null;
+    if (discountAmount !== undefined) data.discountAmount = discountAmount != null ? toNumber(discountAmount) : null;
     if (role !== undefined) data.role = role;
     const updated = await prisma.periodPerson.update({
       where: { id: parseInt(assignmentId) },
       data,
       include: { person: true },
     });
-    return NextResponse.json(updated);
+    return NextResponse.json({
+      ...updated,
+      dayPriceSnapshot: toNumber(updated.dayPriceSnapshot),
+      discountPct: toNumberOrNull(updated.discountPct),
+      discountAmount: toNumberOrNull(updated.discountAmount),
+      person: { ...updated.person, dayPrice: toNumber(updated.person.dayPrice) },
+    });
   } catch (err) {
     return serverError((err as Error).message);
   }

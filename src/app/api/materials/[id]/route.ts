@@ -8,6 +8,7 @@ import {
   conflict,
   serverError,
 } from "@/lib/api-auth";
+import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -23,6 +24,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
     if (!material) return notFound();
     return NextResponse.json({
       ...material,
+      dayPrice: toNumber(material.dayPrice),
+      setupCost: toNumberOrNull(material.setupCost),
+      bundlePriceOverride: toNumberOrNull(material.bundlePriceOverride),
       totalStock: material.stockItems.length,
     });
   } catch (err) {
@@ -65,7 +69,12 @@ export async function PUT(req: NextRequest, { params }: Params) {
         },
         include: { categoryRel: true },
       });
-      return NextResponse.json(material);
+      return NextResponse.json({
+        ...material,
+        dayPrice: toNumber(material.dayPrice),
+        setupCost: toNumberOrNull(material.setupCost),
+        bundlePriceOverride: toNumberOrNull(material.bundlePriceOverride),
+      });
     } catch (e: unknown) {
       if ((e as { code?: string })?.code === "P2002")
         return conflict("Code bestaat al");

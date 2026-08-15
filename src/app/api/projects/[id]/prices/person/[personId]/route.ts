@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
+import { toNumber } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string; personId: string }> };
 
@@ -15,7 +16,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const { dayPrice } = await req.json();
     if (dayPrice == null || Number(dayPrice) < 0) return badRequest("dayPrice >= 0 is verplicht");
 
-    const price = Number(dayPrice);
+    const price = toNumber(dayPrice);
     const override = await prisma.projectPersonPrice.upsert({
       where: { projectId_personId: { projectId, personId: persId } },
       create: { projectId, personId: persId, dayPrice: price },
@@ -26,7 +27,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
       where: { period: { projectId }, personId: persId },
       data: { dayPriceSnapshot: price },
     });
-    return NextResponse.json(override);
+    return NextResponse.json({
+      ...override,
+      dayPrice: toNumber(override.dayPrice),
+      person: { ...override.person, dayPrice: toNumber(override.person.dayPrice) },
+    });
   } catch (err) {
     return serverError((err as Error).message);
   }
@@ -47,7 +52,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     if (person) {
       await prisma.periodPerson.updateMany({
         where: { period: { projectId }, personId: persId },
-        data: { dayPriceSnapshot: Number(person.dayPrice) },
+        data: { dayPriceSnapshot: toNumber(person.dayPrice) },
       });
     }
     return NextResponse.json({ success: true });

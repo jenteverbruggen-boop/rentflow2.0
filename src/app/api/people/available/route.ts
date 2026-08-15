@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
 import { checkPersonAvailability } from "@/lib/availability";
+import { toNumber } from "@/lib/serialize";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     const overrides = projectId
       ? await prisma.projectPersonPrice.findMany({ where: { projectId: parseInt(projectId) } })
       : [];
-    const overrideMap = new Map(overrides.map((o) => [o.personId, Number(o.dayPrice)]));
+    const overrideMap = new Map(overrides.map((o) => [o.personId, toNumber(o.dayPrice)]));
 
     const results = await Promise.all(
       people.map(async (p) => {
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
           excludePeriodId: excludePeriodId ? parseInt(excludePeriodId) : undefined,
           sameProjectId: sameProjectId ? parseInt(sameProjectId) : undefined,
         });
-        const basePrice = Number(p.dayPrice);
+        const basePrice = toNumber(p.dayPrice);
         const effectivePrice = overrideMap.get(p.id) ?? basePrice;
         return {
           person: { ...p, dayPrice: effectivePrice, basePrice, hasOverride: overrideMap.has(p.id) },

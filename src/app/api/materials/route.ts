@@ -9,6 +9,7 @@ import {
 import { nextCode } from "@/lib/material-code";
 import { computeBundleStock } from "@/lib/bundle-stock";
 import { computeSharingMap } from "@/lib/bundle-sharing";
+import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
@@ -57,7 +58,14 @@ export async function GET(req: NextRequest) {
           name: u.parent.name,
           quantity: u.quantity,
         }));
-        const base = { ...m, totalStock: m._count.stockItems, usedInSets };
+        const base = {
+          ...m,
+          dayPrice: toNumber(m.dayPrice),
+          setupCost: toNumberOrNull(m.setupCost),
+          bundlePriceOverride: toNumberOrNull(m.bundlePriceOverride),
+          totalStock: m._count.stockItems,
+          usedInSets,
+        };
         if (!m.isBundle) return base;
         const bundleStock = computeBundleStock(
           m.components.map((c) => ({
@@ -66,13 +74,13 @@ export async function GET(req: NextRequest) {
             code: c.child.code,
             needPerSet: c.quantity,
             totalStock: c.child._count.stockItems,
-            dayPrice: Number(c.child.dayPrice),
+            dayPrice: toNumber(c.child.dayPrice),
             sharedWith: sharingMap.get(c.childId)?.filter((s) => s.id !== m.id) ?? [],
           })),
         );
         const setPrice =
           m.bundlePriceOverride != null
-            ? Number(m.bundlePriceOverride)
+            ? toNumber(m.bundlePriceOverride)
             : bundleStock.componentSum;
         return { ...base, bundleStock, setPrice };
       }),
@@ -139,7 +147,12 @@ export async function POST(req: NextRequest) {
         })),
       });
     }
-    return NextResponse.json({ ...material, totalStock: stock });
+    return NextResponse.json({
+      ...material,
+      dayPrice: toNumber(material.dayPrice),
+      setupCost: toNumberOrNull(material.setupCost),
+      totalStock: stock,
+    });
   } catch (err) {
     return serverError((err as Error).message);
   }

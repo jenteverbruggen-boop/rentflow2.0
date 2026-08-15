@@ -6,6 +6,7 @@ import {
   badRequest,
   serverError,
 } from "@/lib/api-auth";
+import { toNumber } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -54,6 +55,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     });
     return NextResponse.json({
       ...person,
+      dayPrice: toNumber(person.dayPrice),
       functions: person.functions.map((f) => f.function),
     });
   } catch (err) {

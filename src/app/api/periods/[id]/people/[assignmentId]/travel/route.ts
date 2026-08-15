@@ -8,6 +8,7 @@ import {
   notFound,
   serverError,
 } from "@/lib/api-auth";
+import { toNumber } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string; assignmentId: string }> };
 
@@ -26,7 +27,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
       where: { periodPersonId: parseInt(assignmentId) },
       orderBy: { id: "asc" },
     });
-    return NextResponse.json(travel);
+    return NextResponse.json(
+      travel.map((t) => ({ ...t, unitCost: toNumber(t.unitCost) })),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }
@@ -54,7 +57,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         quantity: parsed.data.quantity,
       },
     });
-    return NextResponse.json(created);
+    return NextResponse.json({ ...created, unitCost: toNumber(created.unitCost) });
   } catch (err) {
     return serverError((err as Error).message);
   }

@@ -3,6 +3,42 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, conflict, notFound, serverError } from "@/lib/api-auth";
 import { effectiveMaterialPrice } from "@/lib/effective-price";
 import { bookFlatMaterial, bookBundleMaterial } from "@/lib/booking";
+import { toNumber, toNumberOrNull } from "@/lib/serialize";
+
+interface BookedAssignment {
+  dayPriceSnapshot: unknown;
+  setupCostSnapshot: unknown;
+  discountPct: unknown;
+  discountAmount: unknown;
+  stockItem: {
+    material: {
+      dayPrice: unknown;
+      setupCost: unknown;
+      bundlePriceOverride: unknown;
+    };
+  };
+}
+
+function serializeAssignment(a: BookedAssignment) {
+  return {
+    ...a,
+    dayPriceSnapshot: toNumber(a.dayPriceSnapshot),
+    setupCostSnapshot: toNumberOrNull(a.setupCostSnapshot),
+    discountPct: toNumberOrNull(a.discountPct),
+    discountAmount: toNumberOrNull(a.discountAmount),
+    stockItem: {
+      ...a.stockItem,
+      material: {
+        ...a.stockItem.material,
+        dayPrice: toNumber(a.stockItem.material.dayPrice),
+        setupCost: toNumberOrNull(a.stockItem.material.setupCost),
+        bundlePriceOverride: toNumberOrNull(
+          a.stockItem.material.bundlePriceOverride,
+        ),
+      },
+    },
+  };
+}
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -29,17 +65,26 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (material.isBundle) {
       if (material.components.length === 0) return badRequest("Bundle heeft geen componenten");
       const componentSum = material.components.reduce(
-        (acc, c) => acc + Number(c.child.dayPrice) * c.quantity, 0,
+        (acc, c) => acc + toNumber(c.child.dayPrice) * c.quantity, 0,
       );
       const dayPriceSnapshot = material.bundlePriceOverride != null
-        ? Number(material.bundlePriceOverride) : componentSum;
+        ? toNumber(material.bundlePriceOverride) : componentSum;
       try {
         const result = await bookBundleMaterial({
           periodId, materialId: material.id, quantity: qty,
           from: period.startDate, to: period.endDate, dayPriceSnapshot,
           components: material.components.map((c) => ({ childId: c.childId, quantity: c.quantity })),
         });
-        return NextResponse.json(result);
+        return NextResponse.json({
+          ...result,
+          bundleBooking: {
+            ...(result.bundleBooking as { dayPriceSnapshot: unknown }),
+            dayPriceSnapshot: toNumber(
+              (result.bundleBooking as { dayPriceSnapshot: unknown })
+                .dayPriceSnapshot,
+            ),
+          },
+        });
       } catch (e: unknown) {
         const err = e as { code?: string; message?: string };
         if (err.code === "UNAVAIL") return conflict(err.message ?? "Onvoldoende voorraad");
@@ -49,16 +94,21 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
 
     const snapshotPrice = await effectiveMaterialPrice(period.projectId, parseInt(materialId));
-    const setupSnapshot = Number(material.setupCost ?? 0);
+    const setupSnapshot = toNumber(material.setupCost ?? 0);
     try {
       const result = await bookFlatMaterial({
         periodId, materialId: material.id, quantity: qty,
         from: period.startDate, to: period.endDate,
         dayPriceSnapshot: snapshotPrice, setupCostSnapshot: setupSnapshot,
-        discountPct: discountPct != null ? Number(discountPct) : null,
-        discountAmount: discountAmount != null ? Number(discountAmount) : null,
+        discountPct: discountPct != null ? toNumber(discountPct) : null,
+        discountAmount: discountAmount != null ? toNumber(discountAmount) : null,
       });
-      return NextResponse.json(result);
+      return NextResponse.json({
+        ...result,
+        assignments: (result.assignments as BookedAssignment[]).map(
+          serializeAssignment,
+        ),
+      });
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
       if (err.code === "UNAVAIL") return conflict(err.message ?? "Niet genoeg vrij");

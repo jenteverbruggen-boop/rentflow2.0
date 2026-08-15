@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, serverError } from "@/lib/api-auth";
+import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -36,7 +37,18 @@ export async function GET(_req: NextRequest, { params }: Params) {
         },
       },
     });
-    return NextResponse.json(items);
+    return NextResponse.json(
+      items.map((item) => ({
+        ...item,
+        assignments: item.assignments.map((a) => ({
+          ...a,
+          dayPriceSnapshot: toNumber(a.dayPriceSnapshot),
+          setupCostSnapshot: toNumberOrNull(a.setupCostSnapshot),
+          discountPct: toNumberOrNull(a.discountPct),
+          discountAmount: toNumberOrNull(a.discountAmount),
+        })),
+      })),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }

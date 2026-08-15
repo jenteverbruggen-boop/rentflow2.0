@@ -9,6 +9,7 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { projectInclude } from "@/lib/project-include";
+import { serializeProject } from "@/lib/serialize-project";
 
 export async function GET() {
   const user = await requireAuth().catch(() => null);
@@ -19,7 +20,7 @@ export async function GET() {
       orderBy: { startDate: "asc" },
       include: projectInclude,
     });
-    return NextResponse.json(projects);
+    return NextResponse.json(projects.map(serializeProject));
   } catch (err) {
     return serverError((err as Error).message);
   }
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
       },
       include: projectInclude,
     });
-    return NextResponse.json(project);
+    return NextResponse.json(serializeProject(project));
   } catch (err) {
     return serverError((err as Error).message);
   }

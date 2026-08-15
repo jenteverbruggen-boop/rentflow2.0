@@ -11,6 +11,7 @@ import {
   bundleAvailableCount,
 } from "@/lib/availability";
 import { computeSharingMap } from "@/lib/bundle-sharing";
+import { toNumber } from "@/lib/serialize";
 
 export async function GET(req: NextRequest) {
   const user = await requireAuth().catch(() => null);
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
         })
       : [];
     const overrideMap = new Map(
-      overrides.map((o) => [o.materialId, Number(o.dayPrice)]),
+      overrides.map((o) => [o.materialId, toNumber(o.dayPrice)]),
     );
 
     const results = await Promise.all(
@@ -82,14 +83,14 @@ export async function GET(req: NextRequest) {
         }
 
         const componentSum = m.components.reduce(
-          (sum, c) => sum + Number(c.child.dayPrice) * c.quantity,
+          (sum, c) => sum + toNumber(c.child.dayPrice) * c.quantity,
           0,
         );
         const bundlePrice =
           m.bundlePriceOverride == null
             ? componentSum
-            : Number(m.bundlePriceOverride);
-        const basePrice = m.isBundle ? bundlePrice : Number(m.dayPrice);
+            : toNumber(m.bundlePriceOverride);
+        const basePrice = m.isBundle ? bundlePrice : toNumber(m.dayPrice);
         const effectivePrice = overrideMap.get(m.id) ?? basePrice;
         return {
           material: {

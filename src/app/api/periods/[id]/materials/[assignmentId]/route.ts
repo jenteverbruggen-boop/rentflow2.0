@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, serverError, notFound } from "@/lib/api-auth";
 import { effectiveMaterialPrice } from "@/lib/effective-price";
+import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string; assignmentId: string }> };
 
@@ -24,14 +25,31 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         current.stockItem.materialId
       );
     }
-    if (discountPct !== undefined) data.discountPct = discountPct != null ? Number(discountPct) : null;
-    if (discountAmount !== undefined) data.discountAmount = discountAmount != null ? Number(discountAmount) : null;
+    if (discountPct !== undefined) data.discountPct = discountPct != null ? toNumber(discountPct) : null;
+    if (discountAmount !== undefined) data.discountAmount = discountAmount != null ? toNumber(discountAmount) : null;
     const updated = await prisma.periodStockItem.update({
       where: { id: parseInt(assignmentId) },
       data,
       include: { stockItem: { include: { material: true } } },
     });
-    return NextResponse.json(updated);
+    return NextResponse.json({
+      ...updated,
+      dayPriceSnapshot: toNumber(updated.dayPriceSnapshot),
+      setupCostSnapshot: toNumberOrNull(updated.setupCostSnapshot),
+      discountPct: toNumberOrNull(updated.discountPct),
+      discountAmount: toNumberOrNull(updated.discountAmount),
+      stockItem: {
+        ...updated.stockItem,
+        material: {
+          ...updated.stockItem.material,
+          dayPrice: toNumber(updated.stockItem.material.dayPrice),
+          setupCost: toNumberOrNull(updated.stockItem.material.setupCost),
+          bundlePriceOverride: toNumberOrNull(
+            updated.stockItem.material.bundlePriceOverride,
+          ),
+        },
+      },
+    });
   } catch (err) {
     return serverError((err as Error).message);
   }

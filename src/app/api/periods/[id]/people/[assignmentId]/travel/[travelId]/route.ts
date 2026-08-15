@@ -8,6 +8,7 @@ import {
   notFound,
   serverError,
 } from "@/lib/api-auth";
+import { toNumber } from "@/lib/serialize";
 
 type Params = { params: Promise<{ travelId: string }> };
 
@@ -32,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       where: { id: parseInt(travelId) },
       data: parsed.data,
     });
-    return NextResponse.json(updated);
+    return NextResponse.json({ ...updated, unitCost: toNumber(updated.unitCost) });
   } catch (err) {
     return serverError((err as Error).message);
   }

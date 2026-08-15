@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, unauthorized, badRequest, conflict, notFound, serverError } from "@/lib/api-auth";
 import { checkPersonAvailability } from "@/lib/availability";
 import { effectivePersonPrice } from "@/lib/effective-price";
+import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -50,12 +51,21 @@ export async function POST(req: NextRequest, { params }: Params) {
         personId: parseInt(personId),
         role: role ?? null,
         dayPriceSnapshot: await effectivePersonPrice(period.projectId, parseInt(personId)),
-        discountPct: discountPct != null ? Number(discountPct) : null,
-        discountAmount: discountAmount != null ? Number(discountAmount) : null,
+        discountPct: discountPct != null ? toNumber(discountPct) : null,
+        discountAmount: discountAmount != null ? toNumber(discountAmount) : null,
       },
       include: { person: true },
     });
-    return NextResponse.json({ assignment, warnings });
+    return NextResponse.json({
+      assignment: {
+        ...assignment,
+        dayPriceSnapshot: toNumber(assignment.dayPriceSnapshot),
+        discountPct: toNumberOrNull(assignment.discountPct),
+        discountAmount: toNumberOrNull(assignment.discountAmount),
+        person: { ...assignment.person, dayPrice: toNumber(assignment.person.dayPrice) },
+      },
+      warnings,
+    });
   } catch (err) {
     return serverError((err as Error).message);
   }
