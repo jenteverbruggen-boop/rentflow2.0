@@ -15,7 +15,7 @@ export const projectInclude = {
         orderBy: { id: "asc" },
       },
       people: {
-        include: { person: true, travelCosts: { orderBy: { id: "asc" } } },
+        include: { person: true, function: true, travelCosts: { orderBy: { id: "asc" } } },
         orderBy: { id: "asc" },
       },
       bundleBookings: {

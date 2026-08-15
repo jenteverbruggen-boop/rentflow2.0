@@ -106,7 +106,7 @@ export default function CallsheetPage() {
                     <tr key={pp.id}>
                       <td className="p-2">{pp.person.name}</td>
                       <td className="p-2">
-                        {pp.role ?? pp.person.role ?? "—"}
+                        {pp.function?.name ?? pp.role ?? pp.person.role ?? "—"}
                       </td>
                       <td className="p-2">{fmtDT(period.startDate)}</td>
                       <td className="p-2">{fmtDT(period.endDate)}</td>

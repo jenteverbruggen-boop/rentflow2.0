@@ -40,6 +40,7 @@ export function serializeProject(project: ProjectWithIncludes) {
       people: period.people.map((p) => ({
         ...p,
         dayPriceSnapshot: toNumber(p.dayPriceSnapshot),
+        rateSnapshot: toNumberOrNull(p.rateSnapshot),
         discountPct: toNumberOrNull(p.discountPct),
         discountAmount: toNumberOrNull(p.discountAmount),
         travelCosts: p.travelCosts.map((t) => ({
@@ -47,6 +48,13 @@ export function serializeProject(project: ProjectWithIncludes) {
           unitCost: toNumber(t.unitCost),
         })),
         person: { ...p.person, dayPrice: toNumber(p.person.dayPrice) },
+        function: p.function
+          ? {
+              ...p.function,
+              dayRate: toNumberOrNull(p.function.dayRate),
+              hourRate: toNumberOrNull(p.function.hourRate),
+            }
+          : null,
       })),
       bundleBookings: period.bundleBookings.map((b) => ({
         ...b,
