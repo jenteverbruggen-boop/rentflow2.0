@@ -10,6 +10,7 @@ import {
 } from "@/lib/api-auth";
 import { projectInclude } from "@/lib/project-include";
 import { serializeProject } from "@/lib/serialize-project";
+import { brusselsWallClockToUtc } from "@/lib/brussels-time";
 
 export async function GET() {
   const user = await requireAuth().catch(() => null);
@@ -59,9 +60,16 @@ export async function POST(req: NextRequest) {
         periods: {
           create: [
             {
+              // The auto-created period defaults to a single day (the
+              // project's own start date), 08:00-17:00 Brussels time — not
+              // the full project span, which is what actually books a
+              // person solid for the whole project (H4). project.startDate
+              // is a bare yyyy-MM-dd date stored as UTC midnight, so 08:00/
+              // 17:00 must be computed against Europe/Brussels explicitly
+              // rather than added as raw UTC hours.
               name: "Hoofdperiode",
-              startDate: new Date(startDate),
-              endDate: new Date(endDate),
+              startDate: brusselsWallClockToUtc(new Date(startDate), 8, 0),
+              endDate: brusselsWallClockToUtc(new Date(startDate), 17, 0),
             },
           ],
         },
