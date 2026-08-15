@@ -5,6 +5,11 @@ services:
     env_file: .env
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   app:
     image: ghcr.io/jenteverbruggen-boop/rentflow2.0:latest
@@ -13,7 +18,20 @@ services:
       - "3000:3000"
     env_file: .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    healthcheck:
+      # /login is the one page-level route exempted from the auth redirect
+      # (src/proxy.ts PUBLIC_PATHS) — a real 200 from the running Next.js
+      # server, without needing a session or touching the DB. No /api/health
+      # route exists (out of scope this item); the only unauthenticated API
+      # route (POST /api/auth/login) has no GET handler, so a plain GET/wget
+      # probe against it would just get a 405, not a readiness signal.
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/login >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 volumes:
   pgdata:
