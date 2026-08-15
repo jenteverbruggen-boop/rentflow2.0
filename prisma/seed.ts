@@ -6,6 +6,8 @@ import path from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { MODULES } from "../src/lib/modules";
 import { parseCsv, type CsvRecord } from "../src/lib/csv-parser";
+import { seedChartGradeData } from "./seed-data/chart-seed";
+import { seedInvoices } from "./seed-data/invoice-seed";
 
 // Prisma 7 connects through a driver adapter; pick it from the connection
 // string (a `file:` URL is the local SQLite dev database, else Postgres).
@@ -209,6 +211,14 @@ function importMaterialsFromCsv(): ImportedMaterial[] {
 }
 
 async function main() {
+  // Invoice/Payment/InvoiceLine cascade from Invoice; Payment/InvoiceLine
+  // need no separate deleteMany. InvoiceCounter has no FK back, so it
+  // does.
+  await prisma.invoice.deleteMany();
+  await prisma.invoiceCounter.deleteMany();
+  // PeriodBundleBookingComponent cascades from PeriodBundleBooking, but
+  // is deleted explicitly first for parity with periodStockItem below.
+  await prisma.periodBundleBookingComponent.deleteMany();
   await prisma.periodStockItem.deleteMany();
   await prisma.periodBundleBooking.deleteMany();
   await prisma.periodPerson.deleteMany();
@@ -563,8 +573,37 @@ async function main() {
     });
   }
 
+  // DDL-3 — invoice payment-term/BTW/deposit settings, with sensible
+  // defaults; company settings stay unseeded as before (filled via the
+  // Settings UI), this doesn't change that.
+  await prisma.setting.createMany({
+    data: [
+      { key: "invoicePaymentTermDays", value: "30" },
+      { key: "invoiceBankAccountHolder", value: "RentFlow BV" },
+      { key: "invoiceNumberFormat", value: "{year}-{seq:04d}" },
+      { key: "invoiceFooter", value: "Gelieve te betalen binnen de vermelde termijn." },
+      { key: "btwRate", value: "21" },
+      { key: "defaultDepositPercentage", value: "30" },
+    ],
+  });
+
+  // DDL-3 — chart-grade volume (K2 cannot be judged against 4 projects
+  // and zero bundle bookings/travel costs) plus a representative
+  // invoice spread (design doc §9), both extracted to their own files.
+  const chartResult = await seedChartGradeData(prisma, {
+    clients: [clientSummerSounds, clientCoastline, clientBrugge, clientWarehouse],
+    locations: [locGent, locOostende, locBrugge, locMechelen],
+    people: [alice, bob, charlie, diana, eric, fiona],
+    materials,
+    categoryMap,
+  });
+  const summerSoundsClient = await prisma.client.findUniqueOrThrow({ where: { id: clientSummerSounds.id } });
+  const invoiceResult = await seedInvoices(prisma, summerSoundsClient, festivalMain.id);
+
   console.log("Seed complete.");
   console.log(`  Materials with non-zero day price: ${pricedMaterialCount}/${materialDefs.length}`);
+  console.log(`  Extra projects: ${chartResult.projectCount}, travel costs: ${chartResult.travelCostCount}/${chartResult.personBookingCount} person bookings, bundle bookings: ${chartResult.bundleBookingsWritten}`);
+  console.log(`  Invoices seeded: ${invoiceResult.invoiceCount}`);
   console.log("  Login: admin@rentflow.dev / admin123");
   console.log("  Login: jan@rentflow.dev  / user123");
 }
