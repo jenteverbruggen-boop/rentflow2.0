@@ -9,7 +9,7 @@ import {
 import { toNumber } from "@/lib/serialize";
 import { findRejectedMoneyWrite, redactMoney } from "@/lib/redact";
 import { diffFunctionIds } from "@/lib/person-functions-diff";
-import { personSchema } from "../route";
+import { personSchema, serializePersonFunction } from "../route";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -30,25 +30,37 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
     const parsed = personSchema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.issues[0].message);
-    const { name, role, email, phone, dayPrice, address, postalCode, city, country, functionIds } = parsed.data;
+    const { name, role, email, phone, dayPrice, address, postalCode, city, country, functions } = parsed.data;
 
     // L1.1: diff instead of deleteMany+create — the old destructive
     // write would wipe every PersonFunction row (and, since DDL-2, its
     // per-person rate override) on any save that merely touches an
     // unrelated field. Rows for functions that stay assigned are left
-    // untouched; only the actual add/remove set is written.
+    // untouched by the nested write; only the actual add/remove set is
+    // written there. L1.3 adds a second step below: a kept row's rate
+    // may itself have been *edited* in the form (not added/removed), so
+    // those rows get an explicit update after the nested write.
     let functionsWrite;
-    if (functionIds !== undefined) {
+    let toUpdateRates: typeof functions = [];
+    if (functions !== undefined) {
       const existing = await prisma.personFunction.findMany({
         where: { personId },
         select: { functionId: true },
       });
       const existingIds = existing.map((e) => e.functionId);
-      const { toAdd, toRemove } = diffFunctionIds(existingIds, functionIds);
+      const nextIds = functions.map((f) => f.functionId);
+      const { toAdd, toRemove } = diffFunctionIds(existingIds, nextIds);
       functionsWrite = {
         deleteMany: { functionId: { in: toRemove } },
-        create: toAdd.map((fid) => ({ functionId: fid })),
+        create: functions
+          .filter((f) => toAdd.includes(f.functionId))
+          .map((f) => ({
+            functionId: f.functionId,
+            dayRate: f.dayRate ?? null,
+            hourRate: f.hourRate ?? null,
+          })),
       };
+      toUpdateRates = functions.filter((f) => !toAdd.includes(f.functionId));
     }
 
     const person = await prisma.person.update({
@@ -67,12 +79,26 @@ export async function PUT(req: NextRequest, { params }: Params) {
       },
       include: { functions: { include: { function: true } } },
     });
+
+    for (const f of toUpdateRates) {
+      await prisma.personFunction.update({
+        where: { personId_functionId: { personId, functionId: f.functionId } },
+        data: { dayRate: f.dayRate ?? null, hourRate: f.hourRate ?? null },
+      });
+    }
+    const withUpdatedRates = toUpdateRates.length
+      ? await prisma.person.findUnique({
+          where: { id: personId },
+          include: { functions: { include: { function: true } } },
+        })
+      : person;
+
     return NextResponse.json(
       redactMoney(
         {
           ...person,
           dayPrice: toNumber(person.dayPrice),
-          functions: person.functions.map((f) => f.function),
+          functions: (withUpdatedRates ?? person).functions.map(serializePersonFunction),
         },
         access,
       ),

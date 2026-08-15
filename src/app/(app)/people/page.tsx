@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PersonForm } from "@/components/person-form";
 import { PersonDocuments } from "@/components/person-documents";
+import { FunctionsManagerDialog } from "@/components/functions-manager-dialog";
 import type { Person } from "@/types";
 
 async function fetchPeople(): Promise<Person[]> {
@@ -19,6 +20,7 @@ async function fetchPeople(): Promise<Person[]> {
 export default function PeoplePage() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [functionsOpen, setFunctionsOpen] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -55,14 +57,10 @@ export default function PeoplePage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Personen</h2>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setOpen(true);
-          }}
-        >
-          + Nieuwe persoon
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setFunctionsOpen(true)}>Functies</Button>
+          <Button onClick={() => { setEditing(null); setOpen(true); }}>+ Nieuwe persoon</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -80,11 +78,11 @@ export default function PeoplePage() {
                     <div className="flex flex-wrap gap-1 mt-1">
                       {p.functions.map((f) => (
                         <Badge
-                          key={f.id}
+                          key={f.functionId}
                           variant="secondary"
                           className="text-xs"
                         >
-                          {f.name}
+                          {f.function?.name}
                         </Badge>
                       ))}
                     </div>
@@ -142,6 +140,7 @@ export default function PeoplePage() {
         }
         isPending={upsert.isPending}
       />
+      <FunctionsManagerDialog open={functionsOpen} onOpenChange={setFunctionsOpen} />
     </div>
   );
 }

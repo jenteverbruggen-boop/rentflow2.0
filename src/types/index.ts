@@ -101,7 +101,7 @@ export interface Person {
   city: string | null;
   country: string | null;
   dayPrice: number | null;
-  functions?: Function[];
+  functions?: PersonFunction[];
 }
 
 export interface MaterialComponent {
