@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, badRequest, conflict, notFound, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, badRequest, conflict, notFound, serverError } from "@/lib/api-auth";
 import { effectiveMaterialPrice } from "@/lib/effective-price";
 import { bookFlatMaterial, bookBundleMaterial } from "@/lib/booking";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
+import { redactMoney } from "@/lib/redact";
 
 interface BookedAssignment {
   dayPriceSnapshot: unknown;
@@ -43,8 +44,8 @@ function serializeAssignment(a: BookedAssignment) {
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("planning", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { id } = await params;
@@ -75,16 +76,21 @@ export async function POST(req: NextRequest, { params }: Params) {
           from: period.startDate, to: period.endDate, dayPriceSnapshot,
           components: material.components.map((c) => ({ childId: c.childId, quantity: c.quantity })),
         });
-        return NextResponse.json({
-          ...result,
-          bundleBooking: {
-            ...(result.bundleBooking as { dayPriceSnapshot: unknown }),
-            dayPriceSnapshot: toNumber(
-              (result.bundleBooking as { dayPriceSnapshot: unknown })
-                .dayPriceSnapshot,
-            ),
-          },
-        });
+        return NextResponse.json(
+          redactMoney(
+            {
+              ...result,
+              bundleBooking: {
+                ...(result.bundleBooking as { dayPriceSnapshot: unknown }),
+                dayPriceSnapshot: toNumber(
+                  (result.bundleBooking as { dayPriceSnapshot: unknown })
+                    .dayPriceSnapshot,
+                ),
+              },
+            },
+            access,
+          ),
+        );
       } catch (e: unknown) {
         const err = e as { code?: string; message?: string };
         if (err.code === "UNAVAIL") return conflict(err.message ?? "Onvoldoende voorraad");
@@ -103,12 +109,17 @@ export async function POST(req: NextRequest, { params }: Params) {
         discountPct: discountPct != null ? toNumber(discountPct) : null,
         discountAmount: discountAmount != null ? toNumber(discountAmount) : null,
       });
-      return NextResponse.json({
-        ...result,
-        assignments: (result.assignments as BookedAssignment[]).map(
-          serializeAssignment,
+      return NextResponse.json(
+        redactMoney(
+          {
+            ...result,
+            assignments: (result.assignments as BookedAssignment[]).map(
+              serializeAssignment,
+            ),
+          },
+          access,
         ),
-      });
+      );
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
       if (err.code === "UNAVAIL") return conflict(err.message ?? "Niet genoeg vrij");

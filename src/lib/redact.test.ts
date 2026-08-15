@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { redactMoney, moneyVisible, findRejectedMoneyWrite } from "./redact";
+import {
+  redactMoney,
+  moneyVisible,
+  findRejectedMoneyWrite,
+  findRejectedField,
+} from "./redact";
 import type { ResolvedAccess } from "@/lib/api-auth";
 
 function access(kostenLevel: string): ResolvedAccess {
@@ -166,5 +171,38 @@ describe("findRejectedMoneyWrite", () => {
 
   it("allows a write with no money fields present, regardless of access", () => {
     expect(findRejectedMoneyWrite({ name: "New name" }, access("geen"))).toBeNull();
+  });
+});
+
+describe("findRejectedField (booking PATCH field-level checks, N2.2)", () => {
+  const PERSON_KOSTEN_FIELDS = ["discountPct", "discountAmount"] as const;
+  const MATERIAL_KOSTEN_FIELDS = ["discountPct", "discountAmount", "resnapshotPrice"] as const;
+
+  it("a caller without Kosten access can still edit role on a person booking", () => {
+    expect(
+      findRejectedField({ role: "Regisseur" }, access("lezen"), PERSON_KOSTEN_FIELDS),
+    ).toBeNull();
+  });
+
+  it("the same caller is rejected for discountPct on a person booking", () => {
+    expect(
+      findRejectedField({ role: "Regisseur", discountPct: 10 }, access("lezen"), PERSON_KOSTEN_FIELDS),
+    ).toBe("discountPct");
+  });
+
+  it("a material booking PATCH also rejects resnapshotPrice without Kosten access", () => {
+    expect(
+      findRejectedField({ resnapshotPrice: true }, access("lezen"), MATERIAL_KOSTEN_FIELDS),
+    ).toBe("resnapshotPrice");
+  });
+
+  it("a material booking PATCH with Kosten/Facturen: wijzigen allows all three fields", () => {
+    expect(
+      findRejectedField(
+        { discountPct: 5, discountAmount: 10, resnapshotPrice: true },
+        access("wijzigen"),
+        MATERIAL_KOSTEN_FIELDS,
+      ),
+    ).toBeNull();
   });
 });

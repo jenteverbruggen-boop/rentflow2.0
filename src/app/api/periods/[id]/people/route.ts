@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, badRequest, conflict, notFound, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, badRequest, conflict, notFound, serverError } from "@/lib/api-auth";
 import { checkPersonAvailability } from "@/lib/availability";
 import { effectivePersonPrice } from "@/lib/effective-price";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
+import { redactMoney } from "@/lib/redact";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("planning", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { id } = await params;
@@ -56,16 +57,21 @@ export async function POST(req: NextRequest, { params }: Params) {
       },
       include: { person: true },
     });
-    return NextResponse.json({
-      assignment: {
-        ...assignment,
-        dayPriceSnapshot: toNumber(assignment.dayPriceSnapshot),
-        discountPct: toNumberOrNull(assignment.discountPct),
-        discountAmount: toNumberOrNull(assignment.discountAmount),
-        person: { ...assignment.person, dayPrice: toNumber(assignment.person.dayPrice) },
-      },
-      warnings,
-    });
+    return NextResponse.json(
+      redactMoney(
+        {
+          assignment: {
+            ...assignment,
+            dayPriceSnapshot: toNumber(assignment.dayPriceSnapshot),
+            discountPct: toNumberOrNull(assignment.discountPct),
+            discountAmount: toNumberOrNull(assignment.discountAmount),
+            person: { ...assignment.person, dayPrice: toNumber(assignment.person.dayPrice) },
+          },
+          warnings,
+        },
+        access,
+      ),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }

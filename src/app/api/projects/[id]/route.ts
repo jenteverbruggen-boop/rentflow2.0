@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  resolveCurrentAccess,
-  unauthorized,
+  requireModule,
+  forbidden,
   badRequest,
   notFound,
   serverError,
@@ -15,12 +14,11 @@ import { redactMoney } from "@/lib/redact";
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("projecten", "lezen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { id } = await params;
-    const access = await resolveCurrentAccess();
     const project = await prisma.project.findUnique({
       where: { id: parseInt(id) },
       include: projectInclude,
@@ -33,8 +31,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function PUT(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("projecten", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { id } = await params;
@@ -73,8 +71,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("projecten", "verwijderen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { id } = await params;

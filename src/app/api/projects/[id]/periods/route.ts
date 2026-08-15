@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, badRequest, notFound, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, badRequest, notFound, serverError } from "@/lib/api-auth";
 import { periodRangeSchema, periodOverlapsProject } from "@/lib/period-validation";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("projecten", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { id } = await params;

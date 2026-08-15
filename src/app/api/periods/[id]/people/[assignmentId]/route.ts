@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, serverError, notFound } from "@/lib/api-auth";
+import { requireModule, forbidden, serverError, notFound } from "@/lib/api-auth";
 import { effectivePersonPrice } from "@/lib/effective-price";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
+import { findRejectedField, redactMoney } from "@/lib/redact";
+
+const KOSTEN_FIELDS = ["discountPct", "discountAmount"] as const;
 
 type Params = { params: Promise<{ id: string; assignmentId: string }> };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("planning", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { assignmentId } = await params;
-    const { resnapshotPrice, discountPct, discountAmount, role } = await req.json();
+    const body = await req.json();
+    if (findRejectedField(body, access, KOSTEN_FIELDS)) return forbidden();
+    const { resnapshotPrice, discountPct, discountAmount, role } = body;
     const data: Record<string, unknown> = {};
     if (resnapshotPrice) {
       const current = await prisma.periodPerson.findUnique({
@@ -30,21 +35,26 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       data,
       include: { person: true },
     });
-    return NextResponse.json({
-      ...updated,
-      dayPriceSnapshot: toNumber(updated.dayPriceSnapshot),
-      discountPct: toNumberOrNull(updated.discountPct),
-      discountAmount: toNumberOrNull(updated.discountAmount),
-      person: { ...updated.person, dayPrice: toNumber(updated.person.dayPrice) },
-    });
+    return NextResponse.json(
+      redactMoney(
+        {
+          ...updated,
+          dayPriceSnapshot: toNumber(updated.dayPriceSnapshot),
+          discountPct: toNumberOrNull(updated.discountPct),
+          discountAmount: toNumberOrNull(updated.discountAmount),
+          person: { ...updated.person, dayPrice: toNumber(updated.person.dayPrice) },
+        },
+        access,
+      ),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("planning", "verwijderen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { assignmentId } = await params;

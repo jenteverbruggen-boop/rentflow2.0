@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  resolveCurrentAccess,
-  unauthorized,
+  requireModule,
+  forbidden,
   badRequest,
   serverError,
 } from "@/lib/api-auth";
@@ -17,8 +16,8 @@ import { parseDateRange } from "@/lib/parse-date-range";
 import { redactMoney } from "@/lib/redact";
 
 export async function GET(req: NextRequest) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("planning", "lezen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { searchParams } = new URL(req.url);
@@ -29,7 +28,6 @@ export async function GET(req: NextRequest) {
     const range = parseDateRange(from, to);
     if (!range) return badRequest("from en to zijn verplicht en moeten een geldige periode vormen (to na from)");
 
-    const access = await resolveCurrentAccess();
     const materials = await prisma.material.findMany({
       orderBy: { name: "asc" },
       include: {

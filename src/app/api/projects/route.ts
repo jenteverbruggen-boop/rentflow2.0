@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  requireRole,
-  resolveCurrentAccess,
-  unauthorized,
+  requireModule,
   forbidden,
   badRequest,
   serverError,
@@ -15,11 +12,10 @@ import { brusselsWallClockToUtc } from "@/lib/brussels-time";
 import { redactMoney } from "@/lib/redact";
 
 export async function GET() {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("projecten", "lezen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
-    const access = await resolveCurrentAccess();
     const projects = await prisma.project.findMany({
       orderBy: { startDate: "asc" },
       include: projectInclude,
@@ -33,8 +29,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireRole("ADMIN", "PLANNER").catch(() => null);
-  if (!auth) return forbidden();
+  const access = await requireModule("projecten", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const {
@@ -81,7 +77,6 @@ export async function POST(req: NextRequest) {
       },
       include: projectInclude,
     });
-    const access = await resolveCurrentAccess();
     return NextResponse.json(redactMoney(serializeProject(project), access));
   } catch (err) {
     return serverError((err as Error).message);

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  unauthorized,
+  requireModule,
+  forbidden,
   notFound,
   serverError,
 } from "@/lib/api-auth";
@@ -10,8 +10,8 @@ import {
 type Params = { params: Promise<{ id: string; bundleId: string }> };
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("planning", "verwijderen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { bundleId } = await params;
