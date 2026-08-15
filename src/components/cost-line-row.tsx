@@ -4,7 +4,7 @@ import { LinePricePopover } from "@/components/line-price-popover";
 import { BookingDiscountPopover } from "@/components/booking-discount-popover";
 import { formatEUR } from "@/lib/pricing";
 import { toNumber } from "@/lib/serialize";
-import type { PeriodPerson, Project } from "@/types";
+import type { PeriodPerson, PersonTravelCost, Project } from "@/types";
 import { materialGroupCost, type MaterialGroup } from "@/lib/grouping";
 
 interface PersonRowProps {
@@ -110,6 +110,35 @@ export function MaterialGroupCostRow({ group, days, periodId, project }: Materia
         />
       </td>
       <td className="py-2 pr-3 text-right text-sm font-semibold tabular-nums align-middle">{formatEUR(total)}</td>
+    </tr>
+  );
+}
+
+interface TravelCostRowProps {
+  travel: PersonTravelCost;
+  personName: string;
+}
+
+/** One itemised travel-cost line (J1.2) — previously only a rolled-up
+ * "Reiskosten: €X" existed, with no per-entry line in the cost table. */
+export function TravelCostRow({ travel, personName }: TravelCostRowProps) {
+  const unitCost = toNumber(travel.unitCost);
+  const cost = unitCost * travel.quantity;
+  return (
+    <tr className="border-b last:border-0">
+      <td className="py-2 pl-3 pr-2 align-middle">
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-secondary text-sm">🚗</span>
+      </td>
+      <td className="py-2 pr-4 text-sm align-middle">
+        <div className="font-medium leading-tight">{travel.label ?? "Reiskosten"}</div>
+        <div className="text-muted-foreground text-[11px] leading-tight">{personName}</div>
+      </td>
+      <td className="py-2 pr-4 text-xs text-muted-foreground tabular-nums whitespace-nowrap align-middle">
+        {travel.quantity} × {formatEUR(unitCost)}
+      </td>
+      <td className="py-2 pr-3 align-middle" />
+      <td className="py-2 pr-3 align-middle" />
+      <td className="py-2 pr-3 text-right text-sm font-semibold tabular-nums align-middle">{formatEUR(cost)}</td>
     </tr>
   );
 }

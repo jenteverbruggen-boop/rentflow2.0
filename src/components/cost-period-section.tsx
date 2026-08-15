@@ -5,6 +5,7 @@ import { nl } from "date-fns/locale";
 import {
   PersonCostRow,
   MaterialGroupCostRow,
+  TravelCostRow,
 } from "@/components/cost-line-row";
 import { PeriodSubtotals } from "@/components/cost-summary";
 import { formatEUR, periodDays, personLineCost, periodTotal } from "@/lib/pricing";
@@ -24,8 +25,15 @@ function fmtDate(d: string) {
  * pure move, no behaviour change. */
 export function CostPeriodSection({ period, project }: Props) {
   const days = periodDays(period);
-  const subtotal = periodTotal(period);
+  const total = periodTotal(period);
   const matGroups = groupMaterialAssignments(period.materials);
+  const travelLines = period.people.flatMap((pp) =>
+    (pp.travelCosts ?? []).map((travel) => ({
+      key: `t-${travel.id}`,
+      travel,
+      personName: pp.person.name,
+    })),
+  );
 
   return (
     <section className="space-y-3 cost-period">
@@ -38,7 +46,7 @@ export function CostPeriodSection({ period, project }: Props) {
           </p>
         </div>
         <span className="text-base font-semibold tabular-nums">
-          {formatEUR(subtotal)}
+          {formatEUR(total)}
         </span>
       </div>
       <PeriodSubtotals period={period} />
@@ -89,6 +97,15 @@ export function CostPeriodSection({ period, project }: Props) {
                 periodId={period.id}
                 project={project}
               />
+            ))}
+            {(period.people.length > 0 || matGroups.length > 0) &&
+              travelLines.length > 0 && (
+                <tr>
+                  <td colSpan={6} className="py-0.5" />
+                </tr>
+              )}
+            {travelLines.map(({ key, travel, personName }) => (
+              <TravelCostRow key={key} travel={travel} personName={personName} />
             ))}
             {period.people.length === 0 && period.materials.length === 0 && (
               <tr>
