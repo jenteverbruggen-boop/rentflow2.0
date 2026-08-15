@@ -31,15 +31,27 @@ interface Props {
   fns: PersonFunction[];
   functionId: number | null;
   onFunctionChange: (id: number) => void;
-  preview: { dayPriceSnapshot: number | null; source: string } | undefined;
+  unit: "dag" | "uur";
+  onUnitChange: (unit: "dag" | "uur") => void;
+  preview: { dayPriceSnapshot: number | null; source: string; unit: "dag" | "uur" } | undefined;
   conflict: BlockingProject | null;
   error: string;
 }
 
-/** The body of BookPersonDialog (L2.2/L3.2/H2.1), extracted so the
+/** The body of BookPersonDialog (L2.2/L3.2/H2.1/H5.2), extracted so the
  * dialog's own file has room for its mutation logic under the
  * 150-line limit. Pure presentation — all state lives in the parent. */
-export function BookPersonFields({ personName, fns, functionId, onFunctionChange, preview, conflict, error }: Props) {
+export function BookPersonFields({
+  personName,
+  fns,
+  functionId,
+  onFunctionChange,
+  unit,
+  onUnitChange,
+  preview,
+  conflict,
+  error,
+}: Props) {
   return (
     <>
       {fns.length > 1 && (
@@ -64,6 +76,25 @@ export function BookPersonFields({ personName, fns, functionId, onFunctionChange
       )}
       {fns.length === 1 && (
         <p className="text-sm text-muted-foreground">Functie: {fns[0].function?.name}</p>
+      )}
+      {functionId != null && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">Facturatie</Label>
+          <Select value={unit} onValueChange={(v) => onUnitChange(v as "dag" | "uur")}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dag">Per dag</SelectItem>
+              <SelectItem value="uur">Per uur</SelectItem>
+            </SelectContent>
+          </Select>
+          {unit === "uur" && preview?.unit === "dag" && (
+            <p className="text-xs text-muted-foreground">
+              Geen uurtarief beschikbaar — wordt als volledige dag gefactureerd.
+            </p>
+          )}
+        </div>
       )}
       {preview && (
         <p className="text-sm">

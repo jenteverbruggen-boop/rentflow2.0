@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
     const periodId = parseInt(id);
-    const { personId, role, functionId, discountPct, discountAmount, allowOverlap } = await req.json();
+    const { personId, role, functionId, discountPct, discountAmount, allowOverlap, billingUnit } = await req.json();
     if (!personId) return badRequest("personId is verplicht");
 
     const period = await prisma.period.findUnique({ where: { id: periodId } });
@@ -24,7 +24,18 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (!person) return notFound();
 
     const resolvedFunctionId = functionId != null ? parseInt(functionId) : null;
-    const price = await effectivePersonPrice(period.projectId, parseInt(personId), resolvedFunctionId);
+    // H5.2 — resolved against the *requested* unit; effectivePersonPrice
+    // itself decides whether that unit's rate actually exists (Q19
+    // falls back to a day figure and echoes `unit: "dag"` in the
+    // result when it does, which is what gets persisted below either
+    // way).
+    const resolvedUnit = billingUnit === "uur" ? "uur" : "dag";
+    const price = await effectivePersonPrice(
+      period.projectId,
+      parseInt(personId),
+      resolvedFunctionId,
+      resolvedUnit,
+    );
 
     // H1.2 — check-then-create now runs inside one transaction, with the
     // availability re-check re-run against the same tx; a racing double
@@ -37,7 +48,9 @@ export async function POST(req: NextRequest, { params }: Params) {
         personName: person.name,
         role: role ?? null,
         functionId: resolvedFunctionId,
+        billingUnit: price.unit,
         dayPriceSnapshot: price.amount,
+        rateSnapshot: price.unit === "uur" ? price.amount : null,
         discountPct: discountPct != null ? toNumber(discountPct) : null,
         discountAmount: discountAmount != null ? toNumber(discountAmount) : null,
         from: period.startDate,

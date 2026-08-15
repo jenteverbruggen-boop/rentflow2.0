@@ -103,6 +103,45 @@ describe("checkPersonAvailability against assignment windows, real DB (H1.4)", (
   });
 });
 
+describe("bookPersonAssignment — hourly billing snapshot (H5.2)", () => {
+  it("persists the billingUnit and rateSnapshot it's given, alongside the always-present dayPriceSnapshot", async () => {
+    const project = await client.project.create({
+      data: { name: "Hourly Project", startDate: new Date("2026-09-01"), endDate: new Date("2026-09-01") },
+    });
+    const period = await client.period.create({
+      data: {
+        projectId: project.id,
+        name: "Evening shift",
+        startDate: new Date("2026-09-01T18:00:00Z"),
+        endDate: new Date("2026-09-01T22:00:00Z"),
+      },
+    });
+    const person = await client.person.create({ data: { name: "Hourly Person", dayPrice: 300 } });
+
+    const { assignment } = await bookPersonAssignment({
+      periodId: period.id,
+      personId: person.id,
+      personName: person.name,
+      role: null,
+      functionId: null,
+      billingUnit: "uur",
+      dayPriceSnapshot: 45,
+      rateSnapshot: 45,
+      discountPct: null,
+      discountAmount: null,
+      from: period.startDate,
+      to: period.endDate,
+      excludePeriodId: period.id,
+      sameProjectId: project.id,
+      client,
+    });
+
+    expect(assignment.billingUnit).toBe("uur");
+    expect(Number(assignment.rateSnapshot)).toBe(45);
+    expect(Number(assignment.dayPriceSnapshot)).toBe(45);
+  });
+});
+
 describe("bookPersonAssignment — explicit double-booking override (H2.1)", () => {
   it("refuses an overlapping booking without allowOverlap, naming the conflicting project", async () => {
     const projectC = await client.project.create({
@@ -124,7 +163,9 @@ describe("bookPersonAssignment — explicit double-booking override (H2.1)", () 
         personName: "Bob",
         role: null,
         functionId: null,
+        billingUnit: "dag",
         dayPriceSnapshot: 300,
+        rateSnapshot: null,
         discountPct: null,
         discountAmount: null,
         from: period.startDate,
@@ -161,7 +202,9 @@ describe("bookPersonAssignment — explicit double-booking override (H2.1)", () 
       personName: "Bob",
       role: null,
       functionId: null,
+      billingUnit: "dag",
       dayPriceSnapshot: 300,
+      rateSnapshot: null,
       discountPct: null,
       discountAmount: null,
       from: period.startDate,
@@ -195,7 +238,9 @@ describe("bookPersonAssignment — transactional race protection (H1.4)", () => 
         personName: racer.name,
         role: null,
         functionId: null,
+        billingUnit: "dag",
         dayPriceSnapshot: 200,
+        rateSnapshot: null,
         discountPct: null,
         discountAmount: null,
         from: period.startDate,

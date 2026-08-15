@@ -24,6 +24,13 @@ interface BookPersonArgs {
   role: string | null;
   functionId: number | null;
   dayPriceSnapshot: number;
+  /** H5.2 — the unit actually resolved by effectivePersonPrice (never
+   * trust the client's requested unit directly; Q19 can fall it back
+   * to "dag"), and the rate charged at that unit, snapshotted for
+   * billing. `rateSnapshot` stays null on a "dag" booking — day billing
+   * reads dayPriceSnapshot directly (H5.1). */
+  billingUnit: "dag" | "uur";
+  rateSnapshot: number | null;
   discountPct: number | null;
   discountAmount: number | null;
   from: Date;
@@ -95,7 +102,9 @@ export async function bookPersonAssignment(args: BookPersonArgs) {
         personId: args.personId,
         role: args.role,
         functionId: args.functionId,
+        billingUnit: args.billingUnit,
         dayPriceSnapshot: args.dayPriceSnapshot,
+        rateSnapshot: args.rateSnapshot,
         discountPct: args.discountPct,
         discountAmount: args.discountAmount,
         // H2.1 — only ever true when the caller explicitly confirmed a

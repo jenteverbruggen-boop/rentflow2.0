@@ -34,6 +34,7 @@ interface Props {
  * overriding. */
 export function BookPersonDialog({ person, periodId, clientId, onBooked, onClose }: Props) {
   const [functionId, setFunctionId] = useState<number | null>(null);
+  const [unit, setUnit] = useState<"dag" | "uur">("dag");
   const [conflict, setConflict] = useState<BlockingProject | null>(null);
   const [error, setError] = useState("");
   const allFns = person?.person.functions ?? [];
@@ -48,6 +49,7 @@ export function BookPersonDialog({ person, periodId, clientId, onBooked, onClose
   useEffect(() => {
     if (person) {
       setFunctionId(fns.length === 1 ? fns[0].functionId : null);
+      setUnit("dag");
       setConflict(null);
       setError("");
     }
@@ -55,12 +57,12 @@ export function BookPersonDialog({ person, periodId, clientId, onBooked, onClose
   }, [person, clientRates]);
 
   const { data: preview } = useQuery({
-    queryKey: ["preview-price", periodId, person?.person.id, functionId],
+    queryKey: ["preview-price", periodId, person?.person.id, functionId, unit],
     queryFn: () =>
       fetch(
-        `/api/periods/${periodId}/people/preview-price?personId=${person!.person.id}` +
+        `/api/periods/${periodId}/people/preview-price?personId=${person!.person.id}&unit=${unit}` +
           (functionId ? `&functionId=${functionId}` : ""),
-      ).then((r) => r.json()) as Promise<{ dayPriceSnapshot: number | null; source: string }>,
+      ).then((r) => r.json()) as Promise<{ dayPriceSnapshot: number | null; source: string; unit: "dag" | "uur" }>,
     enabled: !!person,
   });
 
@@ -73,6 +75,7 @@ export function BookPersonDialog({ person, periodId, clientId, onBooked, onClose
           personId: person!.person.id,
           role: person!.person.role ?? undefined,
           functionId,
+          billingUnit: unit,
           allowOverlap,
         }),
       });
@@ -105,6 +108,8 @@ export function BookPersonDialog({ person, periodId, clientId, onBooked, onClose
             fns={fns}
             functionId={functionId}
             onFunctionChange={setFunctionId}
+            unit={unit}
+            onUnitChange={setUnit}
             preview={preview}
             conflict={conflict}
             error={error}

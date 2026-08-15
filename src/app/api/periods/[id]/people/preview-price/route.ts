@@ -24,6 +24,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     const { searchParams } = new URL(req.url);
     const personId = searchParams.get("personId");
     const functionId = searchParams.get("functionId");
+    const unit = searchParams.get("unit") === "uur" ? "uur" : "dag";
     if (!personId) return badRequest("personId is verplicht");
 
     const period = await prisma.period.findUnique({ where: { id: periodId } });
@@ -33,10 +34,14 @@ export async function GET(req: NextRequest, { params }: Params) {
       period.projectId,
       parseInt(personId),
       functionId ? parseInt(functionId) : null,
+      unit,
     );
 
     return NextResponse.json(
-      redactMoney({ dayPriceSnapshot: price.amount, source: price.source }, access),
+      redactMoney(
+        { dayPriceSnapshot: price.amount, source: price.source, unit: price.unit },
+        access,
+      ),
     );
   } catch (err) {
     return serverError((err as Error).message);
