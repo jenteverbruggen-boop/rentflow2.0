@@ -18,10 +18,11 @@ interface Props {
  * roleId instead of a role string. Defaults to PLANNER once the list
  * loads if nothing is selected yet (new-user case). */
 export function RoleSelect({ value, onChange }: Props) {
-  const { data: roles = [] } = useRoles();
+  const { query } = useRoles();
+  const roles = query.data;
 
   useEffect(() => {
-    if (value == null && roles.length > 0) {
+    if (value == null && roles && roles.length > 0) {
       const planner = roles.find((r) => r.key === "PLANNER");
       if (planner) onChange(planner.id);
     }
@@ -36,7 +37,7 @@ export function RoleSelect({ value, onChange }: Props) {
         <SelectValue placeholder="Kies een rol..." />
       </SelectTrigger>
       <SelectContent>
-        {roles.map((r) => (
+        {(roles ?? []).map((r) => (
           <SelectItem key={r.id} value={String(r.id)}>
             {r.label}
           </SelectItem>

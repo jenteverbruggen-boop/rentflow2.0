@@ -2,6 +2,7 @@
 
 import { SettingsForm } from "@/components/settings-form";
 import { LogoUpload } from "@/components/logo-upload";
+import { RolesManager } from "@/components/roles-manager";
 
 export default function SettingsPage() {
   return (
@@ -9,6 +10,7 @@ export default function SettingsPage() {
       <h2 className="text-2xl font-bold">Instellingen</h2>
       <SettingsForm />
       <LogoUpload />
+      <RolesManager />
     </div>
   );
 }
