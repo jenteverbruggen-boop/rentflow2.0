@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { MODULES } from "../src/lib/modules";
+import { parseCsv, type CsvRecord } from "../src/lib/csv-parser";
 
 // Prisma 7 connects through a driver adapter; pick it from the connection
 // string (a `file:` URL is the local SQLite dev database, else Postgres).
@@ -23,61 +24,9 @@ type ImportedMaterial = {
   stockItems: { identifier: string | null; notes: string | null }[];
 };
 
-type CsvRecord = Record<string, string>;
-
 const MATERIALS_CSV_PATH = process.env.MATERIALS_CSV_PATH
   ? path.resolve(process.cwd(), process.env.MATERIALS_CSV_PATH)
   : path.join(process.cwd(), "prisma/seed-data/materials.csv");
-
-function parseCsvLine(line: string): string[] {
-  const fields: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (char === "," && !inQuotes) {
-      fields.push(current);
-      current = "";
-      continue;
-    }
-
-    current += char;
-  }
-
-  fields.push(current);
-  return fields;
-}
-
-function parseCsv(content: string): CsvRecord[] {
-  const lines = content.split(/\r?\n/).filter((line) => line.trim().length > 0);
-  if (lines.length === 0) return [];
-
-  const headers = parseCsvLine(lines[0]);
-  const rows: CsvRecord[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCsvLine(lines[i]);
-    const row: CsvRecord = {};
-    headers.forEach((header, idx) => {
-      row[header] = values[idx] ?? "";
-    });
-    rows.push(row);
-  }
-
-  return rows;
-}
 
 function extractCodeFromNotes(notes: string | null): string | null {
   if (!notes) return null;
@@ -331,9 +280,10 @@ async function main() {
   const locBrugge = await prisma.location.create({ data: { name: "Stadsplein Brugge", address: "Markt", postalCode: "8000", city: "Brugge" } });
   const locMechelen = await prisma.location.create({ data: { name: "Hangar Mechelen", address: "Industrieweg 10", postalCode: "2800", city: "Mechelen" } });
 
-  // Seed functions
+  // Seed functions — Electrician gets both a day and an hour rate (L1) so
+  // dev data exercises the hourly billing path (H5) as soon as it lands.
   const fnPM = await prisma.function.create({ data: { name: "Project Manager" } });
-  const fnElec = await prisma.function.create({ data: { name: "Electrician" } });
+  const fnElec = await prisma.function.create({ data: { name: "Electrician", dayRate: 320, hourRate: 45 } });
   const fnCarp = await prisma.function.create({ data: { name: "Carpenter" } });
   const fnPlumb = await prisma.function.create({ data: { name: "Plumber" } });
   const fnCrane = await prisma.function.create({ data: { name: "Crane Operator" } });
@@ -348,16 +298,27 @@ async function main() {
     prisma.person.create({ data: { name: "Fiona Janssen", role: "Safety Officer", email: "fiona@example.com", phone: "0476 67 89 01", dayPrice: 360 } }),
   ]);
 
-  // Link persons to functions
+  // Link persons to functions — Bob carries a second function (Carpenter,
+  // at his own override rate) so multi-function UI has real data to show;
+  // the other five stay 1:1, matching production data until the PO
+  // assigns second functions themselves.
   await prisma.personFunction.createMany({
     data: [
       { personId: alice.id, functionId: fnPM.id },
       { personId: bob.id, functionId: fnElec.id },
+      { personId: bob.id, functionId: fnCarp.id, dayRate: 280, hourRate: 38 },
       { personId: charlie.id, functionId: fnCarp.id },
       { personId: diana.id, functionId: fnPlumb.id },
       { personId: eric.id, functionId: fnCrane.id },
       { personId: fiona.id, functionId: fnSafety.id },
     ],
+  });
+
+  // L3: Summer Sounds negotiated its own Electrician rate — every other
+  // client is left without a rate card row (the "show all functions"
+  // default the picker-scoping code must fall back to).
+  await prisma.clientFunctionRate.create({
+    data: { clientId: clientSummerSounds.id, functionId: fnElec.id, dayRate: 300, hourRate: 42 },
   });
 
   const materialDefs = importMaterialsFromCsv();
@@ -417,6 +378,20 @@ async function main() {
       stockItemIds.push(item.id);
     }
     materials[def.name] = { id: material.id, dayPrice: def.dayPrice, stockItemIds };
+  }
+
+  // M1/K4: give a couple of materials a cost price and pre-import
+  // revenue figure so phase 3's payback feature has non-empty data —
+  // the first two materials in insertion order, regardless of whether
+  // the real CSV or the fallback list was used.
+  for (const m of Object.values(materials).slice(0, 2)) {
+    await prisma.material.update({
+      where: { id: m.id },
+      data: {
+        costPrice: Math.round(m.dayPrice * 4 * 100) / 100,
+        revenueBefore: Math.round(m.dayPrice * 12 * 100) / 100,
+      },
+    });
   }
 
   // Helper: midnight -> 23:59:59

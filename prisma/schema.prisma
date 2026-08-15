@@ -40,17 +40,18 @@ model RolePermission {
 }
 
 model Client {
-  id          Int      @id @default(autoincrement())
-  name        String
-  contactName String?
-  email       String?
-  phone       String?
-  address     String?
-  postalCode  String?
-  city        String?
-  vatNumber   String?
-  notes       String?
-  projects    Project[]
+  id            Int                  @id @default(autoincrement())
+  name          String
+  contactName   String?
+  email         String?
+  phone         String?
+  address       String?
+  postalCode    String?
+  city          String?
+  vatNumber     String?
+  notes         String?
+  projects      Project[]
+  functionRates ClientFunctionRate[]
 }
 
 model Location {
@@ -65,18 +66,36 @@ model Location {
 }
 
 model Function {
-  id      Int              @id @default(autoincrement())
-  name    String           @unique
-  people  PersonFunction[]
+  id          Int                  @id @default(autoincrement())
+  name        String               @unique
+  dayRate     Decimal?             @db.Decimal(10, 2)
+  hourRate    Decimal?             @db.Decimal(10, 2)
+  people      PersonFunction[]
+  assignments PeriodPerson[]
+  clientRates ClientFunctionRate[]
 }
 
 model PersonFunction {
   personId   Int
   functionId Int
+  dayRate    Decimal? @db.Decimal(10, 2)
+  hourRate   Decimal? @db.Decimal(10, 2)
   person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
   function   Function @relation(fields: [functionId], references: [id], onDelete: Cascade)
 
   @@id([personId, functionId])
+}
+
+model ClientFunctionRate {
+  id         Int      @id @default(autoincrement())
+  clientId   Int
+  functionId Int
+  dayRate    Decimal? @db.Decimal(10, 2)
+  hourRate   Decimal? @db.Decimal(10, 2)
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  function   Function @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, functionId])
 }
 
 model Category {
@@ -174,6 +193,10 @@ model Material {
   setupCost           Decimal?               @db.Decimal(10, 2)
   isBundle            Boolean                @default(false)
   bundlePriceOverride Decimal?               @db.Decimal(10, 2)
+  archived            Boolean                @default(false)
+  costPrice           Decimal?               @db.Decimal(10, 2)
+  listPrice           Decimal?               @db.Decimal(10, 2)
+  revenueBefore       Decimal?               @db.Decimal(10, 2)
   categoryRel         Category?              @relation(fields: [categoryId], references: [id])
   stockItems          StockItem[]
   projectPrices       ProjectMaterialPrice[]
@@ -188,6 +211,7 @@ model StockItem {
   unitNumber  Int
   identifier  String?
   notes       String?
+  costPrice   Decimal?          @db.Decimal(10, 2)
   material    Material          @relation(fields: [materialId], references: [id], onDelete: Cascade)
   assignments PeriodStockItem[]
 
@@ -249,12 +273,19 @@ model PeriodPerson {
   id               Int                @id @default(autoincrement())
   periodId         Int
   personId         Int
+  functionId       Int?
   role             String?
+  startAt          DateTime?
+  endAt            DateTime?
+  overlapAck       Boolean            @default(false)
+  billingUnit      String             @default("dag")
+  rateSnapshot     Decimal?           @db.Decimal(10, 2)
   dayPriceSnapshot Decimal            @db.Decimal(10, 2)
   discountPct      Decimal?           @db.Decimal(5, 2)
   discountAmount   Decimal?           @db.Decimal(10, 2)
   period           Period             @relation(fields: [periodId], references: [id], onDelete: Cascade)
   person           Person             @relation(fields: [personId], references: [id], onDelete: Cascade)
+  function         Function?          @relation(fields: [functionId], references: [id])
   travelCosts      PersonTravelCost[]
 
   @@unique([periodId, personId])

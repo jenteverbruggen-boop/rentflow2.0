@@ -40,7 +40,17 @@ export interface Client {
   city: string | null;
   vatNumber: string | null;
   notes: string | null;
+  functionRates?: ClientFunctionRate[];
   _count?: { projects: number };
+}
+
+export interface ClientFunctionRate {
+  id: number;
+  clientId: number;
+  functionId: number;
+  dayRate: number | null;
+  hourRate: number | null;
+  function?: Function;
 }
 
 export interface Location {
@@ -57,6 +67,16 @@ export interface Location {
 export interface Function {
   id: number;
   name: string;
+  dayRate: number | null;
+  hourRate: number | null;
+}
+
+export interface PersonFunction {
+  personId: number;
+  functionId: number;
+  dayRate: number | null;
+  hourRate: number | null;
+  function?: Function;
 }
 
 export interface Category {
@@ -137,6 +157,10 @@ export interface Material {
   setupCost: number | null;
   isBundle: boolean;
   bundlePriceOverride: number | null;
+  archived: boolean;
+  costPrice: number | null;
+  listPrice: number | null;
+  revenueBefore: number | null;
   components?: MaterialComponent[];
   stockItems?: StockItem[];
   totalStock?: number;
@@ -162,6 +186,7 @@ export interface StockItem {
   unitNumber: number;
   identifier: string | null;
   notes: string | null;
+  costPrice: number | null;
   material?: Material;
   assignments?: StockItemAssignment[];
 }
@@ -211,11 +236,18 @@ export interface PeriodPerson {
   id: number;
   periodId: number;
   personId: number;
+  functionId: number | null;
   role: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  overlapAck: boolean;
+  billingUnit: "dag" | "uur";
+  rateSnapshot: number | null;
   dayPriceSnapshot: number | null;
   discountPct: number | null;
   discountAmount: number | null;
   person: Person;
+  function?: Function | null;
   travelCosts?: PersonTravelCost[];
 }
 

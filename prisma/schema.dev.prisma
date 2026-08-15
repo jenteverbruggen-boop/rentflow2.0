@@ -40,17 +40,18 @@ model RolePermission {
 }
 
 model Client {
-  id          Int      @id @default(autoincrement())
-  name        String
-  contactName String?
-  email       String?
-  phone       String?
-  address     String?
-  postalCode  String?
-  city        String?
-  vatNumber   String?
-  notes       String?
-  projects    Project[]
+  id            Int                  @id @default(autoincrement())
+  name          String
+  contactName   String?
+  email         String?
+  phone         String?
+  address       String?
+  postalCode    String?
+  city          String?
+  vatNumber     String?
+  notes         String?
+  projects      Project[]
+  functionRates ClientFunctionRate[]
 }
 
 model Location {
@@ -65,18 +66,36 @@ model Location {
 }
 
 model Function {
-  id     Int              @id @default(autoincrement())
-  name   String           @unique
-  people PersonFunction[]
+  id          Int                  @id @default(autoincrement())
+  name        String               @unique
+  dayRate     Float?
+  hourRate    Float?
+  people      PersonFunction[]
+  assignments PeriodPerson[]
+  clientRates ClientFunctionRate[]
 }
 
 model PersonFunction {
   personId   Int
   functionId Int
+  dayRate    Float?
+  hourRate   Float?
   person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
   function   Function @relation(fields: [functionId], references: [id], onDelete: Cascade)
 
   @@id([personId, functionId])
+}
+
+model ClientFunctionRate {
+  id         Int      @id @default(autoincrement())
+  clientId   Int
+  functionId Int
+  dayRate    Float?
+  hourRate   Float?
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  function   Function @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, functionId])
 }
 
 model Category {
@@ -174,6 +193,10 @@ model Material {
   setupCost           Float?
   isBundle            Boolean                @default(false)
   bundlePriceOverride Float?
+  archived            Boolean                @default(false)
+  costPrice           Float?
+  listPrice           Float?
+  revenueBefore       Float?
   categoryRel         Category?              @relation(fields: [categoryId], references: [id])
   stockItems          StockItem[]
   projectPrices       ProjectMaterialPrice[]
@@ -188,6 +211,7 @@ model StockItem {
   unitNumber  Int
   identifier  String?
   notes       String?
+  costPrice   Float?
   material    Material          @relation(fields: [materialId], references: [id], onDelete: Cascade)
   assignments PeriodStockItem[]
 
@@ -249,12 +273,19 @@ model PeriodPerson {
   id               Int                @id @default(autoincrement())
   periodId         Int
   personId         Int
+  functionId       Int?
   role             String?
+  startAt          DateTime?
+  endAt            DateTime?
+  overlapAck       Boolean            @default(false)
+  billingUnit      String             @default("dag")
+  rateSnapshot     Float?
   dayPriceSnapshot Float
   discountPct      Float?
   discountAmount   Float?
   period           Period             @relation(fields: [periodId], references: [id], onDelete: Cascade)
   person           Person             @relation(fields: [personId], references: [id], onDelete: Cascade)
+  function         Function?          @relation(fields: [functionId], references: [id])
   travelCosts      PersonTravelCost[]
 
   @@unique([periodId, personId])
