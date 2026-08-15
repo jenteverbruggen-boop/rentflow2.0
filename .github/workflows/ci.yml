@@ -23,7 +23,14 @@ jobs:
       - name: Generate Prisma client (Postgres)
         run: npx prisma generate
 
-      - name: TypeScript type check
+      # Money fields (dayPrice, setupCostSnapshot, etc.) are Decimal in
+      # prisma/schema.prisma (Postgres) but Float in prisma/schema.dev.prisma
+      # (SQLite dev). Type-checking against the Postgres client here — before
+      # the SQLite client is generated below for tests — is what catches
+      # Decimal-vs-number drift at build time instead of in production
+      # (Y1.5). Do not reorder this after the SQLite generate step, and do
+      # not skip it: it is the only place CI sees the Postgres-shaped types.
+      - name: TypeScript type check (against Postgres client — Decimal drift guard)
         run: npx tsc --noEmit
 
       - name: Generate Prisma client (SQLite dev, for integration tests)
