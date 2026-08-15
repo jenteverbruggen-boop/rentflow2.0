@@ -16,6 +16,10 @@ interface CompanyInfo {
 interface DocumentHeaderProps {
   meta: {
     opdrachtgever?: string | null;
+    // J2a — the client billing block: address + VAT, not just the name.
+    // Optional so pakbon/callsheet (which never pass these) are unaffected.
+    opdrachtgeverAdres?: string | null;
+    opdrachtgeverVat?: string | null;
     locatie?: string | null;
     locatieAdres?: string | null;
     projectnummer?: number;
@@ -77,6 +81,12 @@ export function DocumentHeader({ meta }: DocumentHeaderProps) {
             <span className="font-medium">Opdrachtgever:</span>{" "}
             {meta.opdrachtgever}
           </p>
+        )}
+        {meta.opdrachtgeverAdres && (
+          <p className="text-xs text-muted-foreground">{meta.opdrachtgeverAdres}</p>
+        )}
+        {meta.opdrachtgeverVat && (
+          <p className="text-xs text-muted-foreground">BTW: {meta.opdrachtgeverVat}</p>
         )}
         {meta.locatie && (
           <p>

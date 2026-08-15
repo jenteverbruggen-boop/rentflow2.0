@@ -41,6 +41,11 @@ export function ProjectDetailHeader({ project }: Props) {
             Callsheet afdrukken
           </Button>
         </Link>
+        <Link href={`/projects/${project.id}/kosten`}>
+          <Button variant="outline" size="sm">
+            Kosten afdrukken
+          </Button>
+        </Link>
       </div>
 
       <Card>
