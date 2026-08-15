@@ -37,11 +37,11 @@ export function useRoles() {
   });
 
   const rename = useMutation({
-    mutationFn: ({ id, label }: { id: number; label: string }) =>
+    mutationFn: ({ id, label, scope }: { id: number; label: string; scope: "all" | "own" }) =>
       fetch(`/api/roles/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label }),
+        body: JSON.stringify({ label, scope }),
       }).then((r) => jsonOrThrow(r, "Opslaan mislukt")),
     onSuccess: invalidate,
   });

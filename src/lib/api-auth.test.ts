@@ -116,6 +116,32 @@ describe("requireModule", () => {
       requireModule("materialen", "verwijderen"),
     ).resolves.toBeTruthy();
   });
+
+  // N5.1 — scope: own is read-only, and this override wins even against a
+  // deliberately wide-open matrix (own-data-scoping-design.md:74-80).
+  it("scope: own allows lezen when the matrix grants it", async () => {
+    mockAuthenticatedAs(1);
+    mockPrisma.user.findUnique.mockResolvedValue(
+      roleRow("own", { projecten: "verwijderen" }),
+    );
+    await expect(requireModule("projecten", "lezen")).resolves.toBeTruthy();
+  });
+
+  it("scope: own blocks wijzigen even when the matrix grants verwijderen", async () => {
+    mockAuthenticatedAs(1);
+    mockPrisma.user.findUnique.mockResolvedValue(
+      roleRow("own", { projecten: "verwijderen" }),
+    );
+    await expect(requireModule("projecten", "wijzigen")).rejects.toThrow();
+  });
+
+  it("scope: own blocks verwijderen even when the matrix grants verwijderen", async () => {
+    mockAuthenticatedAs(1);
+    mockPrisma.user.findUnique.mockResolvedValue(
+      roleRow("own", { projecten: "verwijderen" }),
+    );
+    await expect(requireModule("projecten", "verwijderen")).rejects.toThrow();
+  });
 });
 
 describe("permission resolution end to end (N1.6)", () => {
@@ -169,10 +195,10 @@ describe("permission resolution end to end (N1.6)", () => {
     // by construction: resolveAccess never selects isSystem from the DB,
     // so a custom role's permissions are honoured identically.
     mockPrisma.user.findUnique.mockResolvedValue(
-      roleRow("own", { klanten: "wijzigen" }),
+      roleRow("all", { klanten: "wijzigen" }),
     );
     const access = await requireModule("klanten", "wijzigen");
-    expect(access.scope).toBe("own");
+    expect(access.scope).toBe("all");
     await expect(requireModule("klanten", "verwijderen")).rejects.toThrow();
   });
 });

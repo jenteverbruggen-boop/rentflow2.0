@@ -5,7 +5,10 @@ import { requireModule, forbidden, badRequest, notFound, conflict, serverError }
 
 type Params = { params: Promise<{ id: string }> };
 
-const patchSchema = z.object({ label: z.string().min(1, "Naam is verplicht") });
+const patchSchema = z.object({
+  label: z.string().min(1, "Naam is verplicht").optional(),
+  scope: z.enum(["all", "own"]).optional(),
+});
 
 export async function PUT(req: NextRequest, { params }: Params) {
   const auth = await requireModule("gebruikers", "wijzigen").catch(() => null);
@@ -15,14 +18,21 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const parsed = patchSchema.safeParse(await req.json());
     if (!parsed.success) return badRequest(parsed.error.issues[0].message);
+    if (parsed.data.label === undefined && parsed.data.scope === undefined) {
+      return badRequest("Geen wijzigingen opgegeven");
+    }
 
     const role = await prisma.role.findUnique({ where: { id: parseInt(id) } });
     if (!role) return notFound();
-    // isSystem roles are renameable — only key is immutable, and this
-    // route never accepts key at all, so no extra branch is needed here.
+    // isSystem roles are renameable and their scope is editable too — only
+    // key is immutable, and this route never accepts key at all, so no
+    // extra branch is needed here.
     const updated = await prisma.role.update({
       where: { id: parseInt(id) },
-      data: { label: parsed.data.label },
+      data: {
+        ...(parsed.data.label !== undefined && { label: parsed.data.label }),
+        ...(parsed.data.scope !== undefined && { scope: parsed.data.scope }),
+      },
     });
     return NextResponse.json(updated);
   } catch (err) {

@@ -75,12 +75,19 @@ export async function resolveCurrentAccess(): Promise<ResolvedAccess> {
  * after re-login (7-day tokens). The JWT keeps carrying `role` for nav
  * rendering only (until N4.3 removes even that); it is never trusted for
  * authorisation here.
+ *
+ * N5's read-only rule lives here, once, so no individual route can forget
+ * it: `scope: own` is read-only regardless of what the matrix says for
+ * this module — a "Freelancer" role accidentally granted `verwijderen`
+ * still gets refused, because this check runs before (and vetoes) the
+ * matrix check below (own-data-scoping-design.md:74-80).
  */
 export async function requireModule(
   module: ModuleKey,
   level: AccessLevel,
 ): Promise<ResolvedAccess> {
   const access = await resolveCurrentAccess();
+  if (access.scope === "own" && level !== "lezen") throw new Error("Forbidden");
   const held = access.permissions[module] ?? "geen";
   if (!satisfies(held, level)) throw new Error("Forbidden");
   return access;

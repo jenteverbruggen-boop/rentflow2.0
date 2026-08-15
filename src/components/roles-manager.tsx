@@ -52,6 +52,7 @@ export function RolesManager() {
             <TableRow>
               <TableHead>Naam</TableHead>
               <TableHead>Sleutel</TableHead>
+              <TableHead>Zichtbaarheid</TableHead>
               <TableHead>Gebruikers</TableHead>
               <TableHead className="text-right">Acties</TableHead>
             </TableRow>
@@ -64,6 +65,13 @@ export function RolesManager() {
                   {r.isSystem && <Badge variant="secondary" className="ml-1 text-[10px]">systeem</Badge>}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-xs">{r.key}</TableCell>
+                <TableCell className="text-xs">
+                  {r.scope === "own" ? (
+                    <Badge variant="outline">alleen eigen boekingen</Badge>
+                  ) : (
+                    <span className="text-muted-foreground">volledig</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-muted-foreground text-xs">{r._count?.users ?? 0}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
