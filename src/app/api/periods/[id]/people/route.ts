@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModule, forbidden, badRequest, conflict, notFound, serverError } from "@/lib/api-auth";
-import { checkPersonAvailability } from "@/lib/availability";
 import { effectivePersonPrice } from "@/lib/effective-price";
+import { bookPersonAssignment } from "@/lib/person-booking";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
 import { redactMoney } from "@/lib/redact";
 
@@ -23,43 +23,36 @@ export async function POST(req: NextRequest, { params }: Params) {
     const person = await prisma.person.findUnique({ where: { id: parseInt(personId) } });
     if (!person) return notFound();
 
-    const existing = await prisma.periodPerson.findUnique({
-      where: { periodId_personId: { periodId, personId: parseInt(personId) } },
-    });
-    if (existing) {
-      return conflict(`${person.name} staat al toegewezen aan deze periode`);
-    }
-
-    const check = await checkPersonAvailability(parseInt(personId), {
-      from: period.startDate,
-      to: period.endDate,
-      excludePeriodId: periodId,
-      sameProjectId: period.projectId,
-    });
-    if (check.blockingProject) {
-      return conflict(
-        `${person.name} staat al ingepland op project "${check.blockingProject.name}" tijdens deze periode`
-      );
-    }
-    const warnings: string[] = [];
-    if (check.sameProjectWarning) {
-      warnings.push(`${person.name} staat ook in een andere periode van dit project`);
-    }
-
     const resolvedFunctionId = functionId != null ? parseInt(functionId) : null;
     const price = await effectivePersonPrice(period.projectId, parseInt(personId), resolvedFunctionId);
-    const assignment = await prisma.periodPerson.create({
-      data: {
+
+    // H1.2 — check-then-create now runs inside one transaction, with the
+    // availability re-check re-run against the same tx; a racing double
+    // insert surfaces as P2002, caught below, not a raw 500.
+    let result;
+    try {
+      result = await bookPersonAssignment({
         periodId,
         personId: parseInt(personId),
+        personName: person.name,
         role: role ?? null,
         functionId: resolvedFunctionId,
         dayPriceSnapshot: price.amount,
         discountPct: discountPct != null ? toNumber(discountPct) : null,
         discountAmount: discountAmount != null ? toNumber(discountAmount) : null,
-      },
-      include: { person: true, function: true },
-    });
+        from: period.startDate,
+        to: period.endDate,
+        excludePeriodId: periodId,
+        sameProjectId: period.projectId,
+      });
+    } catch (e: unknown) {
+      const err = e as { code?: string; message?: string };
+      if (err.code === "DUPLICATE" || err.code === "BLOCKED") return conflict(err.message ?? "Conflict");
+      if (err.code === "P2002") return conflict("Conflict bij gelijktijdige boeking — probeer opnieuw");
+      throw e;
+    }
+
+    const { assignment, warnings } = result;
     return NextResponse.json(
       redactMoney(
         {

@@ -79,16 +79,17 @@ export async function bundleAvailableCount(
 export async function checkPersonAvailability(
   personId: number,
   args: RangeArgs & { sameProjectId?: number },
+  client: PrismaClient = defaultPrisma,
 ): Promise<{
   blockingProject?: { id: number; name: string };
   sameProjectWarning?: { projectId: number; projectName: string };
 }> {
-  // Coarse pre-filter at the period level (Prisma), then the precise
-  // effectiveWindow() comparison in JS — an assignment's own window is
-  // always inside its period, so nothing that could match is excluded
-  // by the coarse filter; it only avoids fetching rows that plainly
-  // can't overlap.
-  const candidates = await defaultPrisma.periodPerson.findMany({
+  // `client` accepts a `tx` handle (H1.2, mirrors bundleAvailableCount
+  // above) so a re-check runs inside the same transaction as the write
+  // it guards. Coarse period-level pre-filter, then the precise
+  // effectiveWindow() comparison in JS — a window is always inside its
+  // own period, so nothing real is excluded by the coarse filter.
+  const candidates = await client.periodPerson.findMany({
     where: {
       personId,
       ...(args.excludePeriodId != null
