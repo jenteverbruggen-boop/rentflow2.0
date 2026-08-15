@@ -1,5 +1,6 @@
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { effectiveWindow } from "@/lib/assignment-window";
 
 interface RangeArgs {
   from: Date;
@@ -82,7 +83,12 @@ export async function checkPersonAvailability(
   blockingProject?: { id: number; name: string };
   sameProjectWarning?: { projectId: number; projectName: string };
 }> {
-  const conflict = await defaultPrisma.periodPerson.findFirst({
+  // Coarse pre-filter at the period level (Prisma), then the precise
+  // effectiveWindow() comparison in JS — an assignment's own window is
+  // always inside its period, so nothing that could match is excluded
+  // by the coarse filter; it only avoids fetching rows that plainly
+  // can't overlap.
+  const candidates = await defaultPrisma.periodPerson.findMany({
     where: {
       personId,
       ...(args.excludePeriodId != null
@@ -93,6 +99,10 @@ export async function checkPersonAvailability(
       },
     },
     include: { period: { include: { project: true } } },
+  });
+  const conflict = candidates.find((c) => {
+    const w = effectiveWindow(c);
+    return w.from < args.to && w.to > args.from;
   });
   if (!conflict) return {};
   const project = conflict.period.project;

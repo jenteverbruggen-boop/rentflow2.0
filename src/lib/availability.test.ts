@@ -4,7 +4,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     stockItem: { findMany: vi.fn() },
     periodStockItem: { findMany: vi.fn() },
-    periodPerson: { findFirst: vi.fn() },
+    periodPerson: { findMany: vi.fn() },
   },
 }));
 
@@ -23,7 +23,7 @@ describe("availability — strict boundary (B7 Q16)", () => {
   beforeEach(() => {
     mockPrisma.stockItem.findMany.mockResolvedValue([STOCK_ITEM]);
     mockPrisma.periodStockItem.findMany.mockResolvedValue([]);
-    mockPrisma.periodPerson.findFirst.mockResolvedValue(null);
+    mockPrisma.periodPerson.findMany.mockResolvedValue([]);
   });
 
   it("back-to-back periods should NOT conflict (end 12:00 / start 12:00)", async () => {
@@ -64,9 +64,17 @@ describe("availability — strict boundary (B7 Q16)", () => {
   });
 });
 
+// H1.1 — checkPersonAvailability now compares against effectiveWindow()
+// (the assignment's own startAt/endAt when set, else the period's),
+// not the period's window directly. The Prisma-level query still does
+// a coarse period-overlap pre-filter (mocked below exactly as before —
+// a period-level AND clause); the fixtures return candidate rows with
+// no startAt/endAt (undefined), so effectiveWindow falls back to the
+// period's own dates, reproducing the pre-H1 behavior exactly. This is
+// the null-window regression case H1.4 also covers explicitly.
 describe("checkPersonAvailability — strict boundary", () => {
   it("returns no conflict when back-to-back", async () => {
-    mockPrisma.periodPerson.findFirst.mockResolvedValue(null);
+    mockPrisma.periodPerson.findMany.mockResolvedValue([]);
     const result = await checkPersonAvailability(1, {
       from: new Date("2026-05-14T12:00:00Z"),
       to: new Date("2026-05-16T17:00:00Z"),
@@ -81,7 +89,7 @@ describe("checkPersonAvailability — same-day non-overlapping windows (H3)", ()
   // date-only strings (from === to), producing a zero-width window that
   // matched nothing regardless of the query — everyone read "Beschikbaar".
   beforeEach(() => {
-    mockPrisma.periodPerson.findFirst.mockImplementation(
+    mockPrisma.periodPerson.findMany.mockImplementation(
       ({
         where,
       }: {
@@ -96,11 +104,22 @@ describe("checkPersonAvailability — same-day non-overlapping windows (H3)", ()
         const existingEnd = new Date("2026-06-01T17:00:00Z");
         const queryEnd = startCond.startDate?.lt;
         const queryStart = endCond.endDate?.gt;
-        if (!queryStart || !queryEnd) return null;
+        if (!queryStart || !queryEnd) return [];
         const overlaps = existingStart < queryEnd && existingEnd > queryStart;
         return overlaps
-          ? { id: 99, period: { project: { id: 7, name: "Project A" } } }
-          : null;
+          ? [
+              {
+                id: 99,
+                startAt: null,
+                endAt: null,
+                period: {
+                  startDate: existingStart,
+                  endDate: existingEnd,
+                  project: { id: 7, name: "Project A" },
+                },
+              },
+            ]
+          : [];
       },
     );
   });
