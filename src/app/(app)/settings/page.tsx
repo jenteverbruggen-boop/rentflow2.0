@@ -1,20 +1,18 @@
-"use client";
+import { resolveCurrentAccess } from "@/lib/api-auth";
+import { satisfies } from "@/lib/modules";
+import { ForbiddenPage } from "@/components/forbidden-page";
+import { SettingsPageContent } from "./settings-page-content";
 
-import { SettingsForm } from "@/components/settings-form";
-import { LogoUpload } from "@/components/logo-upload";
-import { RolesManager } from "@/components/roles-manager";
-import { PermissionMatrix } from "@/components/permission-matrix";
-import { OpenPermissionsBanner } from "@/components/open-permissions-banner";
+// Server Component (N4.3) — the permission check runs before any data
+// fetch or client interactivity mounts, mirroring sidebar.tsx's direct
+// resolveCurrentAccess() call rather than a client-side round-trip.
+export default async function SettingsPage() {
+  const access = await resolveCurrentAccess().catch(() => null);
+  const held = access?.permissions.instellingen ?? "geen";
 
-export default function SettingsPage() {
-  return (
-    <div className="space-y-6 max-w-3xl">
-      <h2 className="text-2xl font-bold">Instellingen</h2>
-      <SettingsForm />
-      <LogoUpload />
-      <RolesManager />
-      <OpenPermissionsBanner />
-      <PermissionMatrix />
-    </div>
-  );
+  if (!satisfies(held, "lezen")) {
+    return <ForbiddenPage />;
+  }
+
+  return <SettingsPageContent />;
 }
