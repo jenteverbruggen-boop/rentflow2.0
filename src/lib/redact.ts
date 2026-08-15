@@ -3,11 +3,18 @@ import { satisfies } from "@/lib/modules";
 
 /**
  * Whether money fields should be visible to this caller. This is the
- * single check every money-visibility decision in the app goes through —
- * N5.1b (own-data scoping) extends this exact function with a scope
- * override rather than duplicating the Kosten/Facturen check elsewhere.
+ * single check every money-visibility decision in the app goes through.
+ *
+ * N5.1b: `scope: own` forces the same result as `Kosten/Facturen: geen`,
+ * regardless of what the role's matrix actually grants for that module —
+ * a scoped ("own-data") user sees no money at all, full stop
+ * (own-data-scoping-design.md:82). This is a removal of an ability a
+ * misconfigured matrix would otherwise grant (a "Freelancer" role with
+ * `Kosten/Facturen: verwijderen` still sees nothing), not merely a
+ * default — tested against that exact case in redact.test.ts.
  */
 export function moneyVisible(access: ResolvedAccess): boolean {
+  if (access.scope === "own") return false;
   const held = access.permissions.kosten_facturen ?? "geen";
   return satisfies(held, "lezen");
 }

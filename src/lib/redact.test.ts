@@ -16,6 +16,18 @@ function access(kostenLevel: string): ResolvedAccess {
   };
 }
 
+// N5.1b — same shape, but scope: own, used to prove the override fires
+// even against a deliberately wide-open matrix (verwijderen), not just
+// the geen case a sensible default would also happen to satisfy.
+function scopedAccess(kostenLevel: string): ResolvedAccess {
+  return {
+    id: 1,
+    personId: null,
+    scope: "own",
+    permissions: { kosten_facturen: kostenLevel as never },
+  };
+}
+
 // A fixture tree with every money field from the inventory table
 // populated (including a bundle booking and a travel cost), built as a
 // plain object rather than via Prisma — this is the exact shape
@@ -144,6 +156,15 @@ describe("redactMoney", () => {
     expect(result.periods[0].materials[0].stockItem.material.name).toBe("Tent");
     expect(result.periods[0].people[0].person.name).toBe("Alice");
   });
+
+  // N5.1b — scope: own overrides even a fully-open Kosten/Facturen:
+  // verwijderen. A test that only checked scope + Kosten:geen would pass
+  // even if this override did nothing at all (own-data-scoping-design.md:229).
+  it("strips every money field for scope: own even against Kosten/Facturen: verwijderen", () => {
+    const project = moneyFixture();
+    const result = redactMoney(project, scopedAccess("verwijderen"));
+    assertNoMoneyLeaks(result);
+  });
 });
 
 describe("moneyVisible", () => {
@@ -155,6 +176,12 @@ describe("moneyVisible", () => {
     expect(
       moneyVisible({ id: 1, personId: null, scope: "all", permissions: {} }),
     ).toBe(false);
+  });
+
+  it("false for scope: own regardless of the caller's kosten_facturen level (N5.1b)", () => {
+    expect(moneyVisible(scopedAccess("verwijderen"))).toBe(false);
+    expect(moneyVisible(scopedAccess("lezen"))).toBe(false);
+    expect(moneyVisible(scopedAccess("geen"))).toBe(false);
   });
 });
 
