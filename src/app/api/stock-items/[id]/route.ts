@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, unauthorized, conflict, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, conflict, serverError } from "@/lib/api-auth";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("materialen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
     const { identifier, notes } = await req.json();
@@ -21,8 +21,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("materialen", "verwijderen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
     const stockItemId = parseInt(id);

@@ -2,20 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  unauthorized,
+  requireModule,
+  forbidden,
   badRequest,
   notFound,
   serverError,
 } from "@/lib/api-auth";
+import { redactMoney } from "@/lib/redact";
 
 type Params = { params: Promise<{ id: string; componentId: string }> };
 
 const patchSchema = z.object({ quantity: z.number().int().min(1) });
 
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("materialen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { componentId } = await params;
     const parsed = patchSchema.safeParse(await req.json());
@@ -29,15 +30,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       data: { quantity: parsed.data.quantity },
       include: { child: true },
     });
-    return NextResponse.json(updated);
+    return NextResponse.json(redactMoney(updated, access));
   } catch (err) {
     return serverError((err as Error).message);
   }
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("materialen", "verwijderen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { componentId } = await params;
     const comp = await prisma.materialComponent.findUnique({

@@ -1,23 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  resolveCurrentAccess,
-  unauthorized,
+  requireModule,
+  forbidden,
   badRequest,
   serverError,
 } from "@/lib/api-auth";
 import { nextCode } from "@/lib/material-code";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
-import { redactMoney } from "@/lib/redact";
+import { findRejectedMoneyWrite, redactMoney } from "@/lib/redact";
 import { serializeMaterialsList } from "@/lib/materials-list";
 
 export async function GET(req: NextRequest) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("materialen", "lezen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
-    const access = await resolveCurrentAccess();
     const code = new URL(req.url).searchParams.get("code");
     const materials = await prisma.material.findMany({
       orderBy: { name: "asc" },
@@ -51,10 +49,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("materialen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
+    const body = await req.json();
+    if (findRejectedMoneyWrite(body, access)) return forbidden();
     const {
       name,
       category,
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       setupCost,
       notes,
       initialStock,
-    } = await req.json();
+    } = body;
     if (!name) return badRequest("naam is verplicht");
 
     let code: string | null = manualCode ?? null;
@@ -107,7 +107,6 @@ export async function POST(req: NextRequest) {
         })),
       });
     }
-    const access = await resolveCurrentAccess();
     return NextResponse.json(
       redactMoney(
         {

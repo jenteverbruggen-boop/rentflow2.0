@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  unauthorized,
+  requireModule,
+  forbidden,
   badRequest,
   serverError,
 } from "@/lib/api-auth";
+import { redactMoney } from "@/lib/redact";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,8 +17,8 @@ const schema = z.object({
 });
 
 export async function GET(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("materialen", "lezen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
     const components = await prisma.materialComponent.findMany({
@@ -25,15 +26,21 @@ export async function GET(_req: NextRequest, { params }: Params) {
       include: { child: { include: { categoryRel: true } } },
       orderBy: { id: "asc" },
     });
-    return NextResponse.json(components);
+    // Not flagged in the brief's own route table for redaction, but
+    // component.child carries the same dayPrice/setupCost/
+    // bundlePriceOverride leak shape as materials/[id]/stock-items —
+    // closing it here for consistency.
+    return NextResponse.json(
+      components.map((c) => redactMoney(c, access)),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("materialen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
     const parentId = parseInt(id);

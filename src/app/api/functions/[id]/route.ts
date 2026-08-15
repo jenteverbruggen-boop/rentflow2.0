@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  unauthorized,
+  requireModule,
+  forbidden,
   badRequest,
   notFound,
   conflict,
@@ -13,9 +13,11 @@ import {
 type Params = { params: Promise<{ id: string }> };
 const schema = z.object({ name: z.string().min(1, "Naam is verplicht") });
 
+// TODO(L1): phase 2 adds Function.dayRate/hourRate — reject those two
+// fields on write for callers without Kosten/Facturen: wijzigen.
 export async function PUT(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
     const body = await req.json();
@@ -31,9 +33,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
   }
 }
 
+// TODO(L1): phase 2 adds Function.dayRate/hourRate — no redaction needed
+// here, this handler never returns the function row on success.
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "verwijderen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
     const fn = await prisma.function.findUnique({

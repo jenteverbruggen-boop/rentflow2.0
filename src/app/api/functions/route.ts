@@ -2,17 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  unauthorized,
+  requireModule,
+  forbidden,
   badRequest,
   serverError,
 } from "@/lib/api-auth";
 
 const schema = z.object({ name: z.string().min(1, "Naam is verplicht") });
 
+// TODO(L1): phase 2 adds Function.dayRate/hourRate — redact those two
+// fields here for callers without Kosten/Facturen: lezen once they exist.
 export async function GET() {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "lezen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const functions = await prisma.function.findMany({
       orderBy: { name: "asc" },
@@ -23,9 +25,11 @@ export async function GET() {
   }
 }
 
+// TODO(L1): phase 2 adds Function.dayRate/hourRate — reject those two
+// fields on write for callers without Kosten/Facturen: wijzigen.
 export async function POST(req: NextRequest) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const body = await req.json();
     const parsed = schema.safeParse(body);

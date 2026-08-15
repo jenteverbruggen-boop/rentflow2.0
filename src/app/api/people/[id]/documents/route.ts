@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, badRequest, serverError } from "@/lib/api-auth";
 import { storeDocument, listDocuments } from "@/lib/documents";
 
 type Params = { params: Promise<{ id: string }> };
@@ -7,8 +7,8 @@ type Params = { params: Promise<{ id: string }> };
 const MAX_SIZE = 10 * 1024 * 1024;
 
 export async function GET(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "lezen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
     const docs = await listDocuments(parseInt(id));
@@ -19,8 +19,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
     const formData = await req.formData();

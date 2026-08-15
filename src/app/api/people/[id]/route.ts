@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  resolveCurrentAccess,
-  unauthorized,
+  requireModule,
   badRequest,
   forbidden,
   serverError,
@@ -14,8 +12,8 @@ import { findRejectedMoneyWrite, redactMoney } from "@/lib/redact";
 type Params = { params: Promise<{ id: string }> };
 
 export async function PUT(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { id } = await params;
@@ -34,9 +32,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     } = body;
     if (!name) return badRequest("naam is verplicht");
 
-    const access = await resolveCurrentAccess();
-    const rejectedField = findRejectedMoneyWrite(body, access);
-    if (rejectedField) return forbidden();
+    if (findRejectedMoneyWrite(body, access)) return forbidden();
 
     const person = await prisma.person.update({
       where: { id: parseInt(id) },
@@ -78,8 +74,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "verwijderen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
     const { id } = await params;

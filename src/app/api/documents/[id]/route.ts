@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, unauthorized, notFound, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, notFound, serverError } from "@/lib/api-auth";
 import { getDocument, deleteDocument } from "@/lib/documents";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "lezen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
     const doc = await getDocument(parseInt(id));
@@ -23,8 +23,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "verwijderen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
     await deleteDocument(parseInt(id));

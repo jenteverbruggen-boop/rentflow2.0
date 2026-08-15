@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  requireAuth,
-  resolveCurrentAccess,
-  unauthorized,
+  requireModule,
+  forbidden,
   badRequest,
   serverError,
 } from "@/lib/api-auth";
 import { toNumber } from "@/lib/serialize";
-import { redactMoney } from "@/lib/redact";
+import { findRejectedMoneyWrite, redactMoney } from "@/lib/redact";
 
 export async function GET() {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "lezen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
-    const access = await resolveCurrentAccess();
     const people = await prisma.person.findMany({
       orderBy: { name: "asc" },
       include: { functions: { include: { function: true } } },
@@ -38,10 +36,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("personen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
 
   try {
+    const body = await req.json();
+    if (findRejectedMoneyWrite(body, access)) return forbidden();
     const {
       name,
       role,
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       city,
       country,
       functionIds,
-    } = await req.json();
+    } = body;
     if (!name) return badRequest("naam is verplicht");
     const person = await prisma.person.create({
       data: {
@@ -76,7 +76,6 @@ export async function POST(req: NextRequest) {
       },
       include: { functions: { include: { function: true } } },
     });
-    const access = await resolveCurrentAccess();
     return NextResponse.json(
       redactMoney(
         {

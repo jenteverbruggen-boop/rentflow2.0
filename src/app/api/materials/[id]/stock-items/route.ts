@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth, resolveCurrentAccess, unauthorized, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, serverError } from "@/lib/api-auth";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
 import { redactMoney } from "@/lib/redact";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("materialen", "lezen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
-    const access = await resolveCurrentAccess();
     const items = await prisma.stockItem.findMany({
       where: { materialId: parseInt(id) },
       orderBy: { unitNumber: "asc" },
@@ -62,8 +61,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("materialen", "wijzigen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const { id } = await params;
     const materialId = parseInt(id);
