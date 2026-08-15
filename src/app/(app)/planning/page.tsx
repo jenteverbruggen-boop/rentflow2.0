@@ -9,17 +9,13 @@ import {
   endOfWeek,
   addWeeks,
   subWeeks,
-  isSameDay,
   startOfDay,
   endOfDay,
 } from "date-fns";
 import { nl } from "date-fns/locale";
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
-import { PlanningCalendarItem } from "@/components/planning-calendar-item";
+import { PlanningWeekGrid } from "@/components/planning-week-grid";
+import { PlanningWeekList } from "@/components/planning-week-list";
 import type { Project } from "@/types";
 
 async function fetchProjects(): Promise<Project[]> {
@@ -46,7 +42,7 @@ export default function PlanningPage() {
     staleTime: 60_000,
   });
 
-  const days = eachDayOfInterval({
+  const dayDates = eachDayOfInterval({
     start: startOfWeek(week, { weekStartsOn: 1 }),
     end: endOfWeek(week, { weekStartsOn: 1 }),
   });
@@ -58,9 +54,19 @@ export default function PlanningPage() {
       return new Date(p.startDate) <= dayEnd && new Date(p.endDate) >= dayStart;
     });
 
+  const days = dayDates.map((date) => ({
+    date,
+    projects: projectsOnDay(date).map((project) => ({
+      project,
+      ...countAssignments(project),
+    })),
+  }));
+
   const weekProjects = [
-    ...new Map(days.flatMap(projectsOnDay).map((p) => [p.id, p])).values(),
-  ];
+    ...new Map(
+      dayDates.flatMap(projectsOnDay).map((p) => [p.id, p]),
+    ).values(),
+  ].map((project) => ({ project, ...countAssignments(project) }));
 
   return (
     <div className="space-y-6">
@@ -75,8 +81,8 @@ export default function PlanningPage() {
             ← Vorige
           </Button>
           <span className="text-sm text-muted-foreground min-w-40 text-center">
-            {format(days[0], "d MMM", { locale: nl })} –{" "}
-            {format(days[6], "d MMM yyyy", { locale: nl })}
+            {format(dayDates[0], "d MMM", { locale: nl })} –{" "}
+            {format(dayDates[6], "d MMM yyyy", { locale: nl })}
           </span>
           <Button
             variant="outline"
@@ -91,83 +97,8 @@ export default function PlanningPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2">
-        {days.map((day) => {
-          const dayProjects = projectsOnDay(day);
-          const isToday = isSameDay(day, new Date());
-          return (
-            <Card
-              key={day.toISOString()}
-              className={cn("min-h-32", isToday && "border-primary")}
-            >
-              <CardContent className="p-3">
-                <p
-                  className={cn(
-                    "text-xs font-semibold mb-2",
-                    isToday ? "text-primary" : "text-muted-foreground",
-                  )}
-                >
-                  {format(day, "EEE d", { locale: nl })}
-                </p>
-                <div className="space-y-1">
-                  {dayProjects.map((p) => {
-                    const { people, materials } = countAssignments(p);
-                    return (
-                      <PlanningCalendarItem
-                        key={p.id}
-                        project={p}
-                        people={people}
-                        materials={materials}
-                      />
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base text-muted-foreground">
-            Alle projecten deze week
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {weekProjects.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Geen projecten deze week
-            </p>
-          ) : (
-            <div className="space-y-0">
-              {weekProjects.map((p, i) => {
-                const { people, materials } = countAssignments(p);
-                return (
-                  <div key={p.id}>
-                    <Link
-                      href={`/projects/${p.id}`}
-                      className="flex justify-between items-center py-3 hover:bg-accent px-2 rounded-lg transition-colors"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {[p.client, p.location].filter(Boolean).join(" · ")}
-                        </p>
-                      </div>
-                      <div className="text-xs text-muted-foreground text-right">
-                        <p>👥 {people} personen</p>
-                        <p>📦 {materials} materialen</p>
-                      </div>
-                    </Link>
-                    {i < weekProjects.length - 1 && <Separator />}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <PlanningWeekGrid days={days} />
+      <PlanningWeekList weekProjects={weekProjects} />
     </div>
   );
 }
