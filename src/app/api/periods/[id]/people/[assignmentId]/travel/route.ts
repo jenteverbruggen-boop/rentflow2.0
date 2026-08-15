@@ -21,6 +21,18 @@ const schema = z.object({
 export async function GET(_req: NextRequest, { params }: Params) {
   const access = await requireModule("kosten_facturen", "lezen").catch(() => null);
   if (!access) return forbidden();
+  // scope: own is denied here even though this is a `lezen` request that
+  // N5.1's read-only override would otherwise let through: this route
+  // returns nothing but money (label/unitCost/quantity), so there is no
+  // partial-keep the way redactMoney() gives every other endpoint — it
+  // never calls redactMoney()/moneyVisible() at all, it *is* the raw
+  // source those functions redact elsewhere. Found while writing N5.4's
+  // enumeration test against own-data-scoping-design.md §5's Kosten
+  // table (line 899): a scope: own role with Kosten/Facturen: lezen
+  // granted (a plausible misconfiguration, not even the wide-open
+  // default) would otherwise see full travel costs, since requireModule
+  // only overrides write levels, not lezen.
+  if (access.scope === "own") return forbidden();
   try {
     const { assignmentId } = await params;
     const travel = await prisma.personTravelCost.findMany({
