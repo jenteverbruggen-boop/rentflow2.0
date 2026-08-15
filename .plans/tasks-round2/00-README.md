@@ -83,6 +83,26 @@ Most phases have exactly one schema commit. **Two do not, deliberately:** phase 
 
 **117 commits total** (27 · 21 · 27 · 27 · 15), counted directly from the commit headings in each brief after enrichment and review. Each phase brief lists its items in dependency order with the exact commit sequence per item.
 
+### Readiness verdict (audited 2026-08-15, after two adversarial review rounds)
+
+| Phase | Ready? | What must be true before it starts |
+|---|---|---|
+| **0** | ✅ **Runnable now** | Nothing. No open decisions, no design-doc dependency, no forward references. |
+| **1** | ✅ Ready | Phase 0 merged + PO glanced at the commits. `own-data-scoping-design.md` exists; N1–N4 do not depend on it, only N5 does. |
+| **2** | ✅ Ready | Phase 1 merged. **PO retests items 1 + 5 in the running app** (see phase 0's exit report) — this is a real gate: H3/H4/J1 may already satisfy much of what H1/H2 would build, and the answer can shrink phase 2. `data-import-export-design.md` exists. |
+| **3** | ✅ Ready | Phase 2 merged. **`invoice-design.md` read and approved** — it is the largest single artefact in the plan and DDL-3 encodes its model shapes. Peppol is explicitly *not* a gate (schema-shaped now, integration later). |
+| **4** | ✅ Ready | Phase 3 merged. Everything here is optional or cleanup; nothing downstream depends on it. |
+
+**No phase is blocked by a missing artefact.** Every gate is either "previous phase merged" or "a human reads something that already exists".
+
+### How to run the sequence
+
+1. **Before phase 0:** capture current production figures for 2–3 projects (project total, a period subtotal, one material line with a setup cost). Phase 0 changes displayed money twice — Y1 corrects the serialisation bug, J1 moves travel out of the subtotal — and without a baseline there is nothing to compare against.
+2. **Per phase:** run the DDL/serial item first and merge it before any parallel worker branches. Follow each item's commit sequence exactly; never squash.
+3. **At the end of each phase:** the worker produces that phase's **exit report** (its last section). Read it before releasing the next phase — several exit reports carry decisions the next phase depends on (e.g. phase 1 reports whether the permission matrix was actually tightened; phase 2 reports the function-backfill mismatches for you to map by hand).
+4. **Between phases:** the gate in the table above. Phase 2's PO retest is the one that can genuinely change scope.
+5. **If a brief turns out to be wrong about the code,** the worker stops and reports rather than improvising — the briefs were written against verified `file:line` facts, so a mismatch means the code moved and the plan needs updating first.
+
 ### Outstanding prerequisites (not code)
 
 Each open prerequisite is also folded into the item it gates, so a worker meets it at the right moment rather than only here.
