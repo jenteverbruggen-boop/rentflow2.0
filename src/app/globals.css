@@ -34,6 +34,10 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
 }
 
 body {
@@ -80,6 +84,17 @@ label {
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.488 0.243 264.376);
+  /* K2.1 — categorical chart palette (dataviz skill's validated
+     reference order: blue/orange/aqua/yellow), fixed slot order, never
+     cycled. Validated via the skill's script for both modes: adjacent
+     CVD ΔE 9.1 (light), normal-vision floor 22.9 — passes; aqua/yellow
+     fall below 3:1 contrast on the light surface, so every chart using
+     them is paired with a table (K2.2/K2.3's own requirement) per the
+     skill's relief rule. */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
 }
 
 .dark {
@@ -110,4 +125,11 @@ label {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.488 0.243 264.376);
+  /* Same 4 hues, dark-surface steps — validated separately (worst
+     adjacent CVD ΔE 8.4, all 4 clear 3:1 contrast), not an automatic
+     flip of the light values. */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
 }

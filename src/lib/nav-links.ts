@@ -16,9 +16,6 @@ export interface NavLink {
  * separate, shorter NAV_LINKS (which was missing /clients and /locations
  * even before considering permissions — that content gap disappears
  * automatically once both derive from this one list).
- *
- * cijfers has no dedicated nav entry yet — the /cijfers page doesn't
- * exist until K2 (later in phase 3).
  */
 export const NAV_LINKS: NavLink[] = [
   { href: "/", label: "Dashboard", icon: "🏠" },
@@ -29,6 +26,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/clients", label: "Klanten", icon: "🏢", module: "klanten" },
   { href: "/locations", label: "Locaties", icon: "📍", module: "locaties" },
   { href: "/facturen", label: "Facturen", icon: "🧾", module: "kosten_facturen" },
+  { href: "/cijfers", label: "Cijfers", icon: "📊", module: "cijfers" },
   { href: "/users", label: "Gebruikers", icon: "👤", module: "gebruikers" },
   { href: "/settings", label: "Instellingen", icon: "⚙️", module: "instellingen" },
 ];
