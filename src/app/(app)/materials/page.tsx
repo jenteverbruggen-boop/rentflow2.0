@@ -79,6 +79,9 @@ function MaterialsPageContent() {
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             ⬆️ Importeren
           </Button>
+          <a href="/api/materials/export" target="_blank" rel="noreferrer">
+            <Button variant="outline">⬇️ Exporteren</Button>
+          </a>
           <Button onClick={() => setFormOpen(true)}>+ Nieuw materiaal</Button>
         </div>
       </div>

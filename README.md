@@ -227,6 +227,7 @@ All endpoints except `/api/auth/*` and `/api/calendar/:token` require authentica
 | `GET` | `/api/materials/available?from&to&excludePeriodId&projectId` | Per-material `{ availableCount, totalStock, availableStockItemIds }` for a date range, excluding archived materials. When `projectId` is supplied, `material.dayPrice` is the effective price for that project and `material.basePrice` + `material.hasOverride` are also returned. For a set, `availableCount` is the number of complete sets bookable in the range (min over components of `floor(freeUnits / perSetQty)`) and `basePrice` is the price override or the live component sum |
 | `POST` | `/api/materials/import/preview` | Upload a materials export (`multipart/form-data`, field `file`, `.csv` or `.xlsx`) — parses a Rentman equipment export or a RentFlow round-trip export and classifies each row as `new`/`updated`/`unchanged`/`skipped` against the current catalogue (matched by `code`) without writing anything |
 | `POST` | `/api/materials/import` | Apply the same upload for real — creates/updates materials (auto-creating categories as needed), generates stock items for new materials, and never touches existing bookings' price snapshots. A bad row is reported, not fatal to the rest of the file |
+| `GET` | `/api/materials/export?includeArchived` | Download the material catalogue as a real `.xlsx` (P2.2) — mirrors the on-screen archived-material default. Money columns (`dayPrice`/`setupCost`/`costPrice`/`listPrice`/`revenueBefore`/`bundlePriceOverride`) are entirely absent from the header row without `Kosten/Facturen: lezen`, never blanked |
 | `GET` | `/api/materials/:id/components` | List a set's components (`{ childId, quantity, child }[]`) |
 | `POST` | `/api/materials/:id/components` | Add a component `{ childId, quantity }` to a set. Rejects a self-reference, a child that is itself a set (no nesting), a duplicate, or a child already used in another set — a stock item can belong to at most one set |
 | `PATCH` | `/api/materials/:id/components/:componentId` | Change a component's per-set quantity |
@@ -236,10 +237,13 @@ All endpoints except `/api/auth/*` and `/api/calendar/:token` require authentica
 | `PATCH` | `/api/stock-items/:id` | Edit a unit's identifier or notes |
 | `DELETE` | `/api/stock-items/:id` | Delete a unit — `409` if it is currently booked |
 | `GET` | `/api/people` | List all people (with `dayPrice`) |
+| `GET` | `/api/people/export` | Download every person as a real `.xlsx` (P2.2). `functions` is a comma-separated list of function names, not ids. `dayPrice` is entirely absent from the header row without `Kosten/Facturen: lezen` |
 | `POST` | `/api/people` | Add a person — body includes `dayPrice` |
 | `PUT` | `/api/people/:id` | Update a person |
 | `DELETE` | `/api/people/:id` | Delete a person |
 | `GET` | `/api/people/available?from&to&excludePeriodId&sameProjectId&projectId` | Per-person `{ isAvailable, blockingProject?, sameProjectWarning? }`. When `projectId` is supplied, `person.dayPrice` is the effective price for that project and `person.basePrice` + `person.hasOverride` are also returned |
+| `GET` | `/api/clients/export` | Download every client as a real `.xlsx` (P2.2). No money column exists on `Client` today |
+| `GET` | `/api/locations/export` | Download every location as a real `.xlsx` (P2.2). No money column exists on `Location` today |
 | `GET`/`POST` | `/api/clients/:id/rates` | List / add a client's per-function rate card (`{ functionId, dayRate?, hourRate? }`) — module `Kosten/Facturen`. No rows means the booking picker offers every function at its normal rate (L3.2) |
 | `PUT`/`DELETE` | `/api/clients/:id/rates/:functionId` | Edit or remove one rate-card row |
 | `POST` | `/api/invoices` | Create a draft invoice from a project — body `{ projectId, invoiceRole: "deposit"\|"final"\|"standalone", depositType?, depositValue? }`. Generates grouped-per-period lines (people/materials/bundles/travel) via the same cost maths as the Kosten tab; a `"final"` role deducts every prior non-`concept` deposit invoice for the project. `201`, `status: "concept"`, no `number` yet. Module `Kosten/Facturen`; denied outright (`403`) for `scope: own` regardless of matrix level |

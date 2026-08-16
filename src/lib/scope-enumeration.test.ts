@@ -106,6 +106,12 @@ describe("bucket (c) — standalone catalogues deny scope: own outright", () => 
     ["functions/[id]/route.ts", "DELETE"],
     ["people/available/route.ts", "GET"],
     ["materials/available/route.ts", "GET"],
+    // P2.2 — exports of the same standalone catalogues deny scope: own
+    // for the identical reason as the catalogues themselves.
+    ["materials/export/route.ts", "GET"],
+    ["people/export/route.ts", "GET"],
+    ["clients/export/route.ts", "GET"],
+    ["locations/export/route.ts", "GET"],
   ])("%s %s denies scope: own", (file, method) => {
     expect(handler(file, method)).toContain('access.scope === "own"');
   });
@@ -206,5 +212,5 @@ describe("company calendar feed (O1.3) — checked at issuance, not re-checked p
 });
 
 describe("forward placeholders — not yet built, must not be forgotten when they land", () => {
-  it.todo("every export route (P2, phase 4) — bucket-a exports scopeFilter'd, bucket-c exports 403");
+  it.todo("P2.3 project/booking/invoice export routes — scope handling per design doc §1.6");
 });

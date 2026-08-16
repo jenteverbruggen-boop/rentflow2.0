@@ -66,14 +66,19 @@ export default function LocationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Locaties</h2>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-        >
-          + Nieuwe locatie
-        </Button>
+        <div className="flex gap-2">
+          <a href="/api/locations/export" target="_blank" rel="noreferrer">
+            <Button variant="outline">⬇️ Exporteren</Button>
+          </a>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
+            + Nieuwe locatie
+          </Button>
+        </div>
       </div>
 
       {locations.length === 0 ? (

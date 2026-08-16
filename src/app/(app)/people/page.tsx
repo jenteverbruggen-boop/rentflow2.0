@@ -59,6 +59,9 @@ export default function PeoplePage() {
         <h2 className="text-2xl font-bold">Personen</h2>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setFunctionsOpen(true)}>Functies</Button>
+          <a href="/api/people/export" target="_blank" rel="noreferrer">
+            <Button variant="outline">⬇️ Exporteren</Button>
+          </a>
           <Button onClick={() => { setEditing(null); setOpen(true); }}>+ Nieuwe persoon</Button>
         </div>
       </div>
