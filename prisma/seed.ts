@@ -303,12 +303,12 @@ async function main() {
   const fnSafety = await prisma.function.create({ data: { name: "Safety Officer" } });
 
   const [alice, bob, charlie, diana, eric, fiona] = await prisma.$transaction([
-    prisma.person.create({ data: { name: "Alice Vermeersch", role: "Project Manager", email: "alice@example.com", phone: "0471 12 34 56", dayPrice: 450 } }),
-    prisma.person.create({ data: { name: "Bob Claes", role: "Electrician", email: "bob@example.com", phone: "0472 23 45 67", dayPrice: 320 } }),
-    prisma.person.create({ data: { name: "Charlie De Smedt", role: "Carpenter", email: "charlie@example.com", phone: "0473 34 56 78", dayPrice: 300 } }),
-    prisma.person.create({ data: { name: "Diana Leclercq", role: "Plumber", email: "diana@example.com", phone: "0474 45 67 89", dayPrice: 310 } }),
-    prisma.person.create({ data: { name: "Eric Wouters", role: "Crane Operator", email: "eric@example.com", phone: "0475 56 78 90", dayPrice: 380 } }),
-    prisma.person.create({ data: { name: "Fiona Janssen", role: "Safety Officer", email: "fiona@example.com", phone: "0476 67 89 01", dayPrice: 360 } }),
+    prisma.person.create({ data: { name: "Alice Vermeersch", email: "alice@example.com", phone: "0471 12 34 56", dayPrice: 450 } }),
+    prisma.person.create({ data: { name: "Bob Claes", email: "bob@example.com", phone: "0472 23 45 67", dayPrice: 320 } }),
+    prisma.person.create({ data: { name: "Charlie De Smedt", email: "charlie@example.com", phone: "0473 34 56 78", dayPrice: 300 } }),
+    prisma.person.create({ data: { name: "Diana Leclercq", email: "diana@example.com", phone: "0474 45 67 89", dayPrice: 310 } }),
+    prisma.person.create({ data: { name: "Eric Wouters", email: "eric@example.com", phone: "0475 56 78 90", dayPrice: 380 } }),
+    prisma.person.create({ data: { name: "Fiona Janssen", email: "fiona@example.com", phone: "0476 67 89 01", dayPrice: 360 } }),
   ]);
 
   // Link persons to functions — Bob carries a second function (Carpenter,
@@ -485,12 +485,11 @@ async function main() {
     include: { periods: true },
   });
 
-  function bookPersons(periodId: number, persons: { p: { id: number; dayPrice: number }; role?: string }[]) {
+  function bookPersons(periodId: number, persons: { p: { id: number; dayPrice: number } }[]) {
     return prisma.periodPerson.createMany({
-      data: persons.map(({ p, role }) => ({
+      data: persons.map(({ p }) => ({
         periodId,
         personId: p.id,
-        role,
         dayPriceSnapshot: p.dayPrice,
       })),
     });
@@ -520,10 +519,10 @@ async function main() {
   const festDays = festivalMain.periods.find((p) => p.name === "Festivaldagen")!;
   const festBuild = festivalMain.periods.find((p) => p.name === "Opbouw")!;
   await bookPersons(festDays.id, [
-    { p: { id: alice.id, dayPrice: 450 }, role: "Project Manager" },
-    { p: { id: bob.id, dayPrice: 320 }, role: "Electrician" },
-    { p: { id: charlie.id, dayPrice: 300 }, role: "Carpenter" },
-    { p: { id: fiona.id, dayPrice: 360 }, role: "Safety Officer" },
+    { p: { id: alice.id, dayPrice: 450 } },
+    { p: { id: bob.id, dayPrice: 320 } },
+    { p: { id: charlie.id, dayPrice: 300 } },
+    { p: { id: fiona.id, dayPrice: 360 } },
   ]);
   await bookMaterial(festBuild.id, ["Tent 4x8", "Tent 5x10", "Tent 8x16"], 2);
   await bookMaterial(festDays.id, ["Tent 5x10", "Tent 4x8", "Tent 8x20"], 1);
@@ -533,21 +532,21 @@ async function main() {
 
   const technoP = technoNight.periods[0];
   await bookPersons(technoP.id, [
-    { p: { id: eric.id, dayPrice: 380 }, role: "Crane Operator" },
+    { p: { id: eric.id, dayPrice: 380 } },
   ]);
   await bookMaterial(technoP.id, ["Tent 5x6 (6 hoek)", "Tent 5x10"], 1);
   await bookMaterial(technoP.id, ["Guirlande (11,5m)", "Guirlande (12,5m)", "Ledpar"], 1);
 
   const cityP = cityLights.periods[0];
   await bookPersons(cityP.id, [
-    { p: { id: diana.id, dayPrice: 310 }, role: "Plumber" },
+    { p: { id: diana.id, dayPrice: 310 } },
   ]);
   await bookMaterial(cityP.id, ["Cava glazen", "Witte wijnglazen", "Rode wijnglazen"], 1);
   await bookMaterial(cityP.id, ["Borden 32 (wit)", "Borden 24 (wit)"], 1);
 
   const beachP = beachFest.periods[0];
   await bookPersons(beachP.id, [
-    { p: { id: charlie.id, dayPrice: 300 }, role: "Carpenter" },
+    { p: { id: charlie.id, dayPrice: 300 } },
   ]);
   await bookMaterial(beachP.id, ["Tent 4x8", "Tent 5x10", "Tent 10x40"], 1);
   await bookMaterial(beachP.id, ["Horeca Frigo"], 1);

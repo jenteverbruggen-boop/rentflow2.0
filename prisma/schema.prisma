@@ -182,7 +182,6 @@ model Period {
 model Person {
   id             Int                  @id @default(autoincrement())
   name           String
-  role           String?
   email          String?
   phone          String?
   address        String?
@@ -313,7 +312,6 @@ model PeriodPerson {
   periodId         Int
   personId         Int
   functionId       Int?
-  role             String?
   startAt          DateTime?
   endAt            DateTime?
   overlapAck       Boolean            @default(false)

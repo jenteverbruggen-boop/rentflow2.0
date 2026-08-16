@@ -75,7 +75,6 @@ function makePerson(
     periodId: 1,
     personId: 1,
     functionId: null,
-    role: null,
     startAt: opts?.startAt ?? null,
     endAt: opts?.endAt ?? null,
     overlapAck: false,
@@ -94,7 +93,6 @@ function makePerson(
     person: {
       id: 1,
       name: "Test",
-      role: null,
       email: null,
       phone: null,
       address: null,

@@ -93,7 +93,6 @@ export interface Setting {
 export interface Person {
   id: number;
   name: string;
-  role: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
@@ -237,7 +236,6 @@ export interface PeriodPerson {
   periodId: number;
   personId: number;
   functionId: number | null;
-  role: string | null;
   startAt: string | null;
   endAt: string | null;
   overlapAck: boolean;

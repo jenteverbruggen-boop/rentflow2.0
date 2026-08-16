@@ -24,7 +24,7 @@ export async function GET() {
   const access = await requireModule("personen", "lezen").catch(() => null);
   if (!access) return forbidden();
   // scope: own — deny the standalone catalogue; function names for the
-  // caller's own crew still arrive embedded via PeriodPerson.role
+  // caller's own crew still arrive embedded via PeriodPerson.function
   // (own-data-scoping-design.md §5, Personen).
   if (access.scope === "own") return forbidden();
   try {

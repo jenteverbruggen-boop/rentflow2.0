@@ -136,8 +136,6 @@ npm run dev
 | `npm run db:dev:seed` | Seed the SQLite dev DB with demo users, projects, periods, stock items |
 | `npm run db:dev:studio` | Open Prisma Studio against the local SQLite DB |
 | `npm run db:dev:generate` | Regenerate the Prisma client from the dev schema |
-| `npm run backfill:functions` | One-off: match existing bookings' legacy `role` text against `Function.name` and populate `functionId` where it matches exactly (L2.1); logs every unmatched row instead of guessing |
-| `npm run backfill:person-functions` | One-off: the same match for `Person.role` — creates the corresponding `PersonFunction` row where it matches and none already exists (L4.1); logs every unmatched row for manual mapping before `Person.role`/`PeriodPerson.role` are dropped |
 | `npm run test:postgres` | Runs only `invoice-numbering.postgres.test.ts` — the invoice-numbering concurrency test, which needs a real Postgres (`docker compose up -d db`) and skips itself under the default SQLite `npm test` |
 
 ---

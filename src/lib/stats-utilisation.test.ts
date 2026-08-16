@@ -7,11 +7,11 @@ function makePerson(
   opts?: { billingUnit?: "dag" | "uur"; startAt?: string | null; endAt?: string | null },
 ): PeriodPerson {
   return {
-    id: personId, periodId: 1, personId, functionId: null, role: null,
+    id: personId, periodId: 1, personId, functionId: null,
     startAt: opts?.startAt ?? null, endAt: opts?.endAt ?? null, overlapAck: false,
     billingUnit: opts?.billingUnit ?? "dag", rateSnapshot: null, dayPriceSnapshot: 100,
     discountPct: null, discountAmount: null, travelCosts: [],
-    person: { id: personId, name, role: null, email: null, phone: null, address: null, postalCode: null, city: null, country: null, dayPrice: 100 },
+    person: { id: personId, name, email: null, phone: null, address: null, postalCode: null, city: null, country: null, dayPrice: 100 },
   };
 }
 

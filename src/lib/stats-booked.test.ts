@@ -4,11 +4,11 @@ import type { Period, PeriodPerson } from "@/types";
 
 function makePerson(snapshot: number): PeriodPerson {
   return {
-    id: 1, periodId: 1, personId: 1, functionId: null, role: null,
+    id: 1, periodId: 1, personId: 1, functionId: null,
     startAt: null, endAt: null, overlapAck: false, billingUnit: "dag",
     rateSnapshot: null, dayPriceSnapshot: snapshot, discountPct: null, discountAmount: null,
     travelCosts: [],
-    person: { id: 1, name: "Test", role: null, email: null, phone: null, address: null, postalCode: null, city: null, country: null, dayPrice: snapshot },
+    person: { id: 1, name: "Test", email: null, phone: null, address: null, postalCode: null, city: null, country: null, dayPrice: snapshot },
   };
 }
 

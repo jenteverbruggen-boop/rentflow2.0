@@ -20,12 +20,12 @@ function makeStockItem(snapshot: number, setup = 0): PeriodStockItem {
 
 function makePerson(name: string, snapshot: number, travelCosts: { unitCost: number; quantity: number }[] = []): PeriodPerson {
   return {
-    id: 1, periodId: 1, personId: 1, functionId: null, role: null,
+    id: 1, periodId: 1, personId: 1, functionId: null,
     startAt: null, endAt: null, overlapAck: false, billingUnit: "dag",
     rateSnapshot: null, dayPriceSnapshot: snapshot, discountPct: null, discountAmount: null,
     travelCosts: travelCosts.map((t, i) => ({ id: i + 1, periodPersonId: 1, label: null, ...t })),
     person: {
-      id: 1, name, role: null, email: null, phone: null, address: null,
+      id: 1, name, email: null, phone: null, address: null,
       postalCode: null, city: null, country: null, dayPrice: snapshot,
     },
   };
