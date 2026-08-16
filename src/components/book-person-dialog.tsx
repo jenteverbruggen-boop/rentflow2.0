@@ -73,7 +73,6 @@ export function BookPersonDialog({ person, periodId, clientId, onBooked, onClose
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           personId: person!.person.id,
-          role: person!.person.role ?? undefined,
           functionId,
           billingUnit: unit,
           allowOverlap,

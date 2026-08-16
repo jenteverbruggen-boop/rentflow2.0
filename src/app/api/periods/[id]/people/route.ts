@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
     const periodId = parseInt(id);
-    const { personId, role, functionId, discountPct, discountAmount, allowOverlap, billingUnit } = await req.json();
+    const { personId, functionId, discountPct, discountAmount, allowOverlap, billingUnit } = await req.json();
     if (!personId) return badRequest("personId is verplicht");
 
     const period = await prisma.period.findUnique({ where: { id: periodId } });
@@ -46,7 +46,6 @@ export async function POST(req: NextRequest, { params }: Params) {
         periodId,
         personId: parseInt(personId),
         personName: person.name,
-        role: role ?? null,
         functionId: resolvedFunctionId,
         billingUnit: price.unit,
         dayPriceSnapshot: price.amount,

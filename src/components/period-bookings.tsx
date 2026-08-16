@@ -53,7 +53,7 @@ export function PeriodBookings({ period, project }: Props) {
                           {pp.person.name}
                           {pp.overlapAck && <Badge variant="destructive" className="text-[10px]">dubbel geboekt</Badge>}
                         </p>
-                        <p className="text-xs text-muted-foreground">{pp.role ?? pp.person.role}</p>
+                        <p className="text-xs text-muted-foreground">{pp.function?.name}</p>
                       </div>
                       <LinePricePopover
                         snapshot={pp.dayPriceSnapshot}

@@ -23,7 +23,6 @@ const functionAssignmentSchema = z.object({
 
 export const personSchema = z.object({
   name: z.string().min(1, "naam is verplicht"),
-  role: z.string().optional().nullable(),
   email: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   dayPrice: z.coerce.number().optional(),
@@ -98,11 +97,10 @@ export async function POST(req: NextRequest) {
     if (findRejectedMoneyWrite(body, access)) return forbidden();
     const parsed = personSchema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.issues[0].message);
-    const { name, role, email, phone, dayPrice, address, postalCode, city, country, functions } = parsed.data;
+    const { name, email, phone, dayPrice, address, postalCode, city, country, functions } = parsed.data;
     const person = await prisma.person.create({
       data: {
         name,
-        role,
         email,
         phone,
         dayPrice: dayPrice ?? 0,

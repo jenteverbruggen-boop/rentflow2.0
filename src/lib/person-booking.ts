@@ -21,7 +21,6 @@ interface BookPersonArgs {
   periodId: number;
   personId: number;
   personName: string;
-  role: string | null;
   functionId: number | null;
   dayPriceSnapshot: number;
   /** H5.2 — the unit actually resolved by effectivePersonPrice (never
@@ -100,7 +99,6 @@ export async function bookPersonAssignment(args: BookPersonArgs) {
       data: {
         periodId: args.periodId,
         personId: args.personId,
-        role: args.role,
         functionId: args.functionId,
         billingUnit: args.billingUnit,
         dayPriceSnapshot: args.dayPriceSnapshot,

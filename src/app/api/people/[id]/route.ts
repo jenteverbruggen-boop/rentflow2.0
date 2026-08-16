@@ -30,7 +30,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
     const parsed = personSchema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.issues[0].message);
-    const { name, role, email, phone, dayPrice, address, postalCode, city, country, functions } = parsed.data;
+    const { name, email, phone, dayPrice, address, postalCode, city, country, functions } = parsed.data;
 
     // L1.1: diff instead of deleteMany+create — the old destructive
     // write would wipe every PersonFunction row (and, since DDL-2, its
@@ -67,7 +67,6 @@ export async function PUT(req: NextRequest, { params }: Params) {
       where: { id: personId },
       data: {
         name,
-        role,
         email,
         phone,
         dayPrice: dayPrice ?? 0,

@@ -32,7 +32,9 @@ export function PersonCostRow({ line, days, cost, periodId, project }: PersonRow
       </td>
       <td className="py-2 pr-4 text-sm align-middle">
         <div className="font-medium leading-tight">{pp.person.name}</div>
-        {pp.role && <div className="text-muted-foreground text-[11px] leading-tight">{pp.role}</div>}
+        {pp.function?.name && (
+          <div className="text-muted-foreground text-[11px] leading-tight">{pp.function.name}</div>
+        )}
       </td>
       <td className="py-2 pr-4 text-xs text-muted-foreground tabular-nums whitespace-nowrap align-middle">
         {days} × {formatEUR(pp.dayPriceSnapshot)}

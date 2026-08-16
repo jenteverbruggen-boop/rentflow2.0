@@ -18,7 +18,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const { assignmentId } = await params;
     const body = await req.json();
     if (findRejectedField(body, access, KOSTEN_FIELDS)) return forbidden();
-    const { resnapshotPrice, discountPct, discountAmount, role, startAt, endAt } = body;
+    const { resnapshotPrice, discountPct, discountAmount, startAt, endAt } = body;
     const data: Record<string, unknown> = {};
 
     // H1.3 — a custom hours window needs the period's own dates to
@@ -60,7 +60,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     if (discountPct !== undefined) data.discountPct = discountPct != null ? toNumber(discountPct) : null;
     if (discountAmount !== undefined) data.discountAmount = discountAmount != null ? toNumber(discountAmount) : null;
-    if (role !== undefined) data.role = role;
     const updated = await prisma.periodPerson.update({
       where: { id: parseInt(assignmentId) },
       data,

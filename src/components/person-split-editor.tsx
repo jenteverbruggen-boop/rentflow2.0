@@ -53,7 +53,7 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
       if (!q) return true;
       return (
         p.person.name.toLowerCase().includes(q) ||
-        (p.person.role ?? "").toLowerCase().includes(q)
+        (p.person.functions ?? []).some((f) => f.function?.name.toLowerCase().includes(q))
       );
     });
   }, [persons.data, search]);
