@@ -6,6 +6,7 @@ import path from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { MODULES } from "../src/lib/modules";
 import { parseCsv, type CsvRecord } from "../src/lib/csv-parser";
+import { toNumber } from "../src/lib/serialize";
 import { seedChartGradeData } from "./seed-data/chart-seed";
 import { seedInvoices } from "./seed-data/invoice-seed";
 
@@ -593,7 +594,15 @@ async function main() {
   const chartResult = await seedChartGradeData(prisma, {
     clients: [clientSummerSounds, clientCoastline, clientBrugge, clientWarehouse],
     locations: [locGent, locOostende, locBrugge, locMechelen],
-    people: [alice, bob, charlie, diana, eric, fiona],
+    // Postgres types Person.dayPrice Decimal; SQLite (dev) types it
+    // Float. seedChartGradeData's own SeedRefs.people declares a plain
+    // number, so coerce here rather than leaking the Postgres-only
+    // Decimal type into that shared interface (Y1.5's Decimal-drift
+    // guard — caught by generating the Postgres client and re-running
+    // tsc, exactly the check ci.yml performs before the SQLite one).
+    people: [alice, bob, charlie, diana, eric, fiona].map((p) => ({
+      id: p.id, name: p.name, dayPrice: toNumber(p.dayPrice),
+    })),
     materials,
     categoryMap,
   });
