@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:postgres": "vitest run src/lib/invoice-numbering.postgres.test.ts",
     "db:dev:generate": "prisma generate --schema=prisma/schema.dev.prisma",
     "db:dev:migrate": "prisma db push --schema=prisma/schema.dev.prisma",
     "db:dev:reset": "prisma db push --force-reset --schema=prisma/schema.dev.prisma && npm run db:dev:seed",

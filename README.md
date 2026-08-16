@@ -137,6 +137,7 @@ npm run dev
 | `npm run db:dev:studio` | Open Prisma Studio against the local SQLite DB |
 | `npm run db:dev:generate` | Regenerate the Prisma client from the dev schema |
 | `npm run backfill:functions` | One-off: match existing bookings' legacy `role` text against `Function.name` and populate `functionId` where it matches exactly (L2.1); logs every unmatched row instead of guessing |
+| `npm run test:postgres` | Runs only `invoice-numbering.postgres.test.ts` — the invoice-numbering concurrency test, which needs a real Postgres (`docker compose up -d db`) and skips itself under the default SQLite `npm test` |
 
 ---
 
@@ -244,6 +245,7 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | `POST` | `/api/invoices` | Create a draft invoice from a project — body `{ projectId, invoiceRole: "deposit"\|"final"\|"standalone", depositType?, depositValue? }`. Generates grouped-per-period lines (people/materials/bundles/travel) via the same cost maths as the Kosten tab; a `"final"` role deducts every prior non-`concept` deposit invoice for the project. `201`, `status: "concept"`, no `number` yet. Module `Kosten/Facturen`; denied outright (`403`) for `scope: own` regardless of matrix level |
 | `GET` | `/api/invoices?status&clientId&projectId&kind` | List invoices (all filters optional) |
 | `GET` | `/api/invoices/:id` | Get one invoice with its lines, payments and linked credit notes |
+| `POST` | `/api/invoices/:id/finalize` | Allocate a gapless sequential number (`{year}-{seq:04d}` by default, credit notes always `CN-` + the same template) and flip `concept → verzonden`, freezing every line and total. `409` if the invoice is not currently `concept` |
 
 ---
 
