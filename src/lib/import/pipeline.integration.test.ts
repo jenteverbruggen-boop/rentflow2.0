@@ -151,7 +151,8 @@ describe("replace mode — referential guards (P3.3, Q49b)", () => {
     // rather than leaving the table half-truncated.
     const crashingAdapter = {
       ...locationAdapter,
-      async applyRow(..._args: unknown[]): Promise<"created" | "updated" | "unchanged"> {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      async applyRow(...args: unknown[]): Promise<"created" | "updated" | "unchanged"> {
         throw new Error("simulated mid-file crash");
       },
     };
