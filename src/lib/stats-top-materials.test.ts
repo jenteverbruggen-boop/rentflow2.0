@@ -18,7 +18,7 @@ function makeStockItem(materialId: number, name: string, snapshot: number, archi
 }
 
 function makePeriod(materials: PeriodStockItem[]): Period {
-  return { id: 1, projectId: 1, name: "Test", startDate: "2026-06-01", endDate: "2026-06-01", materials, people: [], bundleBookings: [] };
+  return { id: 1, projectId: 1, name: "Test", startDate: "2026-06-01", endDate: "2026-06-01", updatedAt: "2026-06-01", materials, people: [], bundleBookings: [] };
 }
 
 describe("computeTopMaterials (K1.1)", () => {

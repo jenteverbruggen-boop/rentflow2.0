@@ -118,6 +118,7 @@ function makePeriod(
     name: "Test",
     startDate: start,
     endDate: end,
+    updatedAt: start,
     materials,
     people,
   };

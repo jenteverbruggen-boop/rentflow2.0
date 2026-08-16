@@ -257,9 +257,23 @@ export interface Period {
   name: string;
   startDate: string;
   endDate: string;
+  updatedAt: string;
   materials: PeriodStockItem[];
   people: PeriodPerson[];
   bundleBookings?: PeriodBundleBooking[];
+}
+
+/** O1.1 — one row per (user, feed kind). `kind` is `"personal"` (the
+ * caller's own bookings) or `"company"` (every project/period, gated on
+ * module access and never issued to a scope:own role). */
+export type CalendarFeedKind = "personal" | "company";
+
+export interface CalendarFeed {
+  id: number;
+  userId: number;
+  kind: CalendarFeedKind;
+  token: string;
+  createdAt: string;
 }
 
 export interface ProjectMaterialPrice {

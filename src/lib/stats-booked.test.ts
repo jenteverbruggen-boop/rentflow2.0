@@ -13,7 +13,7 @@ function makePerson(snapshot: number): PeriodPerson {
 }
 
 function makePeriod(start: string, end: string, people: PeriodPerson[] = []): Period {
-  return { id: 1, projectId: 1, name: "Test", startDate: start, endDate: end, materials: [], people, bundleBookings: [] };
+  return { id: 1, projectId: 1, name: "Test", startDate: start, endDate: end, updatedAt: start, materials: [], people, bundleBookings: [] };
 }
 
 describe("aggregateBookedByMonth (K1.1)", () => {

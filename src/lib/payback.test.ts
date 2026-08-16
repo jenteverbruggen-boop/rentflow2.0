@@ -36,6 +36,7 @@ function makePeriod(opts: {
   return {
     id: 1, projectId: 1, name: "Test",
     startDate: opts.start ?? "2026-06-01", endDate: opts.end ?? "2026-06-01",
+    updatedAt: opts.start ?? "2026-06-01",
     materials: opts.materials ?? [], people: [], bundleBookings: opts.bundleBookings ?? [],
   };
 }

@@ -2,6 +2,7 @@ import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { existsSync, readFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { MODULES } from "../src/lib/modules";
@@ -230,6 +231,7 @@ async function main() {
   await prisma.personFunction.deleteMany();
   await prisma.person.deleteMany();
   await prisma.material.deleteMany();
+  await prisma.calendarFeed.deleteMany();
   await prisma.user.deleteMany();
   await prisma.role.deleteMany(); // cascades RolePermission
   await prisma.client.deleteMany();
@@ -585,6 +587,26 @@ async function main() {
       { key: "invoiceFooter", value: "Gelieve te betalen binnen de vermelde termijn." },
       { key: "btwRate", value: "21" },
       { key: "defaultDepositPercentage", value: "30" },
+    ],
+  });
+
+  // O1.1 — link jan@ to Alice so the personal ICS feed has real bookings
+  // to render in dev (admin@ stays personId: null, exercising O1.2's
+  // "no linked person" explanatory-event path instead). One feed token
+  // per kind per user, `node:crypto`-random per O1.1's own requirement —
+  // never `Math.random`, never the JWT.
+  const jan = await prisma.user.update({
+    where: { email: "jan@rentflow.dev" },
+    data: { personId: alice.id },
+  });
+  const admin = await prisma.user.findUniqueOrThrow({ where: { email: "admin@rentflow.dev" } });
+  await prisma.calendarFeed.createMany({
+    data: [
+      { userId: jan.id, kind: "personal", token: randomBytes(24).toString("hex") },
+      { userId: admin.id, kind: "personal", token: randomBytes(24).toString("hex") },
+      // Company feed — only ever issued to a scope: all role (O1.3);
+      // both seeded roles qualify, admin@ gets the seeded one.
+      { userId: admin.id, kind: "company", token: randomBytes(24).toString("hex") },
     ],
   });
 

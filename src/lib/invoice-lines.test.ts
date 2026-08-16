@@ -39,7 +39,7 @@ function makePeriod(name: string, start: string, end: string, opts?: {
   materials?: PeriodStockItem[]; people?: PeriodPerson[]; bundleBookings?: PeriodBundleBooking[];
 }): Period {
   return {
-    id: 1, projectId: 1, name, startDate: start, endDate: end,
+    id: 1, projectId: 1, name, startDate: start, endDate: end, updatedAt: start,
     materials: opts?.materials ?? [], people: opts?.people ?? [], bundleBookings: opts?.bundleBookings ?? [],
   };
 }
