@@ -1,14 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { useQueries } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { nl } from "date-fns/locale";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { statusVariant } from "@/lib/utils";
+import { useQuery, useQueries } from "@tanstack/react-query";
+import { formatEUR } from "@/lib/pricing";
+import { satisfies } from "@/lib/modules";
 import { useAuthMe } from "@/hooks/use-auth-me";
+import { DashboardStatTile } from "@/components/dashboard-stat-tile";
+import { UpcomingProjectsCard } from "@/components/upcoming-projects-card";
 import type { Project, Person, Material } from "@/types";
+
+interface StatsResponse {
+  revenueByMonth: { booked: number; invoiced: number }[];
+}
 
 async function get<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -72,71 +74,41 @@ export default function DashboardPage() {
         { label: "Materialen", value: materialsQuery.data?.length ?? 0, icon: "📦", href: "/materials" },
       ];
 
+  // K3.1 — headline money figures, year-to-date. Hidden entirely (not
+  // just visually disabled) for a role without Cijfers:lezen — the
+  // server already refuses /api/stats for scope:own and a lower
+  // matrix level, this is the affordance. `useAuthMe()`'s own
+  // `permissions` map is this project's `usePermissions()`-equivalent
+  // (no hook of that literal name exists — verified before assuming
+  // one did).
+  const canSeeCijfers = !isScoped && satisfies(me?.permissions.cijfers ?? "geen", "lezen");
+  const year = new Date().getFullYear();
+  const statsQuery = useQuery({
+    queryKey: ["stats", `${year}-01-01`, `${year}-12-31`],
+    queryFn: () => get<StatsResponse>(`/api/stats?from=${year}-01-01&to=${year}-12-31`),
+    enabled: canSeeCijfers,
+  });
+  const bookedYtd = statsQuery.data?.revenueByMonth.reduce((s, m) => s + m.booked, 0) ?? 0;
+  const invoicedYtd = statsQuery.data?.revenueByMonth.reduce((s, m) => s + m.invoiced, 0) ?? 0;
+  const moneyTiles = canSeeCijfers
+    ? [
+        { label: `Omzet ${year} (geboekt)`, value: formatEUR(bookedYtd), icon: "💶", href: "/cijfers" },
+        { label: `Omzet ${year} (gefactureerd)`, value: formatEUR(invoicedYtd), icon: "🧾", href: "/cijfers" },
+      ]
+    : [];
+  const allTiles = [...stats, ...moneyTiles];
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Dashboard</h2>
 
-      <div
-        className={`grid grid-cols-1 gap-4 ${isScoped ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}
-      >
-        {stats.map((s) => (
-          <Link
-            key={s.label}
-            href={s.href}
-            className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
-          >
-            <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {s.label}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl">{s.icon}</div>
-                <div className="text-3xl font-bold">{s.value}</div>
-              </CardContent>
-            </Card>
-          </Link>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {allTiles.map((s) => (
+          <DashboardStatTile key={s.label} label={s.label} value={s.value} icon={s.icon} href={s.href} />
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Aankomende projecten</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {upcoming.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Geen aankomende projecten
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {upcoming.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/projects/${p.id}`}
-                  className="flex items-center justify-between gap-3 hover:bg-accent px-3 py-2 rounded-lg transition-colors"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">{p.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {[p.client, p.location].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-muted-foreground hidden sm:block">
-                      {format(new Date(p.startDate), "d MMM", { locale: nl })}
-                    </span>
-                    <Badge className={statusVariant(p.status)}>
-                      {p.status}
-                    </Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <UpcomingProjectsCard projects={upcoming} />
     </div>
   );
 }
