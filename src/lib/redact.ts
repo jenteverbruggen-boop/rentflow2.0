@@ -57,6 +57,22 @@ const SCALAR_DENYLIST = new Set([
   "hourRate",
   // H5/L5 (phase 2): the unit rate snapshotted onto a booking.
   "rateSnapshot",
+  // J2b (phase 3): Invoice/InvoiceLine/Payment money fields — declared
+  // now in case a future embed (e.g. a project's own invoice list)
+  // reuses redactMoney(), even though the /api/invoices* routes
+  // themselves are gated entirely on Kosten/Facturen and never call it
+  // directly (there is no lower-tier caller of those routes to redact
+  // for — the guard itself is the money gate).
+  "subtotalExcl",
+  "travelExcl",
+  "deductionExcl",
+  "vatAmount",
+  "totalIncl",
+  "depositPercentage",
+  "depositBasisExcl",
+  "unitPrice",
+  "lineTotalExcl",
+  "amount",
 ]);
 
 // hasOverride is a boolean, not a price — but "an override exists" is

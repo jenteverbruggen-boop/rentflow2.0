@@ -101,6 +101,9 @@ const MONEY_KEYS = [
   "bundlePriceOverride", "discountPct", "discountAmount", "unitCost",
   "basePrice", "setPrice", "costPrice", "listPrice", "revenueBefore",
   "dayRate", "hourRate", "rateSnapshot",
+  // J2b (phase 3): Invoice/InvoiceLine/Payment money fields.
+  "subtotalExcl", "travelExcl", "deductionExcl", "vatAmount", "totalIncl",
+  "depositPercentage", "depositBasisExcl", "unitPrice", "lineTotalExcl", "amount",
 ];
 const ARRAY_KEYS = ["materialPrices", "personPrices", "travelCosts"];
 const OBJECT_KEYS = ["bundleStock"];
@@ -166,6 +169,26 @@ describe("redactMoney", () => {
   it("strips every money field for scope: own even against Kosten/Facturen: verwijderen", () => {
     const project = moneyFixture();
     const result = redactMoney(project, scopedAccess("verwijderen"));
+    assertNoMoneyLeaks(result);
+  });
+
+  // J2b (phase 3) — declared in SCALAR_DENYLIST for any future embed
+  // (redactMoney() itself, not requireModule, is what this test
+  // exercises; the /api/invoices* routes never call it directly since
+  // their own guard already is the money gate).
+  it("strips Invoice/InvoiceLine/Payment money fields when embedded elsewhere", () => {
+    const embed = {
+      invoices: [
+        {
+          subtotalExcl: 1110, travelExcl: 0, deductionExcl: 0,
+          vatAmount: 233.1, totalIncl: 1343.1,
+          depositPercentage: 30, depositBasisExcl: 3700,
+          lines: [{ unitPrice: 1110, lineTotalExcl: 1110 }],
+          payments: [{ amount: 900 }],
+        },
+      ],
+    };
+    const result = redactMoney(embed, access("geen"));
     assertNoMoneyLeaks(result);
   });
 });

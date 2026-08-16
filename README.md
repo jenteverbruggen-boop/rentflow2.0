@@ -241,6 +241,9 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | `GET` | `/api/people/available?from&to&excludePeriodId&sameProjectId&projectId` | Per-person `{ isAvailable, blockingProject?, sameProjectWarning? }`. When `projectId` is supplied, `person.dayPrice` is the effective price for that project and `person.basePrice` + `person.hasOverride` are also returned |
 | `GET`/`POST` | `/api/clients/:id/rates` | List / add a client's per-function rate card (`{ functionId, dayRate?, hourRate? }`) — module `Kosten/Facturen`. No rows means the booking picker offers every function at its normal rate (L3.2) |
 | `PUT`/`DELETE` | `/api/clients/:id/rates/:functionId` | Edit or remove one rate-card row |
+| `POST` | `/api/invoices` | Create a draft invoice from a project — body `{ projectId, invoiceRole: "deposit"\|"final"\|"standalone", depositType?, depositValue? }`. Generates grouped-per-period lines (people/materials/bundles/travel) via the same cost maths as the Kosten tab; a `"final"` role deducts every prior non-`concept` deposit invoice for the project. `201`, `status: "concept"`, no `number` yet. Module `Kosten/Facturen`; denied outright (`403`) for `scope: own` regardless of matrix level |
+| `GET` | `/api/invoices?status&clientId&projectId&kind` | List invoices (all filters optional) |
+| `GET` | `/api/invoices/:id` | Get one invoice with its lines, payments and linked credit notes |
 
 ---
 
