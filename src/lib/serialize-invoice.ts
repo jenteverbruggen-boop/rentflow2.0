@@ -7,6 +7,19 @@ export const invoiceInclude = {
   creditNotes: true,
 } satisfies Prisma.InvoiceInclude;
 type InvoiceWithLines = Prisma.InvoiceGetPayload<{ include: typeof invoiceInclude }>;
+type InvoiceLine = Prisma.InvoiceLineGetPayload<Record<string, never>>;
+
+/** J2b.4 — POST/PATCH .../lines(/:lineId) return just the line (design
+ * doc §7), not the whole invoice. */
+export function serializeInvoiceLine(line: InvoiceLine) {
+  return {
+    ...line,
+    quantity: toNumber(line.quantity),
+    unitPrice: toNumber(line.unitPrice),
+    vatRate: toNumber(line.vatRate),
+    lineTotalExcl: toNumber(line.lineTotalExcl),
+  };
+}
 
 /**
  * J2b.2 — converts every Decimal-typed field to a plain number (Money

@@ -246,6 +246,11 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | `GET` | `/api/invoices?status&clientId&projectId&kind` | List invoices (all filters optional) |
 | `GET` | `/api/invoices/:id` | Get one invoice with its lines, payments and linked credit notes |
 | `POST` | `/api/invoices/:id/finalize` | Allocate a gapless sequential number (`{year}-{seq:04d}` by default, credit notes always `CN-` + the same template) and flip `concept → verzonden`, freezing every line and total. `409` if the invoice is not currently `concept` |
+| `PATCH` | `/api/invoices/:id` | Update `{ notes?, footer?, dueDate? }` — `concept` only, `409` otherwise |
+| `DELETE` | `/api/invoices/:id` | Delete a draft invoice — `concept` only, `409` otherwise ("sent invoices are never deleted, only credited") |
+| `POST` | `/api/invoices/:id/lines` | Add a manual line `{ description, quantity, unit, unitPrice, vatRate?, section? }` — `concept` only, `201 InvoiceLine`, recomputes the invoice's totals |
+| `PATCH`/`DELETE` | `/api/invoices/:id/lines/:lineId` | Edit (`200 InvoiceLine`) or remove (`204`) a line — `concept` only, recomputes totals |
+| `POST` | `/api/invoices/:id/regenerate` | Re-runs the line generator against the live project, discarding every current line including manual ones — `concept` only |
 
 ---
 
