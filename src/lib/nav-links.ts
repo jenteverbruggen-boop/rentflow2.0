@@ -17,8 +17,8 @@ export interface NavLink {
  * even before considering permissions — that content gap disappears
  * automatically once both derive from this one list).
  *
- * kosten_facturen and cijfers have no dedicated nav entry — Kosten is
- * reached via project tabs, Cijfers doesn't exist as a page until phase 3.
+ * cijfers has no dedicated nav entry yet — the /cijfers page doesn't
+ * exist until K2 (later in phase 3).
  */
 export const NAV_LINKS: NavLink[] = [
   { href: "/", label: "Dashboard", icon: "🏠" },
@@ -28,6 +28,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/materials", label: "Materialen", icon: "📦", module: "materialen" },
   { href: "/clients", label: "Klanten", icon: "🏢", module: "klanten" },
   { href: "/locations", label: "Locaties", icon: "📍", module: "locaties" },
+  { href: "/facturen", label: "Facturen", icon: "🧾", module: "kosten_facturen" },
   { href: "/users", label: "Gebruikers", icon: "👤", module: "gebruikers" },
   { href: "/settings", label: "Instellingen", icon: "⚙️", module: "instellingen" },
 ];
