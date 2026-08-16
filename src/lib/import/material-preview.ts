@@ -44,7 +44,8 @@ const FIELDS: (keyof ExistingMaterial)[] = [
   "notes",
 ];
 
-function diffRow(parsed: ParsedMaterialRow, existing: ExistingMaterial): ImportRowChange[] {
+/** Exported for P3.1's `EntityAdapter<ParsedMaterialRow>` wrapper. */
+export function diffMaterialRow(parsed: ParsedMaterialRow, existing: ExistingMaterial): ImportRowChange[] {
   const changes: ImportRowChange[] = [];
   const candidate: ExistingMaterial = {
     code: parsed.code ?? "",
@@ -85,7 +86,7 @@ export function buildMaterialPreview(
       rows.push({ line: parsed.line, classification: "new", matchKey: parsed.code, summary });
       continue;
     }
-    const changes = diffRow(parsed, existing);
+    const changes = diffMaterialRow(parsed, existing);
     rows.push({
       line: parsed.line,
       classification: changes.length > 0 ? "updated" : "unchanged",

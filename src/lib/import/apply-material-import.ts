@@ -46,7 +46,10 @@ async function resolveCategoryId(
  * items. Re-importing an already-imported row lands on "unchanged" or
  * "updated", never duplicates a material or its stock.
  */
-async function applyRow(
+/** Exported for P3.1's `EntityAdapter<ParsedMaterialRow>` wrapper
+ * (`adapters/material.ts`) — the same function `applyMaterialImport`
+ * below still calls for its own (unchanged) M1 call path. */
+export async function applyMaterialRow(
   tx: PrismaClient,
   row: ParsedMaterialRow,
   categoryCache: Map<string, number>,
@@ -138,7 +141,7 @@ export async function applyMaterialImport(
 
     for (const row of materials) {
       try {
-        const outcome = await applyRow(tx as unknown as PrismaClient, row, categoryCache, usedCodes);
+        const outcome = await applyMaterialRow(tx as unknown as PrismaClient, row, categoryCache, usedCodes);
         if (outcome === "created") created++;
         else if (outcome === "updated") updated++;
         else unchanged++;

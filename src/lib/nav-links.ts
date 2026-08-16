@@ -25,6 +25,10 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/materials", label: "Materialen", icon: "📦", module: "materialen" },
   { href: "/clients", label: "Klanten", icon: "🏢", module: "klanten" },
   { href: "/locations", label: "Locaties", icon: "📍", module: "locaties" },
+  // P3.4 — gated on materialen as a representative anchor (every entity
+  // route re-checks its own module server-side regardless); this only
+  // affects whether the shortcut is shown, not who can actually import.
+  { href: "/import", label: "Importeren", icon: "⬆️", module: "materialen" },
   { href: "/facturen", label: "Facturen", icon: "🧾", module: "kosten_facturen" },
   { href: "/cijfers", label: "Cijfers", icon: "📊", module: "cijfers" },
   { href: "/users", label: "Gebruikers", icon: "👤", module: "gebruikers" },
