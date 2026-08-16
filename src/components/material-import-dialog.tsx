@@ -80,7 +80,7 @@ export function MaterialImportDialog({ open, onOpenChange }: Props) {
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>Materialen importeren</DialogTitle>
         </DialogHeader>

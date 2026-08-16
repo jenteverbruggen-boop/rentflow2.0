@@ -66,7 +66,7 @@ export function PackingListDialog({ period, project, open, onOpenChange }: Props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>Paklijst — {period.name}</DialogTitle>
         </DialogHeader>
