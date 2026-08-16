@@ -251,6 +251,7 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | `POST` | `/api/invoices/:id/lines` | Add a manual line `{ description, quantity, unit, unitPrice, vatRate?, section? }` — `concept` only, `201 InvoiceLine`, recomputes the invoice's totals |
 | `PATCH`/`DELETE` | `/api/invoices/:id/lines/:lineId` | Edit (`200 InvoiceLine`) or remove (`204`) a line — `concept` only, recomputes totals |
 | `POST` | `/api/invoices/:id/regenerate` | Re-runs the line generator against the live project, discarding every current line including manual ones — `concept` only |
+| `POST` | `/api/invoices/:id/credit-note` | Create a draft credit note against a sent (non-`concept`) invoice — body `{ lines?: { lineId, quantity? }[] }` (omit for a full mirror, provide for a partial one, each capped at its own original line's quantity). `201 Invoice` (`kind: "creditnota"`, own `credit` number series) — goes through the same `/finalize` endpoint afterwards to be numbered |
 
 ---
 
