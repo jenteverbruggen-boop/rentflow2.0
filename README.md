@@ -252,6 +252,8 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | `PATCH`/`DELETE` | `/api/invoices/:id/lines/:lineId` | Edit (`200 InvoiceLine`) or remove (`204`) a line — `concept` only, recomputes totals |
 | `POST` | `/api/invoices/:id/regenerate` | Re-runs the line generator against the live project, discarding every current line including manual ones — `concept` only |
 | `POST` | `/api/invoices/:id/credit-note` | Create a draft credit note against a sent (non-`concept`) invoice — body `{ lines?: { lineId, quantity? }[] }` (omit for a full mirror, provide for a partial one, each capped at its own original line's quantity). `201 Invoice` (`kind: "creditnota"`, own `credit` number series) — goes through the same `/finalize` endpoint afterwards to be numbered |
+| `POST` | `/api/invoices/:id/payments` | Record a payment `{ amount, paidAt, method?, reference?, notes? }` — `400` if the invoice is `concept` or a credit note. `201 Payment`; may flip the invoice to `betaald` in the same transaction once the balance reaches zero |
+| `PATCH`/`DELETE` | `/api/invoices/:id/payments/:paymentId` | Edit (`200 Payment`) or remove (`204`) a payment; may flip the invoice back to `verzonden` if the correction re-opens a balance |
 
 ---
 
