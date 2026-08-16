@@ -6,14 +6,13 @@ import { Button } from "@/components/ui/button";
 import { MaterialLabel } from "@/components/print/material-label";
 import type { Material } from "@/types";
 
+// J3 — visibility is handled by the shared .print-root rules in
+// globals.css; only this page's tighter @page margin is genuinely
+// different (the label grid assumes 10mm, not the shared 1.5cm) so it
+// stays as a small local override.
 const PRINT_CSS = `
 @media print {
   @page { size: A4; margin: 10mm; }
-  html, body { background: white !important; }
-  body * { visibility: hidden; }
-  .label-sheet, .label-sheet * { visibility: visible; }
-  .label-sheet { position: absolute; inset: 0; }
-  .no-print { display: none !important; }
 }
 `;
 
@@ -99,7 +98,7 @@ export default function LabelsPage() {
         </p>
       </div>
 
-      <div className="label-sheet">
+      <div className="print-root label-sheet">
         {pages.map((page, pi) => (
           <div
             key={pi}

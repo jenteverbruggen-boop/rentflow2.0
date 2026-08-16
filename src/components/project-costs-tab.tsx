@@ -19,28 +19,6 @@ function fmtDate(d: string) {
   return format(new Date(d), "d MMM yyyy", { locale: nl });
 }
 
-const PRINT_CSS = `
-@media print {
-  @page { size: A4; margin: 1.5cm; }
-  html, body { background: white !important; height: auto !important; overflow: visible !important; }
-  body * { visibility: hidden; }
-  .print-root, .print-root * { visibility: visible; }
-  .print-root { position: absolute; inset: 0; width: 100%; height: auto !important; overflow: visible !important; padding: 0 !important; }
-  body { color: #000 !important; font-size: 10pt; }
-  .no-print { display: none !important; }
-  .print-only { display: block !important; }
-  .cost-period { page-break-inside: avoid; break-inside: avoid; }
-  .cost-period + .cost-period { margin-top: 1.5rem; }
-  table { border-collapse: collapse; width: 100%; }
-  table th, table td { border-bottom: 1px solid #ddd !important; }
-  table thead { background: #f4f4f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  h1, h2 { color: #000 !important; }
-  .text-muted-foreground { color: #4b5563 !important; }
-  .print-grand-total { border-top: 2px solid #000; padding-top: 0.5rem; }
-}
-.print-only { display: none; }
-`;
-
 export function ProjectCostsTab({ project }: Props) {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const sorted = [...project.periods].sort(
@@ -49,8 +27,6 @@ export function ProjectCostsTab({ project }: Props) {
 
   return (
     <>
-      <style>{PRINT_CSS}</style>
-
       <div className="space-y-6 print-root">
         <div className="flex justify-between items-center no-print">
           <p className="text-xs text-muted-foreground">

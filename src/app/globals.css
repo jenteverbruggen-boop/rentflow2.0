@@ -133,3 +133,120 @@ label {
   --chart-3: #199e70;
   --chart-4: #c98500;
 }
+
+/* J3 — one shared print stylesheet for every printed document (pakbon,
+   callsheet, kosten tab, kosten print page, invoice print page, labels).
+   Consolidated from three previously-diverged @media print blocks
+   (print-layout.tsx, project-costs-tab.tsx, materials/labels/page.tsx) —
+   .print-root is now the one canonical visibility root everywhere. */
+@media print {
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+  html,
+  body {
+    background: white !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-root,
+  .print-root * {
+    visibility: visible;
+  }
+  .print-root {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+  body {
+    color: #000 !important;
+    font-size: 10pt;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  /* Force a fixed light look for PrintLayout-wrapped documents, regardless
+     of the on-screen theme. */
+  .print-paper {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 10pt;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --muted: oklch(0.95 0 0);
+    --muted-foreground: oklch(0.44 0 0);
+    --border: oklch(0.8 0 0);
+    --secondary: oklch(0.91 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+  }
+  .cost-period {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .cost-period + .cost-period {
+    margin-top: 1.5rem;
+  }
+  .print-grand-total {
+    border-top: 2px solid #000;
+    padding-top: 0.5rem;
+  }
+  .text-muted-foreground {
+    color: #4b5563 !important;
+  }
+  h1,
+  h2,
+  h3 {
+    color: #000 !important;
+  }
+  /* Default table look: full grid (pakbon, callsheet, kosten print page,
+     invoice print page). */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  table td,
+  table th {
+    border: 1px solid #ccc;
+    padding: 4px 6px;
+  }
+  table thead {
+    background: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Kosten tab's own inline print table keeps its row-separator-only look —
+     scoped under .cost-table so it doesn't override the default grid above
+     for every other document. */
+  .cost-table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  .cost-table th,
+  .cost-table td {
+    border-bottom: 1px solid #ddd !important;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+  }
+  .cost-table thead {
+    background: #f4f4f5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+.print-only {
+  display: none;
+}
