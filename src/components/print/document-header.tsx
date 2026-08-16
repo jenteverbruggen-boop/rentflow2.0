@@ -25,6 +25,11 @@ interface DocumentHeaderProps {
     projectnummer?: number;
     accountmanager?: string;
     aangemaaktOp?: string;
+    // J2b.8 — invoice-only meta; optional so every other document
+    // (pakbon/callsheet/kosten) that never passes these is unaffected.
+    factuurnummer?: string;
+    factuurdatum?: string;
+    vervaldatum?: string;
   };
 }
 
@@ -111,6 +116,21 @@ export function DocumentHeader({ meta }: DocumentHeaderProps) {
         {meta.aangemaaktOp && (
           <p>
             <span className="font-medium">Aangemaakt:</span> {meta.aangemaaktOp}
+          </p>
+        )}
+        {meta.factuurnummer && (
+          <p>
+            <span className="font-medium">Factuurnummer:</span> {meta.factuurnummer}
+          </p>
+        )}
+        {meta.factuurdatum && (
+          <p>
+            <span className="font-medium">Factuurdatum:</span> {meta.factuurdatum}
+          </p>
+        )}
+        {meta.vervaldatum && (
+          <p>
+            <span className="font-medium">Vervaldatum:</span> {meta.vervaldatum}
           </p>
         )}
       </div>
