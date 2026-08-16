@@ -419,3 +419,19 @@ model InvoiceCounter {
 
   @@id([series, year])
 }
+
+// P3.3 — written inside the same transaction as a committed import
+// apply (update or replace); a row only exists for imports that
+// actually landed, never for a preview or a refused replace.
+model ImportAudit {
+  id         Int      @id @default(autoincrement())
+  entity     String
+  mode       String // "update" | "replace"
+  userId     Int
+  fileName   String
+  rowCounts  Json
+  blockedBy  Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entity, createdAt])
+}
