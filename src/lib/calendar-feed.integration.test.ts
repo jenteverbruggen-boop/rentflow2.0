@@ -16,6 +16,7 @@ import {
   revokeFeedToken,
   revokeCompanyFeedForUser,
   revokeCompanyFeedsForRole,
+  isCompanyFeedStillEligible,
 } from "@/lib/calendar-feed";
 import { buildPersonalFeedIcs, buildCompanyFeedIcs } from "@/lib/calendar-feed-ics";
 import type { ResolvedAccess } from "@/lib/api-auth";
@@ -167,5 +168,33 @@ describe("buildCompanyFeedIcs (O1.3)", () => {
   it("includes every period, unfiltered by ownership", async () => {
     const ics = await buildCompanyFeedIcs(new Date("2026-08-14T09:00:00Z"), client);
     expect(ics).toContain(`UID:period-${ids.period}@rentflow.app`);
+  });
+});
+
+describe("isCompanyFeedStillEligible (review finding — per-request re-check)", () => {
+  it("is eligible for a scope: all user with planning access", async () => {
+    expect(await isCompanyFeedStillEligible(ids.allUser, client)).toBe(true);
+  });
+
+  it("is not eligible for a scope: own user, even with planning access", async () => {
+    expect(await isCompanyFeedStillEligible(ids.ownUser, client)).toBe(false);
+  });
+
+  it("catches a pure planning-permission downgrade — no roleId/scope change, only the matrix", async () => {
+    const role = await client.role.create({
+      data: { key: "DOWNGRADE_TEST", label: "Downgrade Test", scope: "all", permissions: { create: [{ module: "planning", access: "lezen" }] } },
+    });
+    const user = await client.user.create({ data: { email: "downgrade@test.dev", password: "x", name: "Downgrade User", roleId: role.id } });
+    expect(await isCompanyFeedStillEligible(user.id, client)).toBe(true);
+
+    await client.rolePermission.update({
+      where: { roleId_module: { roleId: role.id, module: "planning" } },
+      data: { access: "geen" },
+    });
+    expect(await isCompanyFeedStillEligible(user.id, client)).toBe(false);
+  });
+
+  it("returns false for a nonexistent user rather than throwing", async () => {
+    expect(await isCompanyFeedStillEligible(999999, client)).toBe(false);
   });
 });

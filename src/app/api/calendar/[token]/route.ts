@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { resolveFeedToken } from "@/lib/calendar-feed";
+import { resolveFeedToken, isCompanyFeedStillEligible } from "@/lib/calendar-feed";
 import { buildPersonalFeedIcs, buildCompanyFeedIcs } from "@/lib/calendar-feed-ics";
 
 type Params = { params: Promise<{ token: string }> };
@@ -15,6 +15,16 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { token } = await params;
   const feed = await resolveFeedToken(token);
   if (!feed) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Review finding: re-check eligibility on every request for a company
+  // feed, not only at issue/revoke time — a pure permission-matrix
+  // downgrade (no roleId/scope change) would otherwise slip through.
+  // Same 404 as a bogus token, never a distinguishing error, so this
+  // can't be used to probe whether a token is merely ineligible vs.
+  // truly nonexistent.
+  if (feed.kind === "company" && !(await isCompanyFeedStillEligible(feed.userId))) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

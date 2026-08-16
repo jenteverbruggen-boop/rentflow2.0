@@ -4,6 +4,7 @@ import { parseImportFile } from "@/lib/import/parse-file";
 import { detectEntityFormat } from "@/lib/import/format-detection";
 import { applyImport } from "@/lib/import/pipeline";
 import { resolveImportEntity, getImportAdapter, IMPORT_ENTITY_MODULE } from "@/lib/import/entity-registry";
+import { rejectedMoneyImportHeader } from "@/lib/import/money-guard";
 import type { ImportMode } from "@/lib/import/pipeline-types";
 
 type Params = { params: Promise<{ entity: string }> };
@@ -62,6 +63,12 @@ export async function POST(req: NextRequest, { params }: Params) {
         `Onherkend bestandsformaat — verwacht kolommen: ${adapter.requiredHeaders.join(", ")}`,
       );
     }
+
+    // Mirrors the single-record write gate (findRejectedMoneyWrite):
+    // refuse the whole import rather than silently importing every
+    // other field and dropping just the price, if the caller lacks
+    // Kosten/Facturen: wijzigen and the file carries a money column.
+    if (rejectedMoneyImportHeader(entity, headers, access)) return forbidden();
 
     const result = await applyImport(adapter, rows, format, mode, { userId: access.id, fileName: file.name });
     if ("blockers" in result) {

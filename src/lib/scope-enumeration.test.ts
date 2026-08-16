@@ -223,3 +223,28 @@ describe("company calendar feed (O1.3) — checked at issuance, not re-checked p
     expect(source).toContain('access.scope === "own"');
   });
 });
+
+describe("import pipeline (P3) — bucket (c), deny scope: own outright", () => {
+  // Found by review: these routes existed but were never added to this
+  // hand-maintained enumeration, so a future refactor dropping the
+  // check would have gone unnoticed here (route-guards.test.ts only
+  // proves *a* requireModule call exists, not the scope handling).
+  it.each([
+    ["import/[entity]/preview/route.ts", "POST"],
+    ["import/[entity]/apply/route.ts", "POST"],
+    ["materials/import/preview/route.ts", "POST"],
+    ["materials/import/route.ts", "POST"],
+  ])("%s %s denies scope: own", (file, method) => {
+    expect(handler(file, method)).toContain('access.scope === "own"');
+  });
+});
+
+describe("calendar-feeds (O1.4) — own-row restriction, not a blanket deny", () => {
+  it("GET /api/calendar-feeds filters to the caller's own userId", () => {
+    expect(handler("calendar-feeds/route.ts", "GET")).toContain("userId: access.id");
+  });
+
+  it("DELETE /api/calendar-feeds/[id] checks ownership via revokeFeedToken(access.id, ...)", () => {
+    expect(handler("calendar-feeds/[id]/route.ts", "DELETE")).toContain("revokeFeedToken(access.id");
+  });
+});

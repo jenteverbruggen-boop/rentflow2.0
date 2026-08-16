@@ -9,6 +9,7 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { redactMoney } from "@/lib/redact";
+import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string; componentId: string }> };
 
@@ -30,7 +31,22 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       data: { quantity: parsed.data.quantity },
       include: { child: true },
     });
-    return NextResponse.json(redactMoney(updated, access));
+    // Review finding: same Decimal→number gap as the sibling components
+    // route — redactMoney only nulls for a caller without access.
+    return NextResponse.json(
+      redactMoney(
+        {
+          ...updated,
+          child: {
+            ...updated.child,
+            dayPrice: toNumber(updated.child.dayPrice),
+            setupCost: toNumberOrNull(updated.child.setupCost),
+            bundlePriceOverride: toNumberOrNull(updated.child.bundlePriceOverride),
+          },
+        },
+        access,
+      ),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }

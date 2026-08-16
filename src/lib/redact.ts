@@ -73,6 +73,11 @@ const SCALAR_DENYLIST = new Set([
   "unitPrice",
   "lineTotalExcl",
   "amount",
+  // K4 (phase 3): the bundle-component weight snapshot payback reads
+  // from — not on any response wire today (verified by review), but a
+  // forward entry so a future embed doesn't need a second pass, same
+  // reasoning as costPrice/listPrice/revenueBefore above.
+  "dayPriceAtBooking",
 ]);
 
 // hasOverride is a boolean, not a price — but "an override exists" is

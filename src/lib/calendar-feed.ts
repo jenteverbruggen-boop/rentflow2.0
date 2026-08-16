@@ -3,7 +3,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import type { ResolvedAccess } from "@/lib/api-auth";
 import { satisfies } from "@/lib/modules";
-import type { CalendarFeedKind } from "@/types";
+import type { AccessLevel, CalendarFeedKind } from "@/types";
 
 /** O1.1 — `node:crypto`-random, never `Math.random`, never the JWT. */
 function generateFeedToken(): string {
@@ -54,20 +54,42 @@ export async function revokeFeedToken(
   return true;
 }
 
+/**
+ * Found by review: the design doc's own requirement is that the
+ * feed-*serving* route re-checks the token owner's current scope on
+ * every request, not only at issue/revoke time — revoke-on-change
+ * (below) covers a role reassignment or a scope edit, but a `planning`
+ * module *downgrade* via the permission matrix touches neither `roleId`
+ * nor `scope`, so it would otherwise slip through undetected until the
+ * next unrelated role/scope edit. This closes that gap directly: called
+ * from the serving route on every request for a `company`-kind feed
+ * (cheap — one row lookup, same shape as `requireModule`'s own
+ * per-request re-resolution, no caching).
+ */
+export async function isCompanyFeedStillEligible(
+  userId: number,
+  client: PrismaClient = defaultPrisma,
+): Promise<boolean> {
+  const user = await client.user.findUnique({
+    where: { id: userId },
+    select: { roleRel: { select: { scope: true, permissions: { where: { module: "planning" } } } } },
+  });
+  if (!user?.roleRel) return false;
+  if (user.roleRel.scope === "own") return false;
+  const level = (user.roleRel.permissions[0]?.access ?? "geen") as AccessLevel;
+  return satisfies(level, "lezen");
+}
+
 /** O1.3 — "revoke the token when a user's role or scope changes" is
  * enforced here, called from the two write paths that can invalidate a
  * company feed's eligibility: reassigning a user's role
  * (`PATCH /api/users/[id]`) and editing a role's own scope
  * (`PUT /api/roles/[id]`). Only the `company` kind is ever revoked this
  * way — the personal feed's eligibility never depends on role/scope.
- *
- * Known gap, stated rather than silently left: a company feed issued to a
- * role that later has its `planning` module access *downgraded* via the
- * permission matrix (without touching `roleId` or `scope`) is not
- * revoked by this — only a role reassignment or a scope change trigger
- * it. Re-checking the full matrix on every poll isn't feasible from a
- * static URL token; this is the same trade-off the brief accepts for
- * scope/role changes, just not yet extended to matrix edits. */
+ * A pure `planning` matrix downgrade (neither `roleId` nor `scope`
+ * touched) is now caught instead by `isCompanyFeedStillEligible`'s
+ * per-request check above, so this eager revoke and that lazy check
+ * together cover every eligibility-changing edit. */
 export async function revokeCompanyFeedForUser(
   userId: number,
   client: PrismaClient = defaultPrisma,

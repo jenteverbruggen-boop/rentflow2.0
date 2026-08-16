@@ -4,6 +4,7 @@ import { parseImportFile } from "@/lib/import/parse-file";
 import { detectEntityFormat } from "@/lib/import/format-detection";
 import { buildImportPreview } from "@/lib/import/pipeline";
 import { resolveImportEntity, getImportAdapter, IMPORT_ENTITY_MODULE } from "@/lib/import/entity-registry";
+import { redactPreviewMoney } from "@/lib/import/money-guard";
 import type { ImportMode } from "@/lib/import/pipeline-types";
 
 type Params = { params: Promise<{ entity: string }> };
@@ -48,7 +49,10 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
 
     const preview = await buildImportPreview(adapter, rows, format, mode);
-    return NextResponse.json(preview);
+    // A row's `changes[].from` is the material/person's *current*
+    // database price — exactly what the money-redaction rule exists to
+    // hide from a caller without Kosten/Facturen: lezen.
+    return NextResponse.json(redactPreviewMoney(preview, access));
   } catch (err) {
     return serverError((err as Error).message);
   }

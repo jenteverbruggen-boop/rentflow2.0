@@ -4,6 +4,7 @@ import { parseImportFile } from "@/lib/import/parse-file";
 import { detectFormat } from "@/lib/import/format-detection";
 import { parseMaterialRows } from "@/lib/import/material-adapter";
 import { applyMaterialImport } from "@/lib/import/apply-material-import";
+import { rejectedMoneyImportHeader } from "@/lib/import/money-guard";
 
 /**
  * M1.4 — applies an import. Same module/level guard as the preview
@@ -34,6 +35,12 @@ export async function POST(req: NextRequest) {
         "Onherkend bestandsformaat — verwacht een Rentman-materiaalexport of een RentFlow-export",
       );
     }
+
+    // Mirrors the single-record write gate (findRejectedMoneyWrite):
+    // refuse the whole import rather than silently importing every
+    // other field and dropping just the price, if the caller lacks
+    // Kosten/Facturen: wijzigen and the file carries a money column.
+    if (rejectedMoneyImportHeader("materials", headers, access)) return forbidden();
 
     const { materials, errors } = parseMaterialRows(rows, format);
     const result = await applyMaterialImport(materials, errors);

@@ -8,6 +8,7 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { redactMoney } from "@/lib/redact";
+import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -30,9 +31,25 @@ export async function GET(_req: NextRequest, { params }: Params) {
     // Not flagged in the brief's own route table for redaction, but
     // component.child carries the same dayPrice/setupCost/
     // bundlePriceOverride leak shape as materials/[id]/stock-items —
-    // closing it here for consistency.
+    // closing it here for consistency. Review finding: the child's
+    // Decimal fields also need converting before redactMoney — that
+    // function only nulls them for a caller without access, it's a
+    // no-op (raw Decimal, not a number) for one that does have access.
     return NextResponse.json(
-      components.map((c) => redactMoney(c, access)),
+      components.map((c) =>
+        redactMoney(
+          {
+            ...c,
+            child: {
+              ...c.child,
+              dayPrice: toNumber(c.child.dayPrice),
+              setupCost: toNumberOrNull(c.child.setupCost),
+              bundlePriceOverride: toNumberOrNull(c.child.bundlePriceOverride),
+            },
+          },
+          access,
+        ),
+      ),
     );
   } catch (err) {
     return serverError((err as Error).message);
@@ -64,7 +81,24 @@ export async function POST(req: NextRequest, { params }: Params) {
       data: { parentId, childId, quantity },
       include: { child: true },
     });
-    return NextResponse.json(component);
+    // Review finding: this response had no redaction at all — any
+    // caller regardless of Kosten/Facturen access received the raw
+    // (and unconverted, on Postgres) child.dayPrice/setupCost/
+    // bundlePriceOverride.
+    return NextResponse.json(
+      redactMoney(
+        {
+          ...component,
+          child: {
+            ...component.child,
+            dayPrice: toNumber(component.child.dayPrice),
+            setupCost: toNumberOrNull(component.child.setupCost),
+            bundlePriceOverride: toNumberOrNull(component.child.bundlePriceOverride),
+          },
+        },
+        access,
+      ),
+    );
   } catch (err) {
     if ((err as { code?: string }).code === "P2002") {
       return badRequest("Dit component zit al in de set");

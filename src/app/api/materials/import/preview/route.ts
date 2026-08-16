@@ -6,6 +6,7 @@ import { detectFormat } from "@/lib/import/format-detection";
 import { parseMaterialRows } from "@/lib/import/material-adapter";
 import { buildMaterialPreview, type ExistingMaterial } from "@/lib/import/material-preview";
 import { toNumberOrNull } from "@/lib/serialize";
+import { redactPreviewMoney } from "@/lib/import/money-guard";
 
 // M1.2 — never writes. Module Materialen:wijzigen, same as apply (M1.4)
 // — stated explicitly since N2.5's guard enumeration checks every
@@ -58,7 +59,11 @@ export async function POST(req: NextRequest) {
     );
 
     const preview = buildMaterialPreview(materials, errors, existingByCode, format);
-    return NextResponse.json(preview);
+    // A row's `changes[].from` is the material's *current* database
+    // price — exactly what the money-redaction rule exists to hide
+    // from a caller without Kosten/Facturen: lezen (found by review;
+    // this route's own preview shape had never gone through it).
+    return NextResponse.json(redactPreviewMoney(preview, access));
   } catch (err) {
     return serverError((err as Error).message);
   }

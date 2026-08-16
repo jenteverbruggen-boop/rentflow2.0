@@ -10,6 +10,7 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { findRejectedField, redactMoney } from "@/lib/redact";
+import { toNumberOrNull } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string }> };
 const RATE_FIELDS = ["dayRate", "hourRate"] as const;
@@ -37,7 +38,12 @@ export async function PUT(req: NextRequest, { params }: Params) {
       where: { id: parseInt(id) },
       data: parsed.data,
     });
-    return NextResponse.json(redactMoney(fn, access));
+    // Review finding: same Decimal→number gap as functions/route.ts's
+    // GET/POST — redactMoney doesn't convert, it only nulls for a
+    // caller without access.
+    return NextResponse.json(
+      redactMoney({ ...fn, dayRate: toNumberOrNull(fn.dayRate), hourRate: toNumberOrNull(fn.hourRate) }, access),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }

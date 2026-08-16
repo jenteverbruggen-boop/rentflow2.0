@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModule, forbidden, conflict, serverError } from "@/lib/api-auth";
+import { redactMoney } from "@/lib/redact";
+import { toNumberOrNull } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -14,7 +16,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       where: { id: parseInt(id) },
       data: { identifier: identifier ?? null, notes: notes ?? null },
     });
-    return NextResponse.json(item);
+    // Review finding: this route only ever writes identifier/notes but
+    // echoed the whole updated row, including costPrice, with no
+    // redaction at all — the sibling GET (materials/[id]/stock-items)
+    // already redacts it correctly.
+    return NextResponse.json(redactMoney({ ...item, costPrice: toNumberOrNull(item.costPrice) }, access));
   } catch (err) {
     return serverError((err as Error).message);
   }

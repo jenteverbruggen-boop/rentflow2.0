@@ -8,6 +8,7 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { findRejectedField, redactMoney } from "@/lib/redact";
+import { toNumberOrNull } from "@/lib/serialize";
 
 const RATE_FIELDS = ["dayRate", "hourRate"] as const;
 
@@ -31,7 +32,17 @@ export async function GET() {
     const functions = await prisma.function.findMany({
       orderBy: { name: "asc" },
     });
-    return NextResponse.json(functions.map((f) => redactMoney(f, access)));
+    // Review finding: a caller WITH Kosten/Facturen access previously
+    // received a raw Decimal here — redactMoney only nulls fields for
+    // callers WITHOUT access, it's a no-op otherwise, so the
+    // Decimal→number conversion still has to happen at this boundary
+    // (production/Postgres-only bug: Decimal.toJSON() returns a string,
+    // invisible on SQLite dev/CI).
+    return NextResponse.json(
+      functions.map((f) =>
+        redactMoney({ ...f, dayRate: toNumberOrNull(f.dayRate), hourRate: toNumberOrNull(f.hourRate) }, access),
+      ),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }
@@ -49,7 +60,9 @@ export async function POST(req: NextRequest) {
       return forbidden();
     }
     const fn = await prisma.function.create({ data: parsed.data });
-    return NextResponse.json(redactMoney(fn, access));
+    return NextResponse.json(
+      redactMoney({ ...fn, dayRate: toNumberOrNull(fn.dayRate), hourRate: toNumberOrNull(fn.hourRate) }, access),
+    );
   } catch (err) {
     return serverError((err as Error).message);
   }
