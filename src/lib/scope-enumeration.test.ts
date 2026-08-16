@@ -189,7 +189,22 @@ describe("write-only routes — no new scoping code, covered by requireModule's 
   });
 });
 
+describe("company calendar feed (O1.3) — checked at issuance, not re-checked per request", () => {
+  // GET /api/calendar/[token] is token-authenticated and serves whatever
+  // the token was issued for — it never re-derives a ResolvedAccess, so
+  // there is nothing to scopeFilter in that handler's own body (unlike
+  // every route above). The actual scope: own refusal lives in
+  // src/lib/calendar-feed.ts's issueFeedToken (O1.4's issuance route),
+  // checked once here rather than duplicated as a source-scan per file.
+  it("issueFeedToken refuses scope: own for kind: company", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "src", "lib", "calendar-feed.ts"),
+      "utf-8",
+    );
+    expect(source).toContain('access.scope === "own"');
+  });
+});
+
 describe("forward placeholders — not yet built, must not be forgotten when they land", () => {
-  it.todo("/api/calendar/ company feed (O1, phase 4) refuses scope: own, re-checked per request");
   it.todo("every export route (P2, phase 4) — bucket-a exports scopeFilter'd, bucket-c exports 403");
 });

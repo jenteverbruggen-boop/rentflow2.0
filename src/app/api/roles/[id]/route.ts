@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireModule, forbidden, badRequest, notFound, conflict, serverError } from "@/lib/api-auth";
+import { revokeCompanyFeedsForRole } from "@/lib/calendar-feed";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -34,6 +35,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
         ...(parsed.data.scope !== undefined && { scope: parsed.data.scope }),
       },
     });
+    // O1.3 — a scope edit can invalidate every user on this role's
+    // eligibility for the company calendar feed.
+    if (parsed.data.scope !== undefined) await revokeCompanyFeedsForRole(role.id);
     return NextResponse.json(updated);
   } catch (err) {
     return serverError((err as Error).message);

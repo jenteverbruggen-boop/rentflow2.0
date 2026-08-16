@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireModule, badRequest, notFound, conflict, serverError, forbidden } from "@/lib/api-auth";
 import { resolveRoleAssignment } from "@/lib/role-assignment";
+import { revokeCompanyFeedForUser } from "@/lib/calendar-feed";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -57,6 +58,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     try {
       const updated = await prisma.user.update({ where: { id: userId }, data, select: USER_SELECT });
+      // O1.3 — a role reassignment can invalidate this user's eligibility
+      // for the company calendar feed; a static URL token can't be
+      // re-checked on every poll, so revoke it here instead.
+      if (data.roleId !== undefined) await revokeCompanyFeedForUser(userId);
       return NextResponse.json(updated);
     } catch (e: unknown) {
       if ((e as { code?: string })?.code === "P2002") return conflict("Deze persoon is al gekoppeld aan een account");
