@@ -2,8 +2,7 @@
 
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, startOfDay, endOfDay } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { PlanningWeekGrid } from "@/components/planning-week-grid";
@@ -11,28 +10,34 @@ import { PlanningWeekList } from "@/components/planning-week-list";
 import { PlanningMonthGrid } from "@/components/planning-month-grid";
 import { PlanningDayTimeline } from "@/components/planning-day-timeline";
 import { stepDate, monthGridDays, parseViewParam, parseDateParam, type PlanningView } from "@/lib/planning-dates";
-import { projectsOnDay, countAssignments, projectsToDayPeriods } from "@/lib/planning-project-data";
-import type { Project } from "@/types";
-
-async function fetchProjects(): Promise<Project[]> {
-  const res = await fetch("/api/projects");
-  if (!res.ok) throw new Error("Ophalen mislukt");
-  return res.json();
-}
+import { periodsOnDay, projectTotals, projectsToDayPeriods } from "@/lib/planning-project-data";
+import { usePlanningProjects } from "@/hooks/use-planning-projects";
 
 const VIEW_LABELS: Record<PlanningView, string> = { day: "Dag", week: "Week", month: "Maand" };
 
-/** I1.1 — view + date live in the URL (`?view=&date=`), replacing the
- * old local `useState` cursor — reload-safe and shareable, following
- * the house `useSearchParams()`/`router.replace()` pattern
- * (projects/[id]/page.tsx). */
+/**
+ * I1.1/I2.2 — view + date live in the URL; the visible range is
+ * range-fetched from the lean planning endpoint (I2.1) and bucketed by
+ * **period**, not whole projects (I2.2) — a Mon–Fri project with a
+ * single Wednesday period no longer paints Mon/Tue/Thu/Fri.
+ */
 function PlanningPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const view = parseViewParam(searchParams.get("view"));
   const cursor = parseDateParam(searchParams.get("date"));
 
-  const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: fetchProjects, staleTime: 60_000 });
+  const weekDates = eachDayOfInterval({
+    start: startOfWeek(cursor, { weekStartsOn: 1 }),
+    end: endOfWeek(cursor, { weekStartsOn: 1 }),
+  });
+  const monthDates = monthGridDays(cursor);
+  const rangeStart =
+    view === "day" ? startOfDay(cursor) : view === "month" ? monthDates[0] : weekDates[0];
+  const rangeEnd =
+    view === "day" ? endOfDay(cursor) : view === "month" ? monthDates[monthDates.length - 1] : weekDates[6];
+
+  const { data: projects = [] } = usePlanningProjects(rangeStart, rangeEnd);
 
   function setParams(nextView: PlanningView, nextDate: Date) {
     const params = new URLSearchParams(searchParams.toString());
@@ -41,17 +46,9 @@ function PlanningPageContent() {
     router.replace(`?${params.toString()}`);
   }
 
-  const weekDates = eachDayOfInterval({
-    start: startOfWeek(cursor, { weekStartsOn: 1 }),
-    end: endOfWeek(cursor, { weekStartsOn: 1 }),
-  });
-  const weekDays = weekDates.map((date) => ({
-    date,
-    projects: projectsOnDay(projects, date).map((project) => ({ project, ...countAssignments(project) })),
-  }));
-  const weekProjects = [...new Map(weekDates.flatMap((d) => projectsOnDay(projects, d)).map((p) => [p.id, p])).values()]
-    .map((project) => ({ project, ...countAssignments(project) }));
-  const monthDays = monthGridDays(cursor).map((date) => ({ date, projects: projectsOnDay(projects, date) }));
+  const weekDays = weekDates.map((date) => ({ date, periods: periodsOnDay(projects, date) }));
+  const weekProjects = projectTotals(weekDates.flatMap((d) => periodsOnDay(projects, d)));
+  const monthDays = monthDates.map((date) => ({ date, periods: periodsOnDay(projects, date) }));
   const dayPeriods = projectsToDayPeriods(projects);
 
   const rangeLabel =

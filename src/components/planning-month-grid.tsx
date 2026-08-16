@@ -7,11 +7,11 @@ import { Card } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { cn, statusVariant } from "@/lib/utils";
-import type { Project } from "@/types";
+import type { PeriodWithProject } from "@/lib/planning-project-data";
 
 export interface MonthDayCell {
   date: Date;
-  projects: Project[];
+  periods: PeriodWithProject[];
 }
 
 interface Props {
@@ -22,20 +22,25 @@ interface Props {
 const VISIBLE_LIMIT = 3;
 const WEEKDAY_LABELS = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
 
-/** I1.2 — leading/trailing-padded month grid; a cell showing more
- * than fits expands via a popover on click (Q20) rather than
- * truncating silently. */
+function fmtTime(d: string) {
+  return format(new Date(d), "HH:mm");
+}
+
+/** I1.2/I2.2 — leading/trailing-padded month grid, placing **periods**
+ * (with their real `HH:mm`) rather than whole projects; a cell
+ * showing more than fits expands via a popover on click (Q20) rather
+ * than truncating silently. */
 export function PlanningMonthGrid({ month, days }: Props) {
   return (
     <div className="grid grid-cols-7 gap-1">
       {WEEKDAY_LABELS.map((d) => (
         <div key={d} className="text-xs text-muted-foreground text-center pb-1">{d}</div>
       ))}
-      {days.map(({ date, projects }) => {
+      {days.map(({ date, periods }) => {
         const isToday = isSameDay(date, new Date());
         const inMonth = isSameMonth(date, month);
-        const visible = projects.slice(0, VISIBLE_LIMIT);
-        const overflow = projects.length - visible.length;
+        const visible = periods.slice(0, VISIBLE_LIMIT);
+        const overflow = periods.length - visible.length;
         return (
           <Card
             key={date.toISOString()}
@@ -45,13 +50,13 @@ export function PlanningMonthGrid({ month, days }: Props) {
               {format(date, "d", { locale: nl })}
             </p>
             <div className="space-y-0.5">
-              {visible.map((p) => (
+              {visible.map(({ period, project }) => (
                 <Link
-                  key={p.id}
-                  href={`/projects/${p.id}`}
-                  className={cn("block truncate text-[10px] rounded px-1", statusVariant(p.status))}
+                  key={period.id}
+                  href={`/projects/${project.id}`}
+                  className={cn("block truncate text-[10px] rounded px-1", statusVariant(project.status))}
                 >
-                  {p.name}
+                  {fmtTime(period.startDate)} {project.name}
                 </Link>
               ))}
               {overflow > 0 && (
@@ -63,14 +68,14 @@ export function PlanningMonthGrid({ month, days }: Props) {
                   </PopoverTrigger>
                   <PopoverContent className="w-64 space-y-1" align="start">
                     <p className="text-xs font-semibold mb-1">{format(date, "d MMM yyyy", { locale: nl })}</p>
-                    {projects.map((p) => (
+                    {periods.map(({ period, project }) => (
                       <Link
-                        key={p.id}
-                        href={`/projects/${p.id}`}
+                        key={period.id}
+                        href={`/projects/${project.id}`}
                         className="flex items-center justify-between gap-2 text-xs hover:bg-accent px-2 py-1 rounded"
                       >
-                        <span className="truncate">{p.name}</span>
-                        <Badge className={statusVariant(p.status)}>{p.status}</Badge>
+                        <span className="truncate">{fmtTime(period.startDate)} {project.name}</span>
+                        <Badge className={statusVariant(project.status)}>{project.status}</Badge>
                       </Link>
                     ))}
                   </PopoverContent>

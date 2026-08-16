@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import type { Project } from "@/types";
+import type { PlanningProject } from "@/lib/planning-include";
 
 interface Props {
-  weekProjects: { project: Project; people: number; materials: number }[];
+  weekProjects: { project: PlanningProject; people: number; materials: number }[];
 }
 
 /** "Alle projecten deze week" list, extracted from planning/page.tsx (Y3.2)

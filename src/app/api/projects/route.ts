@@ -8,23 +8,37 @@ import {
 } from "@/lib/api-auth";
 import { projectInclude } from "@/lib/project-include";
 import { serializeProject } from "@/lib/serialize-project";
+import { fetchProjects } from "@/lib/fetch-projects";
 import { brusselsWallClockToUtc } from "@/lib/brussels-time";
 import { redactMoney } from "@/lib/redact";
-import { scopeFilter } from "@/lib/scope-filter";
+import { parseDateRange } from "@/lib/parse-date-range";
 
-export async function GET() {
+/**
+ * I2.1 — `from`/`to` are optional, with an unfiltered fallback: unlike
+ * materials/available/route.ts (which *requires* a range and 400s
+ * without one), three existing callers already fetch this endpoint
+ * with no query string at all (dashboard, projects table, planning
+ * pre-I2) and must keep working unchanged. Only when both are present
+ * does this switch to the range-filtered, lean planning shape — a
+ * materially different response shape from the full `Project` tree,
+ * never returned to an unfiltered caller.
+ */
+export async function GET(req: NextRequest) {
   const access = await requireModule("projecten", "lezen").catch(() => null);
   if (!access) return forbidden();
 
   try {
-    const projects = await prisma.project.findMany({
-      where: scopeFilter(access),
-      orderBy: { startDate: "asc" },
-      include: projectInclude,
-    });
-    return NextResponse.json(
-      projects.map((p) => redactMoney(serializeProject(p), access)),
-    );
+    const { searchParams } = new URL(req.url);
+    const fromParam = searchParams.get("from");
+    const toParam = searchParams.get("to");
+
+    if (fromParam || toParam) {
+      const range = parseDateRange(fromParam, toParam);
+      if (!range) return badRequest("from en to moeten een geldige periode vormen (to na from)");
+      return NextResponse.json(await fetchProjects(access, range));
+    }
+
+    return NextResponse.json(await fetchProjects(access, undefined));
   } catch (err) {
     return serverError((err as Error).message);
   }

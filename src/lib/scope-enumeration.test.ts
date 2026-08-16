@@ -52,11 +52,22 @@ function handler(relPath: string, method: string) {
 }
 
 describe("bucket (a) — scopeFilter applied to project ownership reads", () => {
-  it.each([
-    ["projects/route.ts", "GET"],
-    ["projects/[id]/route.ts", "GET"],
-  ])("%s %s calls scopeFilter", (file, method) => {
+  it.each([["projects/[id]/route.ts", "GET"]])("%s %s calls scopeFilter", (file, method) => {
     expect(handler(file, method)).toContain("scopeFilter(");
+  });
+
+  // I2.1 — projects/route.ts's GET delegates to src/lib/fetch-projects.ts
+  // (both the unfiltered and range-filtered planning paths) rather than
+  // calling scopeFilter() directly in the handler body; assert the
+  // delegation and the delegate's own scopeFilter( call separately so a
+  // future refactor can't silently drop either half.
+  it("projects/route.ts GET delegates to fetchProjects(), which itself calls scopeFilter", () => {
+    expect(handler("projects/route.ts", "GET")).toContain("fetchProjects(");
+    const fetchProjectsSource = readFileSync(
+      path.join(process.cwd(), "src", "lib", "fetch-projects.ts"),
+      "utf-8",
+    );
+    expect(fetchProjectsSource).toContain("scopeFilter(");
   });
 });
 

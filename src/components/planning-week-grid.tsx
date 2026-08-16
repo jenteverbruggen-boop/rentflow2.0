@@ -2,25 +2,25 @@ import { format, isSameDay } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { PlanningCalendarItem } from "@/components/planning-calendar-item";
-import type { Project } from "@/types";
+import { PlanningPeriodItem } from "@/components/planning-period-item";
+import type { PeriodWithProject } from "@/lib/planning-project-data";
 
 export interface DayCell {
   date: Date;
-  projects: { project: Project; people: number; materials: number }[];
+  periods: PeriodWithProject[];
 }
 
 interface Props {
   days: DayCell[];
 }
 
-/** The 7-column week grid, extracted from planning/page.tsx (Y3.2) — pure
- * move, no behaviour change. Receives already-computed per-day project
- * counts rather than recomputing countAssignments/projectsOnDay itself. */
+/** I2.2 — the 7-column week grid now places **periods**, not whole
+ * projects: a Mon–Fri project with a single Wednesday period only
+ * paints Wednesday. */
 export function PlanningWeekGrid({ days }: Props) {
   return (
     <div className="grid grid-cols-7 gap-2">
-      {days.map(({ date, projects }) => {
+      {days.map(({ date, periods }) => {
         const isToday = isSameDay(date, new Date());
         return (
           <Card
@@ -37,13 +37,8 @@ export function PlanningWeekGrid({ days }: Props) {
                 {format(date, "EEE d", { locale: nl })}
               </p>
               <div className="space-y-1">
-                {projects.map(({ project, people, materials }) => (
-                  <PlanningCalendarItem
-                    key={project.id}
-                    project={project}
-                    people={people}
-                    materials={materials}
-                  />
+                {periods.map(({ period, project }) => (
+                  <PlanningPeriodItem key={period.id} period={period} project={project} />
                 ))}
               </div>
             </CardContent>

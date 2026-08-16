@@ -198,7 +198,7 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | `POST` | `/api/auth/register` | Register a new user |
 | `POST` | `/api/auth/login` | Login — sets httpOnly cookie |
 | `POST` | `/api/auth/logout` | Logout — clears cookie |
-| `GET` | `/api/projects` | List all projects (with nested periods + bookings) |
+| `GET` | `/api/projects?from&to` | With no query string: every project, full nested tree (periods + bookings) — unchanged since before I2. With both `from`/`to`: only projects overlapping that range, in a materially lighter shape for the planning page (periods carry `peopleCount`/`materialsCount` instead of the full nested person/material/travel-cost trees) |
 | `POST` | `/api/projects` | Create a project (auto-creates a default "Hoofdperiode") |
 | `GET` | `/api/projects/:id` | Get project with periods, bookings, stock items, persons |
 | `PUT` | `/api/projects/:id` | Update a project |
