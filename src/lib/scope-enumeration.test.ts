@@ -111,6 +111,32 @@ describe("bucket (c) — standalone catalogues deny scope: own outright", () => 
   });
 });
 
+describe("Cijfers/Facturen — phase 3 aggregate money surfaces deny scope: own outright", () => {
+  // own-data-scoping-design.md:192 — aggregate company revenue/utilisation
+  // figures and invoices have no "my own" reading a freelancer has
+  // legitimate use for; every one of these denies scope: own unconditionally,
+  // never a partial/filtered view (K1.1, J2b).
+  it.each([
+    ["stats/route.ts", "GET"],
+    ["invoices/route.ts", "POST"],
+    ["invoices/route.ts", "GET"],
+    ["invoices/[id]/route.ts", "GET"],
+    ["invoices/[id]/route.ts", "PATCH"],
+    ["invoices/[id]/route.ts", "DELETE"],
+    ["invoices/[id]/payments/route.ts", "POST"],
+    ["invoices/[id]/payments/[paymentId]/route.ts", "PATCH"],
+    ["invoices/[id]/payments/[paymentId]/route.ts", "DELETE"],
+    ["invoices/[id]/credit-note/route.ts", "POST"],
+    ["invoices/[id]/regenerate/route.ts", "POST"],
+    ["invoices/[id]/finalize/route.ts", "POST"],
+    ["invoices/[id]/lines/route.ts", "POST"],
+    ["invoices/[id]/lines/[lineId]/route.ts", "PATCH"],
+    ["invoices/[id]/lines/[lineId]/route.ts", "DELETE"],
+  ])("%s %s denies scope: own", (file, method) => {
+    expect(handler(file, method)).toContain('access.scope === "own"');
+  });
+});
+
 describe("Kosten/Facturen money routes with no partial-keep deny scope: own even at lezen", () => {
   it("periods/[id]/people/[assignmentId]/travel/route.ts GET denies scope: own", () => {
     expect(
@@ -164,7 +190,6 @@ describe("write-only routes — no new scoping code, covered by requireModule's 
 });
 
 describe("forward placeholders — not yet built, must not be forgotten when they land", () => {
-  it.todo("GET /api/stats (K1, phase 3) denies scope: own regardless of matrix");
   it.todo("/api/calendar/ company feed (O1, phase 4) refuses scope: own, re-checked per request");
   it.todo("every export route (P2, phase 4) — bucket-a exports scopeFilter'd, bucket-c exports 403");
 });
