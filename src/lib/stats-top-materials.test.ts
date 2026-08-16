@@ -5,7 +5,7 @@ import type { Period, PeriodStockItem } from "@/types";
 function makeStockItem(materialId: number, name: string, snapshot: number, archived = false): PeriodStockItem {
   return {
     id: materialId, periodId: 1, stockItemId: materialId, dayPriceSnapshot: snapshot,
-    setupCostSnapshot: 0, discountPct: null, discountAmount: null, bundleBookingId: null,
+    setupCostSnapshot: 0, discountPct: null, discountAmount: null, bundleBookingId: null, shippedAt: null, returnedAt: null,
     stockItem: {
       id: materialId, materialId, unitNumber: 1, identifier: null, notes: null, costPrice: null,
       material: {

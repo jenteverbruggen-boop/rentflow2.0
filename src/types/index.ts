@@ -220,6 +220,11 @@ export interface PeriodStockItem {
   discountPct: number | null;
   discountAmount: number | null;
   bundleBookingId: number | null;
+  /** Packing-list checklist — set when an operator ticks a unit as
+   * loaded/unloaded; `null` means "not yet". `returnedAt` is only ever
+   * meaningful once `shippedAt` is set (checked server-side). */
+  shippedAt: string | null;
+  returnedAt: string | null;
   stockItem: StockItem & { material: Material };
 }
 

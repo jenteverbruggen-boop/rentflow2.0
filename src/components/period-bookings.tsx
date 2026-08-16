@@ -1,14 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LinePricePopover } from "@/components/line-price-popover";
-import { PersonTravelEditor } from "@/components/person-travel-editor";
-import { formatEUR, periodDays, personLineCost } from "@/lib/pricing";
+import { PeriodPeopleSection } from "@/components/period-people-section";
+import { PackingListDialog } from "@/components/packing-list-dialog";
+import { formatEUR, periodDays } from "@/lib/pricing";
 import { groupMaterialAssignments, materialGroupCost } from "@/lib/grouping";
 import type { Period, Project } from "@/types";
 
@@ -19,6 +20,7 @@ interface Props {
 
 export function PeriodBookings({ period, project }: Props) {
   const queryClient = useQueryClient();
+  const [packingListOpen, setPackingListOpen] = useState(false);
   const days = periodDays(period);
   const projectKey = ["project", String(project.id)] as const;
   const groups = groupMaterialAssignments(period.materials);
@@ -28,73 +30,23 @@ export function PeriodBookings({ period, project }: Props) {
       fetch(`/api/periods/${period.id}/materials/${assignmentId}`, { method: "DELETE" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKey }),
   });
-  const removePerson = useMutation({
-    mutationFn: (assignmentId: number) =>
-      fetch(`/api/periods/${period.id}/people/${assignmentId}`, { method: "DELETE" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKey }),
-  });
 
   return (
     <Card>
       <CardContent className="pt-5 space-y-4">
-        <section>
-          <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">👥 Personen</h4>
-          {period.people.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Geen toegewezen</p>
-          ) : (
-            <div className="space-y-1.5">
-              {period.people.map((pp) => {
-                const override = project.personPrices.find((p) => p.personId === pp.personId);
-                return (
-                  <div key={pp.id} className="rounded-md bg-muted/40 px-3 py-1.5">
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate flex items-center gap-1.5">
-                          {pp.person.name}
-                          {pp.overlapAck && <Badge variant="destructive" className="text-[10px]">dubbel geboekt</Badge>}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{pp.function?.name}</p>
-                      </div>
-                      <LinePricePopover
-                        snapshot={pp.dayPriceSnapshot}
-                        basePrice={pp.person.dayPrice}
-                        override={override ? override.dayPrice : null}
-                        resnapshotUrl={`/api/periods/${period.id}/people/${pp.id}`}
-                        projectId={project.id}
-                        kind="person"
-                        entityId={pp.personId}
-                        entityName={pp.person.name}
-                        invalidateKey={projectKey}
-                      />
-                      <span className="text-xs text-muted-foreground tabular-nums">
-                        {formatEUR(personLineCost(pp, days))}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 hover:text-destructive"
-                        onClick={() => removePerson.mutate(pp.id)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <PersonTravelEditor
-                      periodId={period.id}
-                      assignmentId={pp.id}
-                      travelCosts={pp.travelCosts ?? []}
-                      invalidateKey={projectKey}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
+        <PeriodPeopleSection period={period} project={project} days={days} />
 
         <Separator />
 
         <section>
-          <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">📦 Materialen</h4>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-semibold uppercase text-muted-foreground">📦 Materialen</h4>
+            {period.materials.length > 0 && (
+              <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => setPackingListOpen(true)}>
+                Paklijst
+              </Button>
+            )}
+          </div>
           {groups.length === 0 ? (
             <p className="text-xs text-muted-foreground">Geen toegewezen</p>
           ) : (
@@ -143,6 +95,12 @@ export function PeriodBookings({ period, project }: Props) {
           )}
         </section>
       </CardContent>
+      <PackingListDialog
+        period={period}
+        project={project}
+        open={packingListOpen}
+        onOpenChange={setPackingListOpen}
+      />
     </Card>
   );
 }

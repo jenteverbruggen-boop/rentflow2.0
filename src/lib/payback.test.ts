@@ -17,7 +17,7 @@ function makeMaterialShape(id: number, name: string): Material {
 function makeFlatItem(materialId: number, materialName: string, snapshot: number): PeriodStockItem {
   return {
     id: materialId, periodId: 1, stockItemId: materialId, dayPriceSnapshot: snapshot,
-    setupCostSnapshot: 0, discountPct: null, discountAmount: null, bundleBookingId: null,
+    setupCostSnapshot: 0, discountPct: null, discountAmount: null, bundleBookingId: null, shippedAt: null, returnedAt: null,
     stockItem: { id: materialId, materialId, unitNumber: 1, identifier: null, notes: null, costPrice: null, material: makeMaterialShape(materialId, materialName) },
   };
 }
@@ -25,7 +25,7 @@ function makeFlatItem(materialId: number, materialName: string, snapshot: number
 function makeBundleComponentItem(id: number, materialId: number, materialName: string, bundleBookingId: number): PeriodStockItem {
   return {
     id, periodId: 1, stockItemId: id, dayPriceSnapshot: 0, setupCostSnapshot: 0,
-    discountPct: null, discountAmount: null, bundleBookingId,
+    discountPct: null, discountAmount: null, bundleBookingId, shippedAt: null, returnedAt: null,
     stockItem: { id, materialId, unitNumber: 1, identifier: null, notes: null, costPrice: null, material: makeMaterialShape(materialId, materialName) },
   };
 }

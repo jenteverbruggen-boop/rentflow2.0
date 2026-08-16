@@ -6,7 +6,7 @@ import type { Period, PeriodStockItem, PeriodPerson, PeriodBundleBooking } from 
 function makeStockItem(snapshot: number, setup = 0): PeriodStockItem {
   return {
     id: 1, periodId: 1, stockItemId: 1, dayPriceSnapshot: snapshot,
-    setupCostSnapshot: setup, discountPct: null, discountAmount: null, bundleBookingId: null,
+    setupCostSnapshot: setup, discountPct: null, discountAmount: null, bundleBookingId: null, shippedAt: null, returnedAt: null,
     stockItem: {
       id: 1, materialId: 1, unitNumber: 1, identifier: null, notes: null, costPrice: null,
       material: {

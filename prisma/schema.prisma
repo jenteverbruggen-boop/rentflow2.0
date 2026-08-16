@@ -255,6 +255,8 @@ model PeriodStockItem {
   discountPct       Decimal?             @db.Decimal(5, 2)
   discountAmount    Decimal?             @db.Decimal(10, 2)
   bundleBookingId   Int?
+  shippedAt         DateTime?
+  returnedAt        DateTime?
   period           Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
   stockItem        StockItem            @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
   bundleBooking    PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)

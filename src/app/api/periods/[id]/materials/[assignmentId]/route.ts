@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireModule, forbidden, serverError, notFound } from "@/lib/api-auth";
+import { requireModule, forbidden, badRequest, serverError, notFound } from "@/lib/api-auth";
 import { effectiveMaterialPrice } from "@/lib/effective-price";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
 import { findRejectedField, redactMoney } from "@/lib/redact";
+import { resolvePackingListPatch } from "@/lib/packing-list";
 
 const KOSTEN_FIELDS = ["discountPct", "discountAmount", "resnapshotPrice"] as const;
 
@@ -17,7 +18,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const { assignmentId } = await params;
     const body = await req.json();
     if (findRejectedField(body, access, KOSTEN_FIELDS)) return forbidden();
-    const { resnapshotPrice, discountPct, discountAmount } = body;
+    const { resnapshotPrice, discountPct, discountAmount, shipped, returned } = body;
     const data: Record<string, unknown> = {};
     if (resnapshotPrice) {
       const current = await prisma.periodStockItem.findUnique({
@@ -33,6 +34,25 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
     if (discountPct !== undefined) data.discountPct = discountPct != null ? toNumber(discountPct) : null;
     if (discountAmount !== undefined) data.discountAmount = discountAmount != null ? toNumber(discountAmount) : null;
+
+    // Packing-list checklist — server stamps "now" itself, the same
+    // convention as every other snapshot-at-action-time field in this
+    // codebase (dayPriceSnapshot, rateSnapshot, etc.); never trusts a
+    // client-supplied timestamp.
+    if (shipped !== undefined || returned !== undefined) {
+      const existing = await prisma.periodStockItem.findUnique({
+        where: { id: parseInt(assignmentId) },
+        select: { shippedAt: true },
+      });
+      if (!existing) return notFound();
+      const patch = resolvePackingListPatch(
+        { shipped, returned, currentlyShipped: existing.shippedAt != null },
+        new Date(),
+      );
+      if (patch.error) return badRequest(patch.error);
+      Object.assign(data, patch.data);
+    }
+
     const updated = await prisma.periodStockItem.update({
       where: { id: parseInt(assignmentId) },
       data,

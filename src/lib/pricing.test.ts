@@ -31,6 +31,8 @@ function makeStockItem(
     discountPct: opts?.discountPct ?? null,
     discountAmount: opts?.discountAmount ?? null,
     bundleBookingId: opts?.bundleBookingId ?? null,
+    shippedAt: null,
+    returnedAt: null,
     stockItem: {
       id: 1,
       materialId: 1,
