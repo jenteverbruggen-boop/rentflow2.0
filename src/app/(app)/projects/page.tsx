@@ -56,7 +56,12 @@ export default function ProjectsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Projecten</h2>
-        <Button onClick={openCreate}>+ Nieuw project</Button>
+        <div className="flex gap-2">
+          <a href="/api/projects/export" target="_blank" rel="noreferrer">
+            <Button variant="outline">⬇️ Exporteren</Button>
+          </a>
+          <Button onClick={openCreate}>+ Nieuw project</Button>
+        </div>
       </div>
 
       <div className="space-y-3">

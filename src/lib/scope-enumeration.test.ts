@@ -69,6 +69,18 @@ describe("bucket (a) — scopeFilter applied to project ownership reads", () => 
     );
     expect(fetchProjectsSource).toContain("scopeFilter(");
   });
+
+  // P2.3 — same delegation pattern: the export routes call their own
+  // lib function, which itself calls scopeFilter, rather than the route
+  // handler calling it directly.
+  it.each([
+    ["projects/export/route.ts", "fetchProjectsExportRows", "projects-export.ts"],
+    ["bookings/export/route.ts", "fetchBookingsExportRows", "bookings-export.ts"],
+  ])("%s GET delegates to %s, which itself calls scopeFilter", (file, fnName, libFile) => {
+    expect(handler(file, "GET")).toContain(`${fnName}(`);
+    const source = readFileSync(path.join(process.cwd(), "src", "lib", libFile), "utf-8");
+    expect(source).toContain("scopeFilter(");
+  });
 });
 
 describe("bucket (c) — standalone catalogues deny scope: own outright", () => {
@@ -138,6 +150,7 @@ describe("Cijfers/Facturen — phase 3 aggregate money surfaces deny scope: own 
     ["invoices/[id]/lines/route.ts", "POST"],
     ["invoices/[id]/lines/[lineId]/route.ts", "PATCH"],
     ["invoices/[id]/lines/[lineId]/route.ts", "DELETE"],
+    ["invoices/export/route.ts", "GET"],
   ])("%s %s denies scope: own", (file, method) => {
     expect(handler(file, method)).toContain('access.scope === "own"');
   });
@@ -209,8 +222,4 @@ describe("company calendar feed (O1.3) — checked at issuance, not re-checked p
     );
     expect(source).toContain('access.scope === "own"');
   });
-});
-
-describe("forward placeholders — not yet built, must not be forgotten when they land", () => {
-  it.todo("P2.3 project/booking/invoice export routes — scope handling per design doc §1.6");
 });

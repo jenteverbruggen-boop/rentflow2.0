@@ -200,6 +200,8 @@ All endpoints except `/api/auth/*` and `/api/calendar/:token` require authentica
 | `GET` | `/api/projects?from&to` | With no query string: every project, full nested tree (periods + bookings) — unchanged since before I2. With both `from`/`to`: only projects overlapping that range, in a materially lighter shape for the planning page (periods carry `peopleCount`/`materialsCount` instead of the full nested person/material/travel-cost trees) |
 | `GET` | `/api/planning/persons?from&to` | Person-mode planning view — one row per person with their bookings in range (`{ personId, name, bookings }[]`), each booking flagging `overlapAck` (H2's forced-double-booking marker). `from`/`to` are required. `scope: own` is restricted to the caller's own row (never denied outright) |
 | `POST` | `/api/projects` | Create a project (auto-creates a default "Hoofdperiode") |
+| `GET` | `/api/projects/export` | Download every project as a real `.xlsx` (P2.3) — export only, no import counterpart (a project's real content is a booking graph, not a flat row). `scope: own` is filtered to owned projects, same as `GET /api/projects` itself, never denied outright |
+| `GET` | `/api/bookings/export` | Download every person/material/bundle booking, flattened, one row per booking with `kind`/`entityName`/`quantity` (P2.3) — export only. Money columns omitted entirely without `Kosten/Facturen: lezen`. `scope: own` filtered the same way as projects |
 | `GET` | `/api/projects/:id` | Get project with periods, bookings, stock items, persons |
 | `PUT` | `/api/projects/:id` | Update a project |
 | `DELETE` | `/api/projects/:id` | Delete a project (cascades to periods + bookings) |
@@ -248,6 +250,7 @@ All endpoints except `/api/auth/*` and `/api/calendar/:token` require authentica
 | `PUT`/`DELETE` | `/api/clients/:id/rates/:functionId` | Edit or remove one rate-card row |
 | `POST` | `/api/invoices` | Create a draft invoice from a project — body `{ projectId, invoiceRole: "deposit"\|"final"\|"standalone", depositType?, depositValue? }`. Generates grouped-per-period lines (people/materials/bundles/travel) via the same cost maths as the Kosten tab; a `"final"` role deducts every prior non-`concept` deposit invoice for the project. `201`, `status: "concept"`, no `number` yet. Module `Kosten/Facturen`; denied outright (`403`) for `scope: own` regardless of matrix level |
 | `GET` | `/api/invoices?status&clientId&projectId&kind` | List invoices (all filters optional) |
+| `GET` | `/api/invoices/export` | Download every invoice as a real `.xlsx` (P2.3) — export only, no import in any mode, ever (an invoice's number is gapless/sequential and every figure is frozen once sent). Denied entirely (`403`) for `scope: own`, same as every other `Kosten/Facturen` route |
 | `GET` | `/api/invoices/:id` | Get one invoice with its lines, payments and linked credit notes |
 | `POST` | `/api/invoices/:id/finalize` | Allocate a gapless sequential number (`{year}-{seq:04d}` by default, credit notes always `CN-` + the same template) and flip `concept → verzonden`, freezing every line and total. `409` if the invoice is not currently `concept` |
 | `PATCH` | `/api/invoices/:id` | Update `{ notes?, footer?, dueDate? }` — `concept` only, `409` otherwise |

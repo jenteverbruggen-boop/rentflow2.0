@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { InvoiceStatusBadge } from "@/components/invoice-status-badge";
 import { formatEUR } from "@/lib/pricing";
 import { useInvoices } from "@/hooks/use-invoices";
@@ -30,14 +31,19 @@ export default function FacturenPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Facturen</h2>
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <a href="/api/invoices/export" target="_blank" rel="noreferrer">
+            <Button variant="outline">⬇️ Exporteren</Button>
+          </a>
+        </div>
       </div>
 
       {invoices.length === 0 ? (
