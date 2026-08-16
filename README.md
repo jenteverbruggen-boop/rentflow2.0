@@ -199,6 +199,7 @@ All endpoints except `/api/auth/*` require authentication via an httpOnly cookie
 | `POST` | `/api/auth/login` | Login — sets httpOnly cookie |
 | `POST` | `/api/auth/logout` | Logout — clears cookie |
 | `GET` | `/api/projects?from&to` | With no query string: every project, full nested tree (periods + bookings) — unchanged since before I2. With both `from`/`to`: only projects overlapping that range, in a materially lighter shape for the planning page (periods carry `peopleCount`/`materialsCount` instead of the full nested person/material/travel-cost trees) |
+| `GET` | `/api/planning/persons?from&to` | Person-mode planning view — one row per person with their bookings in range (`{ personId, name, bookings }[]`), each booking flagging `overlapAck` (H2's forced-double-booking marker). `from`/`to` are required. `scope: own` is restricted to the caller's own row (never denied outright) |
 | `POST` | `/api/projects` | Create a project (auto-creates a default "Hoofdperiode") |
 | `GET` | `/api/projects/:id` | Get project with periods, bookings, stock items, persons |
 | `PUT` | `/api/projects/:id` | Update a project |

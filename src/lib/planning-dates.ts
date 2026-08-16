@@ -35,6 +35,13 @@ export function parseViewParam(value: string | null): PlanningView {
   return value === "day" || value === "month" ? value : "week";
 }
 
+export type PlanningMode = "project" | "person";
+
+/** I3.1 — `?mode=project|person`, alongside `view`/`date`. */
+export function parseModeParam(value: string | null): PlanningMode {
+  return value === "person" ? "person" : "project";
+}
+
 export function parseDateParam(value: string | null): Date {
   if (!value) return new Date();
   const parsed = new Date(value);
