@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { BookPersonFields, type BlockingProject } from "@/components/book-person-fields";
 import { scopeFunctionsToClientRates } from "@/lib/scope-functions-to-client";
+import { useBookingPricePreview } from "@/hooks/use-booking-price-preview";
 import type { ClientFunctionRate, PersonAvailability } from "@/types";
 
 interface BookError extends Error { blockingProject?: BlockingProject }
@@ -56,15 +57,11 @@ export function BookPersonDialog({ person, periodId, clientId, onBooked, onClose
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [person, clientRates]);
 
-  const { data: preview } = useQuery({
-    queryKey: ["preview-price", periodId, person?.person.id, functionId, unit],
-    queryFn: () =>
-      fetch(
-        `/api/periods/${periodId}/people/preview-price?personId=${person!.person.id}&unit=${unit}` +
-          (functionId ? `&functionId=${functionId}` : ""),
-      ).then((r) => r.json()) as Promise<{ dayPriceSnapshot: number | null; source: string; unit: "dag" | "uur" }>,
-    enabled: !!person,
-  });
+  const { preview, hasHourRate } = useBookingPricePreview(periodId, person?.person.id, functionId, unit);
+
+  useEffect(() => {
+    if (!hasHourRate) setUnit("dag");
+  }, [hasHourRate]);
 
   const book = useMutation({
     mutationFn: async (allowOverlap: boolean) => {
@@ -109,6 +106,7 @@ export function BookPersonDialog({ person, periodId, clientId, onBooked, onClose
             onFunctionChange={setFunctionId}
             unit={unit}
             onUnitChange={setUnit}
+            hasHourRate={hasHourRate}
             preview={preview}
             conflict={conflict}
             error={error}

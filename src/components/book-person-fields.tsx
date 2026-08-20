@@ -33,6 +33,11 @@ interface Props {
   onFunctionChange: (id: number) => void;
   unit: "dag" | "uur";
   onUnitChange: (unit: "dag" | "uur") => void;
+  /** Whether an hourly rate exists anywhere in the cascade for the
+   * currently chosen function — when false, there is only one real
+   * billable unit, so the picker is skipped entirely rather than
+   * offering a choice that always falls back to the same answer. */
+  hasHourRate: boolean;
   preview: { dayPriceSnapshot: number | null; source: string; unit: "dag" | "uur" } | undefined;
   conflict: BlockingProject | null;
   error: string;
@@ -48,6 +53,7 @@ export function BookPersonFields({
   onFunctionChange,
   unit,
   onUnitChange,
+  hasHourRate,
   preview,
   conflict,
   error,
@@ -77,7 +83,7 @@ export function BookPersonFields({
       {fns.length === 1 && (
         <p className="text-sm text-muted-foreground">Functie: {fns[0].function?.name}</p>
       )}
-      {functionId != null && (
+      {functionId != null && hasHourRate && (
         <div className="space-y-1.5">
           <Label className="text-xs">Facturatie</Label>
           <Select value={unit} onValueChange={(v) => onUnitChange(v as "dag" | "uur")}>
@@ -89,12 +95,12 @@ export function BookPersonFields({
               <SelectItem value="uur">Per uur</SelectItem>
             </SelectContent>
           </Select>
-          {unit === "uur" && preview?.unit === "dag" && (
-            <p className="text-xs text-muted-foreground">
-              Geen uurtarief beschikbaar — wordt als volledige dag gefactureerd.
-            </p>
-          )}
         </div>
+      )}
+      {functionId != null && !hasHourRate && (
+        <p className="text-xs text-muted-foreground">
+          Facturatie: per dag (geen uurtarief beschikbaar voor deze functie)
+        </p>
       )}
       {preview && (
         <p className="text-sm">
