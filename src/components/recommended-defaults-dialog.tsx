@@ -36,7 +36,7 @@ const LEVEL_LABEL: Record<string, string> = {
 export function RecommendedDefaultsDialog({ open, onOpenChange, rows, onApply, isPending }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-describedby={undefined} className="max-w-lg">
+      <DialogContent aria-describedby={undefined} className="max-w-lg max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Aanbevolen standaarden toepassen</DialogTitle>
         </DialogHeader>
