@@ -1,13 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { toNumber, toNumberOrNull } from "./serialize";
 
+/**
+ * Mirrors decimal.js's actual instance shape (sign/exponent/digits +
+ * `toFixed`), not just its printable class name — deliberately named
+ * something other than "Decimal" and never given a `name` override.
+ * A real production bundle renames the genuine class to avoid a scope
+ * collision (`Decimal` -> `Decimal2`; reproduced against the actual
+ * generated client in prod, see serialize.ts's isDecimalish comment),
+ * so a fake whose `.name` happens to read "Decimal" would let a
+ * regression back to a name-string check slip past this suite
+ * unnoticed — which is exactly what happened before this fix.
+ */
 class FakeDecimal {
-  constructor(private value: string) {}
+  s = 1;
+  e = 0;
+  d: number[];
+  constructor(private value: string) {
+    this.d = value.split("").map(Number);
+  }
   toString() {
     return this.value;
   }
+  toFixed() {
+    return this.value;
+  }
 }
-Object.defineProperty(FakeDecimal, "name", { value: "Decimal" });
 
 describe("toNumber", () => {
   it("passes plain numbers through", () => {
