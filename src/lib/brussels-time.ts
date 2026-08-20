@@ -50,3 +50,29 @@ function brusselsOffsetMinutes(date: Date): number {
   );
   return (asUtc - date.getTime()) / 60_000;
 }
+
+/**
+ * H4/period-range fix — the start of a calendar date's day, in Brussels
+ * wall-clock time, expressed as the equivalent UTC instant. `dateOnly`
+ * is expected to be a UTC-midnight Date representing just a calendar
+ * date (e.g. how `Project.startDate`/`endDate` are stored) — same
+ * convention as `brusselsWallClockToUtc`.
+ */
+export function brusselsStartOfDay(dateOnly: Date): Date {
+  return brusselsWallClockToUtc(dateOnly, 0, 0);
+}
+
+/**
+ * The exclusive upper bound of a calendar date's day in Brussels time —
+ * i.e. the start of the *next* day. Comparing with a strict `<` against
+ * this value is equivalent to "on or before 23:59:59.999 Brussels time
+ * on `dateOnly`", without picking an arbitrary near-midnight instant.
+ */
+export function brusselsEndOfDay(dateOnly: Date): Date {
+  const nextDay = new Date(Date.UTC(
+    dateOnly.getUTCFullYear(),
+    dateOnly.getUTCMonth(),
+    dateOnly.getUTCDate() + 1,
+  ));
+  return brusselsWallClockToUtc(nextDay, 0, 0);
+}

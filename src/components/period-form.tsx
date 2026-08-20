@@ -4,11 +4,12 @@ import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, endOfDay } from "date-fns";
+import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/date-input";
+import { brusselsStartOfDay, brusselsEndOfDay } from "@/lib/brussels-time";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Period, Project } from "@/types";
@@ -71,10 +72,13 @@ export function PeriodForm({ open, onOpenChange, defaultValues, project, onSubmi
 
   const start = useWatch({ control: form.control, name: "startDate" });
   const end = useWatch({ control: form.control, name: "endDate" });
+  // Review fix: widen the project's own dates to their full Brussels
+  // calendar day on both ends (was end-only) — see period-validation.ts
+  // for why a raw instant comparison is wrong near midnight/DST.
   const outOfRange =
     start && end &&
-    (new Date(start) < new Date(project.startDate) ||
-      new Date(end) > endOfDay(new Date(project.endDate)));
+    (new Date(start) < brusselsStartOfDay(new Date(project.startDate)) ||
+      new Date(end) > brusselsEndOfDay(new Date(project.endDate)));
 
   function handleSubmit(values: FormValues) {
     onSubmit({

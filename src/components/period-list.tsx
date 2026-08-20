@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { brusselsStartOfDay, brusselsEndOfDay } from "@/lib/brussels-time";
 import { periodDays } from "@/lib/pricing";
 import type { Period, Project } from "@/types";
 
@@ -24,10 +25,18 @@ interface Props {
   project: Project;
 }
 
+// Review fix: this had NEITHER end of the widening period-form.tsx/
+// period-validation.ts already applied — a period starting early
+// Brussels-morning on the project's own start date (or ending late
+// evening on its end date) could get flagged as out-of-range purely
+// from a raw-instant comparison, more so across a DST boundary where
+// the UTC offset shifts which wall-clock hours land before/after UTC
+// midnight. Widen the project's own dates to their full Brussels
+// calendar day on both ends, same as the other two call sites.
 function outOfRange(period: Period, project: Project): boolean {
   return (
-    new Date(period.startDate) < new Date(project.startDate) ||
-    new Date(period.endDate) > new Date(project.endDate)
+    new Date(period.startDate) < brusselsStartOfDay(new Date(project.startDate)) ||
+    new Date(period.endDate) > brusselsEndOfDay(new Date(project.endDate))
   );
 }
 
