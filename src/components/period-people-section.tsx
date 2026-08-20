@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { LinePricePopover } from "@/components/line-price-popover";
 import { PersonTravelEditor } from "@/components/person-travel-editor";
 import { formatEUR, personLineCost } from "@/lib/pricing";
+import { resolvePersonBasePrice } from "@/lib/person-base-price";
 import type { Period, Project } from "@/types";
 
 interface Props {
@@ -48,7 +49,7 @@ export function PeriodPeopleSection({ period, project, days }: Props) {
                   </div>
                   <LinePricePopover
                     snapshot={pp.dayPriceSnapshot}
-                    basePrice={pp.person.dayPrice}
+                    basePrice={resolvePersonBasePrice(pp)}
                     override={override ? override.dayPrice : null}
                     resnapshotUrl={`/api/periods/${period.id}/people/${pp.id}`}
                     projectId={project.id}

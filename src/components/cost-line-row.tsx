@@ -3,6 +3,7 @@
 import { LinePricePopover } from "@/components/line-price-popover";
 import { BookingDiscountPopover } from "@/components/booking-discount-popover";
 import { formatEUR } from "@/lib/pricing";
+import { resolvePersonBasePrice } from "@/lib/person-base-price";
 import { toNumber } from "@/lib/serialize";
 import type { PeriodPerson, PersonTravelCost, Project } from "@/types";
 import { materialGroupCost, type MaterialGroup } from "@/lib/grouping";
@@ -50,7 +51,7 @@ export function PersonCostRow({ line, days, cost, periodId, project }: PersonRow
       <td className="py-2 pr-3 text-right align-middle">
         <LinePricePopover
           snapshot={pp.dayPriceSnapshot}
-          basePrice={pp.person.dayPrice}
+          basePrice={resolvePersonBasePrice(pp)}
           override={override ? override.dayPrice : null}
           resnapshotUrl={`/api/periods/${periodId}/people/${pp.id}`}
           projectId={project.id}
