@@ -8,6 +8,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
+# src/lib/env.ts validates DATABASE_URL/JWT_SECRET at module import time, and
+# `next build`'s page-data-collection step imports every route module
+# (including ones that only reach @/lib/auth or @/lib/prisma indirectly),
+# so the build itself needs *some* value here even though neither is ever
+# read at runtime from this stage — the real values come from the runner
+# container's actual environment. Same placeholders ci.yml's `next build`
+# step uses, kept out of the final image since this whole stage is discarded.
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+ENV JWT_SECRET="docker-build-placeholder-secret-unused-at-runtime"
 RUN npm run build
 
 FROM node:22-alpine AS runner
