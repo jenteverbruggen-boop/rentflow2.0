@@ -19,12 +19,30 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
 
   const token = request.cookies.get("rentflow_token")?.value;
-  if (!token) return NextResponse.redirect(new URL("/login", request.url));
+  if (!token) {
+    // Debug logging (login-flow investigation) — this is the other half
+    // of the picture alongside auth/login's own logs: a login POST that
+    // returned 200 but never actually landed a cookie in the browser
+    // (e.g. a Secure-cookie-over-HTTP mismatch) shows up here as every
+    // subsequent request bouncing back to /login with no cookie at all.
+    console.warn("[proxy] no auth cookie — redirecting to /login", {
+      pathname,
+      host: request.headers.get("host"),
+      userAgent: request.headers.get("user-agent"),
+    });
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   try {
     await jwtVerify(token, JWT_SECRET_BYTES);
     return NextResponse.next();
-  } catch {
+  } catch (err) {
+    console.warn("[proxy] invalid/expired auth cookie — clearing and redirecting to /login", {
+      pathname,
+      host: request.headers.get("host"),
+      userAgent: request.headers.get("user-agent"),
+      message: (err as Error).message,
+    });
     const response = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete("rentflow_token");
     return response;
