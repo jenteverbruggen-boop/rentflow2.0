@@ -19,6 +19,31 @@ ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholde
 ENV JWT_SECRET="docker-build-placeholder-secret-unused-at-runtime"
 RUN npm run build
 
+# Isolated install of just the `prisma` CLI package for docker-entrypoint.sh's
+# `prisma migrate deploy` — needed because that script runs as a separate
+# process, never imported by app code, so Next's file-tracing for
+# `.next/standalone` (below) never picks it up. A previous version of this
+# Dockerfile worked around that by copying the *entire* builder node_modules
+# (dependencies + devDependencies, untraced) over the runner's, which dragged
+# in typescript/eslint/vitest/tailwind and full-size copies of next/react/etc
+# that standalone's own tracing had already shrunk — ballooning the image to
+# ~1.5GB. Installing `prisma` fresh in an empty directory instead lets npm
+# resolve exactly its own dependency closure (@prisma/config, effect, the
+# schema-engine binary, …), without any of that.
+FROM node:22-alpine AS prisma-cli
+WORKDIR /app
+# Copied under a different name so it's never treated as *this* directory's
+# own package.json — `npm install prisma@x` in a directory whose
+# package.json already lists next/react/etc as dependencies installs that
+# entire tree too (there is no node_modules yet to reuse), not just prisma.
+# Reading the version out of it, then starting from a throwaway `npm init
+# -y` manifest, is what keeps this stage down to prisma's own closure.
+COPY package.json ./main-package.json
+RUN PRISMA_VERSION=$(node -p "require('./main-package.json').dependencies.prisma") \
+  && rm main-package.json \
+  && npm init -y >/dev/null \
+  && npm install "prisma@${PRISMA_VERSION}" --omit=dev
+
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
@@ -29,10 +54,11 @@ COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/prisma ./prisma
 COPY --from=builder --chown=node:node /app/prisma.config.ts ./prisma.config.ts
-# Prisma 7's config loader (@prisma/config) depends on `effect` and ~20 other
-# packages not traced by Next.js standalone. Copy full builder node_modules —
-# the standalone traced set is a subset so overwriting is safe.
-COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+# Merges into (does not replace) the node_modules that .next/standalone
+# already populated above — Docker COPY unions directory contents. Next's
+# tracing already put @prisma/client + the pg/libsql driver adapters app
+# code actually imports in there; this adds only the CLI's own closure.
+COPY --from=prisma-cli --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x docker-entrypoint.sh
 USER node
