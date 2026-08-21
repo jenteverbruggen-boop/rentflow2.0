@@ -24,8 +24,9 @@ export interface User {
   email: string;
   name: string;
   roleId: number;
-  roleRel: { id: number; key: string; label: string };
+  roleRel: { id: number; key: string; label: string; scope: "all" | "own" };
   personId: number | null;
+  person: { name: string } | null;
   createdAt: string;
 }
 

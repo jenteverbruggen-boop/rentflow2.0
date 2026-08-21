@@ -19,10 +19,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RoleSelect } from "@/components/role-select";
+import { PersonLinkSelect } from "@/components/person-link-select";
 import type { User } from "@/types";
 
 export const editSchema = z.object({
   roleId: z.coerce.number({ error: "Kies een rol" }),
+  personId: z.number().nullable(),
   password: z.string().refine((v) => v === "" || v.length >= 8, {
     message: "Minimaal 8 tekens of leeg laten",
   }),
@@ -50,11 +52,19 @@ export function UserFormEdit({
 }: Props) {
   const form = useForm<EditUserInput, unknown, EditUserValues>({
     resolver: zodResolver(editSchema),
-    defaultValues: { roleId: defaultValues.roleId ?? undefined, password: "" },
+    defaultValues: {
+      roleId: defaultValues.roleId ?? undefined,
+      personId: defaultValues.personId,
+      password: "",
+    },
   });
 
   useEffect(() => {
-    form.reset({ roleId: defaultValues.roleId ?? undefined, password: "" });
+    form.reset({
+      roleId: defaultValues.roleId ?? undefined,
+      personId: defaultValues.personId,
+      password: "",
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaultValues.id]);
 
@@ -78,6 +88,22 @@ export function UserFormEdit({
                       onChange={field.onChange}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="personId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gekoppelde persoon</FormLabel>
+                  <FormControl>
+                    <PersonLinkSelect value={field.value} onChange={field.onChange} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Nodig voor rollen die enkel eigen projecten mogen zien.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

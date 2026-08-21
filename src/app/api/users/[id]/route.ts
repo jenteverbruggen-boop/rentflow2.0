@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireModule, badRequest, notFound, conflict, serverError, forbidden } from "@/lib/api-auth";
 import { resolveRoleAssignment } from "@/lib/role-assignment";
+import { resolvePersonLink } from "@/lib/person-link";
 import { revokeCompanyFeedForUser } from "@/lib/calendar-feed";
 
 type Params = { params: Promise<{ id: string }> };
@@ -12,8 +13,9 @@ const USER_SELECT = {
   email: true,
   name: true,
   roleId: true,
-  roleRel: { select: { id: true, key: true, label: true } },
+  roleRel: { select: { id: true, key: true, label: true, scope: true } },
   personId: true,
+  person: { select: { name: true } },
   createdAt: true,
 } as const;
 
@@ -43,7 +45,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         data.roleId = resolved.roleId;
       }
     }
-    if (body.personId !== undefined) data.personId = body.personId ?? null;
+    if (body.personId !== undefined) {
+      const resolvedPerson = await resolvePersonLink({ personId: body.personId });
+      if (resolvedPerson && "error" in resolvedPerson) return badRequest(resolvedPerson.error);
+      if (resolvedPerson) {
+        data.personId = resolvedPerson.personId;
+      }
+    }
     if (body.password) {
       if (typeof body.password !== "string" || body.password.length < 8) {
         return badRequest("Wachtwoord moet minimaal 8 tekens zijn");

@@ -55,6 +55,7 @@ export function UsersPageContent() {
             <TableHead>Naam</TableHead>
             <TableHead>E-mail</TableHead>
             <TableHead>Rol</TableHead>
+            <TableHead>Gekoppelde persoon</TableHead>
             <TableHead>Aangemaakt</TableHead>
             <TableHead className="text-right">Acties</TableHead>
           </TableRow>
@@ -68,6 +69,15 @@ export function UsersPageContent() {
                 <Badge variant={u.roleRel.key === "ADMIN" ? "default" : "secondary"}>
                   {u.roleRel.label}
                 </Badge>
+              </TableCell>
+              <TableCell>
+                {u.person ? (
+                  <span>{u.person.name}</span>
+                ) : u.roleRel.scope === "own" ? (
+                  <Badge variant="destructive">Niet gekoppeld</Badge>
+                ) : (
+                  <span className="text-muted-foreground text-sm">—</span>
+                )}
               </TableCell>
               <TableCell className="text-muted-foreground text-sm">
                 {new Date(u.createdAt).toLocaleDateString("nl-BE")}

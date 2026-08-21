@@ -9,14 +9,16 @@ import {
   forbidden,
 } from "@/lib/api-auth";
 import { resolveRoleAssignment } from "@/lib/role-assignment";
+import { resolvePersonLink } from "@/lib/person-link";
 
 const USER_SELECT = {
   id: true,
   email: true,
   name: true,
   roleId: true,
-  roleRel: { select: { id: true, key: true, label: true } },
+  roleRel: { select: { id: true, key: true, label: true, scope: true } },
   personId: true,
+  person: { select: { name: true } },
   createdAt: true,
 } as const;
 
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
   if (!auth) return forbidden();
 
   try {
-    const { email, name, password, roleId } = await req.json();
+    const { email, name, password, roleId, personId } = await req.json();
     if (!email || !name || !password)
       return badRequest("email, naam en wachtwoord zijn verplicht");
 
@@ -57,20 +59,33 @@ export async function POST(req: NextRequest) {
       resolvedRoleId = planner.id;
     }
 
+    let resolvedPersonId: number | null = null;
+    if (personId !== undefined) {
+      const resolvedPerson = await resolvePersonLink({ personId });
+      if (resolvedPerson && "error" in resolvedPerson) return badRequest(resolvedPerson.error);
+      if (resolvedPerson) resolvedPersonId = resolvedPerson.personId;
+    }
+
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return conflict("Email is al in gebruik");
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        password: hashed,
-        roleId: resolvedRoleId,
-      },
-      select: USER_SELECT,
-    });
-    return NextResponse.json(user);
+    try {
+      const user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          password: hashed,
+          roleId: resolvedRoleId,
+          personId: resolvedPersonId,
+        },
+        select: USER_SELECT,
+      });
+      return NextResponse.json(user);
+    } catch (e: unknown) {
+      if ((e as { code?: string })?.code === "P2002") return conflict("Deze persoon is al gekoppeld aan een account");
+      throw e;
+    }
   } catch (err) {
     return serverError((err as Error).message);
   }

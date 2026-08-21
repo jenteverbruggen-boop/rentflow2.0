@@ -18,12 +18,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RoleSelect } from "@/components/role-select";
+import { PersonLinkSelect } from "@/components/person-link-select";
 
 export const createSchema = z.object({
   name: z.string().min(1, "Verplicht"),
   email: z.string().email("Ongeldig e-mailadres"),
   password: z.string().min(8, "Minimaal 8 tekens"),
   roleId: z.coerce.number({ error: "Kies een rol" }),
+  personId: z.number().nullable(),
 });
 
 export type CreateUserValues = z.output<typeof createSchema>;
@@ -41,7 +43,7 @@ interface Props {
 export function UserFormCreate({ open, onOpenChange, onSubmit, isPending }: Props) {
   const form = useForm<CreateUserInput, unknown, CreateUserValues>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: "", email: "", password: "", roleId: undefined },
+    defaultValues: { name: "", email: "", password: "", roleId: undefined, personId: null },
   });
 
   return (
@@ -103,6 +105,22 @@ export function UserFormCreate({ open, onOpenChange, onSubmit, isPending }: Prop
                       onChange={field.onChange}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="personId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gekoppelde persoon</FormLabel>
+                  <FormControl>
+                    <PersonLinkSelect value={field.value} onChange={field.onChange} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Nodig voor rollen die enkel eigen projecten mogen zien.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
