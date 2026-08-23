@@ -13,9 +13,15 @@ export interface IcsEvent {
   summary: string;
   location?: string | null;
   description?: string | null;
-  /** UTC start/end. */
+  /** UTC start/end. Under `allDay` only their calendar date is read. */
   start: Date;
   end: Date;
+  /**
+   * Emit a whole-day event (`VALUE=DATE`, RFC 5545 §3.3.4) rather than
+   * a timestamped one. `end` is the **inclusive** last day here; DTEND is
+   * exclusive for date values (§3.6.1), so the serializer adds the day.
+   */
+  allDay?: boolean;
 }
 
 /**
@@ -60,24 +66,25 @@ function formatUtc(date: Date): string {
   return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 }
 
-const VTIMEZONE_BRUSSELS = `BEGIN:VTIMEZONE
-TZID:Europe/Brussels
-X-LIC-LOCATION:Europe/Brussels
-BEGIN:DAYLIGHT
-TZOFFSETFROM:+0100
-TZOFFSETTO:+0200
-TZNAME:CEST
-DTSTART:19700329T020000
-RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
-END:DAYLIGHT
-BEGIN:STANDARD
-TZOFFSETFROM:+0200
-TZOFFSETTO:+0100
-TZNAME:CET
-DTSTART:19701025T030000
-RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
-END:STANDARD
-END:VTIMEZONE`;
+/** `YYYYMMDD` — a floating calendar date, no clock part and no timezone. */
+function formatDate(date: Date): string {
+  return date.toISOString().slice(0, 10).replace(/-/g, "");
+}
+
+function dayAfter(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1),
+  );
+}
+
+/**
+ * No VTIMEZONE block is emitted: every timestamp below is either UTC
+ * (`…Z`) or a floating calendar date, so nothing would ever reference a
+ * TZID. The block this file used to carry was never referenced by a
+ * single DTSTART — it read like the feed handled Brussels time when it
+ * did not. Whole-day events are what actually fix a midnight-UTC period
+ * rendering as 02:00 (and spilling a day) in a Brussels client.
+ */
 
 /** Builds a full VCALENDAR document — CRLF-terminated, folded at 75
  * octets, every line, per RFC 5545 §3.1. `now` is passed in (never
@@ -89,7 +96,6 @@ export function buildIcsCalendar(events: IcsEvent[], now: Date): string {
     "PRODID:-//RentFlow//Calendar Feed//NL",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    ...VTIMEZONE_BRUSSELS.split("\n"),
   ];
 
   for (const event of events) {
@@ -97,8 +103,12 @@ export function buildIcsCalendar(events: IcsEvent[], now: Date): string {
       "BEGIN:VEVENT",
       `UID:${event.uid}`,
       `DTSTAMP:${formatUtc(now)}`,
-      `DTSTART:${formatUtc(event.start)}`,
-      `DTEND:${formatUtc(event.end)}`,
+      ...(event.allDay
+        ? [
+            `DTSTART;VALUE=DATE:${formatDate(event.start)}`,
+            `DTEND;VALUE=DATE:${formatDate(dayAfter(event.end))}`,
+          ]
+        : [`DTSTART:${formatUtc(event.start)}`, `DTEND:${formatUtc(event.end)}`]),
       `SUMMARY:${escapeText(event.summary)}`,
     );
     if (event.location) lines.push(`LOCATION:${escapeText(event.location)}`);

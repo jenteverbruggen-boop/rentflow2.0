@@ -69,16 +69,48 @@ describe("buildIcsCalendar (O1.2)", () => {
 
   it("omits LOCATION/DESCRIPTION lines entirely when not provided", () => {
     const ics = buildIcsCalendar([makeEvent({ location: null, description: null })], NOW);
-    // X-LIC-LOCATION (VTIMEZONE) legitimately contains "LOCATION:" as a
-    // substring — check for the VEVENT-level property line specifically.
-    expect(ics).not.toContain("\r\nLOCATION:");
+    expect(ics).not.toContain("LOCATION:");
     expect(ics).not.toContain("DESCRIPTION:");
   });
 
-  it("includes exactly one VTIMEZONE block for Europe/Brussels", () => {
-    const ics = buildIcsCalendar([makeEvent()], NOW);
-    expect(ics.match(/BEGIN:VTIMEZONE/g)).toHaveLength(1);
-    expect(ics).toContain("TZID:Europe/Brussels");
+  it("emits no VTIMEZONE and no TZID — every value is UTC or a floating date", () => {
+    const ics = buildIcsCalendar([makeEvent(), makeEvent({ allDay: true })], NOW);
+    expect(ics).not.toContain("VTIMEZONE");
+    expect(ics).not.toContain("TZID");
+  });
+
+  it("emits a whole-day event as VALUE=DATE with no clock part", () => {
+    const ics = buildIcsCalendar(
+      [
+        makeEvent({
+          allDay: true,
+          start: new Date("2026-06-01T00:00:00Z"),
+          end: new Date("2026-06-06T23:59:59Z"),
+        }),
+      ],
+      NOW,
+    );
+    expect(ics).toContain("DTSTART;VALUE=DATE:20260601");
+    // DTEND is exclusive for date values (RFC 5545 §3.6.1): a 1–6 June
+    // period ends on the 7th, so a Brussels client shows 1–6 June and
+    // does not spill into a seventh day.
+    expect(ics).toContain("DTEND;VALUE=DATE:20260607");
+    expect(ics).not.toMatch(/DTSTART[^\r]*T\d{6}Z/);
+  });
+
+  it("rolls a whole-day event's exclusive DTEND over a month boundary", () => {
+    const ics = buildIcsCalendar(
+      [
+        makeEvent({
+          allDay: true,
+          start: new Date("2026-07-27T00:00:00Z"),
+          end: new Date("2026-07-31T00:00:00Z"),
+        }),
+      ],
+      NOW,
+    );
+    expect(ics).toContain("DTSTART;VALUE=DATE:20260727");
+    expect(ics).toContain("DTEND;VALUE=DATE:20260801");
   });
 
   it("an empty event list still produces a valid, parseable VCALENDAR wrapper", () => {

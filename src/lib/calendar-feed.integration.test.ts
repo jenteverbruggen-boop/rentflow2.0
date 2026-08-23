@@ -25,7 +25,7 @@ const DB_PATH = path.join(os.tmpdir(), `calendar-feed-${process.pid}.db`);
 const DB_URL = `file:${DB_PATH}`;
 
 let client: PrismaClient;
-const ids = { allRole: 0, ownRole: 0, allUser: 0, ownUser: 0, linkedUser: 0, alice: 0, period: 0 };
+const ids = { allRole: 0, ownRole: 0, allUser: 0, ownUser: 0, linkedUser: 0, alice: 0, period: 0, legacyPeriod: 0 };
 
 beforeAll(async () => {
   execSync(`DATABASE_URL=${DB_URL} npx prisma db push --schema=prisma/schema.dev.prisma`, { stdio: "pipe" });
@@ -66,6 +66,18 @@ beforeAll(async () => {
   });
   ids.period = period.id;
   await client.periodPerson.create({ data: { periodId: period.id, personId: alice.id, dayPriceSnapshot: 300 } });
+
+  // A legacy/imported period: a whole-day window stored as bare
+  // midnight-UTC boundaries rather than the form's real 08:00–17:00 hours.
+  const legacyPeriod = await client.period.create({
+    data: {
+      projectId: project.id,
+      name: "Week 1",
+      startDate: new Date("2026-09-01T00:00:00Z"),
+      endDate: new Date("2026-09-06T23:59:59Z"),
+    },
+  });
+  ids.legacyPeriod = legacyPeriod.id;
 }, 60_000);
 
 afterAll(async () => {
@@ -168,6 +180,23 @@ describe("buildCompanyFeedIcs (O1.3)", () => {
   it("includes every period, unfiltered by ownership", async () => {
     const ics = await buildCompanyFeedIcs(new Date("2026-08-14T09:00:00Z"), client);
     expect(ics).toContain(`UID:period-${ids.period}@rentflow.app`);
+    expect(ics).toContain(`UID:period-${ids.legacyPeriod}@rentflow.app`);
+  });
+
+  it("keeps a period with real hours timestamped — UTC is already correct there", async () => {
+    const ics = await buildCompanyFeedIcs(new Date("2026-08-14T09:00:00Z"), client);
+    expect(ics).toContain("DTSTART:20260901T080000Z");
+    expect(ics).toContain("DTEND:20260901T180000Z");
+  });
+
+  it("renders a midnight-UTC legacy period as whole-day, not 02:00 Brussels", async () => {
+    const ics = await buildCompanyFeedIcs(new Date("2026-08-14T09:00:00Z"), client);
+    expect(ics).toContain("DTSTART;VALUE=DATE:20260901");
+    expect(ics).toContain("DTEND;VALUE=DATE:20260907");
+    // The pre-fix output — a timestamp a Brussels client reads as 02:00
+    // on the 1st, ending 01:59 on the 7th.
+    expect(ics).not.toContain("DTSTART:20260901T000000Z");
+    expect(ics).not.toContain("DTEND:20260906T235959Z");
   });
 });
 
