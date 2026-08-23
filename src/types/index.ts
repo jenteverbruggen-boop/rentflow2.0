@@ -191,6 +191,27 @@ export interface StockItem {
   assignments?: StockItemAssignment[];
 }
 
+export interface StockBulkAddResult {
+  added: number;
+  fromUnit: number;
+  toUnit: number;
+}
+
+export interface StockBulkRemoveResult {
+  removed: number;
+  removedUnits: number[];
+}
+
+export interface StockBulkConflict {
+  error: string;
+  blockedUnits: number[];
+  /** Free units across the whole material (informational). */
+  removable: number;
+  /** Largest count a highest-first removal would actually accept —
+   * always use this for a "remove the maximum" affordance. */
+  removableFromTop: number;
+}
+
 export interface StockItemAssignment {
   id: number;
   periodId: number;

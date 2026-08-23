@@ -53,7 +53,7 @@ rentflow2.0/
 │   │       ├── projects/         # CRUD + [id]/periods + [id]/prices/{material,person}/[xId]
 │   │       ├── periods/          # [id] CRUD + [id]/materials + [id]/people
 │   │       ├── people/           # CRUD + /available
-│   │       ├── materials/        # CRUD + /available + [id]/stock-items
+│   │       ├── materials/        # CRUD + /available + [id]/stock-items (+ /bulk add/remove)
 │   │       └── stock-items/      # [id] PATCH / DELETE
 │   ├── proxy.ts                  # Edge JWT guard (Next.js 16 — not middleware.ts)
 │   ├── components/
@@ -238,6 +238,8 @@ All endpoints except `/api/auth/*` and `/api/calendar/:token` require authentica
 | `DELETE` | `/api/materials/:id/components/:componentId` | Remove a component from a set |
 | `GET` | `/api/materials/:id/stock-items` | List individual units of a material |
 | `POST` | `/api/materials/:id/stock-items` | Add a unit — `unitNumber` auto-assigned, `identifier` optional |
+| `POST` | `/api/materials/:id/stock-items/bulk` | Add `count` (1-500) blank units in one transaction, numbered after the current max — `{ added, fromUnit, toUnit }` |
+| `DELETE` | `/api/materials/:id/stock-items/bulk` | Remove units by `{ count }` (the `count` highest unit numbers) or by `{ ids }`. All-or-nothing: if any targeted unit has ever been booked, nothing is deleted and the response is `409` with `{ error, blockedUnits, removable }`; an id not belonging to the material is a `400` |
 | `PATCH` | `/api/stock-items/:id` | Edit a unit's identifier or notes |
 | `DELETE` | `/api/stock-items/:id` | Delete a unit — `409` if it is currently booked |
 | `GET` | `/api/people` | List all people (with `dayPrice`) |
