@@ -96,6 +96,8 @@ describe("bucket (c) — standalone catalogues deny scope: own outright", () => 
     ["materials/[id]/route.ts", "DELETE"],
     ["materials/[id]/stock-items/route.ts", "GET"],
     ["materials/[id]/stock-items/route.ts", "POST"],
+    ["materials/[id]/stock-items/bulk/route.ts", "POST"],
+    ["materials/[id]/stock-items/bulk/route.ts", "DELETE"],
     ["materials/[id]/components/route.ts", "GET"],
     ["materials/[id]/components/route.ts", "POST"],
     ["clients/route.ts", "GET"],
