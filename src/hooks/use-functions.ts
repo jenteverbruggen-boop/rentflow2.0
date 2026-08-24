@@ -1,8 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Function as Fn } from "@/types";
 
+// Always fetches the superset (archived included, usage counts always
+// present) — every consumer of this hook needs it: the manager dialog
+// filters client-side into active/archived sections, and the person
+// form's chip list must still resolve an already-assigned-but-archived
+// function by id (it just excludes archived ones from its own "add new"
+// picker). One query key, one shape, no second cache entry to keep in
+// sync.
 async function fetchFunctions(): Promise<Fn[]> {
-  const res = await fetch("/api/functions");
+  const res = await fetch("/api/functions?includeArchived=1");
   if (!res.ok) throw new Error("Ophalen mislukt");
   return res.json() as Promise<Fn[]>;
 }
@@ -14,13 +21,16 @@ async function jsonOrThrow(res: Response, fallback: string) {
 }
 
 export interface FunctionRateInput {
-  name: string;
+  name?: string;
   dayRate?: number | null;
   hourRate?: number | null;
+  archived?: boolean;
 }
 
 /** L1.3 — manage functions (name + company-default day/hour rate) from
- * the person page's "Functies" dialog, mirroring use-roles.ts's shape. */
+ * the person page's "Functies" dialog, mirroring use-roles.ts's shape.
+ * `update` also carries the archive/restore toggle (`{ id, archived }`,
+ * no other fields) and the person form's pencil-edit save. */
 export function useFunctions() {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["functions"], queryFn: fetchFunctions });

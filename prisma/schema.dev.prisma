@@ -83,6 +83,7 @@ model Function {
   name        String               @unique
   dayRate     Float?
   hourRate    Float?
+  archived    Boolean              @default(false)
   people      PersonFunction[]
   assignments PeriodPerson[]
   clientRates ClientFunctionRate[]

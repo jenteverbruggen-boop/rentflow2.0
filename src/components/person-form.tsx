@@ -3,14 +3,16 @@
 import { useEffect, useState } from "react";
 import { type Resolver, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PersonFunctionChips, type FunctionAssignment } from "@/components/person-function-chips";
-import type { Function as Fn, Person } from "@/types";
+import { FunctionFormDialog } from "@/components/function-form-dialog";
+import { useFunctions } from "@/hooks/use-functions";
+import { useFunctionEditor } from "@/hooks/use-function-editor";
+import { z } from "zod";
+import type { Person } from "@/types";
 
 const schema = z.object({
   name: z.string().min(1, "Naam is verplicht"),
@@ -39,12 +41,9 @@ export function PersonForm({ open, onOpenChange, defaultValues, onSubmit, isPend
     defaultValues: { name: "", email: "", phone: "", dayPrice: 0, address: "", postalCode: "", city: "", country: "" },
   });
   const [selectedFns, setSelectedFns] = useState<FunctionAssignment[]>([]);
-  const queryClient = useQueryClient();
-
-  const { data: functions = [] } = useQuery<Fn[]>({
-    queryKey: ["functions"],
-    queryFn: () => fetch("/api/functions").then((r) => r.json()),
-  });
+  const { query: functionsQuery, create } = useFunctions();
+  const functions = functionsQuery.data ?? [];
+  const functionEditor = useFunctionEditor();
 
   useEffect(() => {
     if (defaultValues) {
@@ -65,13 +64,11 @@ export function PersonForm({ open, onOpenChange, defaultValues, onSubmit, isPend
   }, [defaultValues, form]);
 
   async function createFunction(name: string) {
-    const res = await fetch("/api/functions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
-    const created = (await res.json()) as { id: number };
-    await queryClient.invalidateQueries({ queryKey: ["functions"] });
-    return created;
+    return (await create.mutateAsync({ name })) as { id: number };
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{defaultValues ? "Persoon bewerken" : "Nieuwe persoon"}</DialogTitle></DialogHeader>
@@ -88,6 +85,7 @@ export function PersonForm({ open, onOpenChange, defaultValues, onSubmit, isPend
               value={selectedFns}
               onChange={setSelectedFns}
               onCreateFunction={createFunction}
+              onEditFunction={functionEditor.openEditor}
             />
             <div className="grid grid-cols-2 gap-3">
               <FormField control={form.control} name="email" render={({ field }) => (
@@ -119,5 +117,17 @@ export function PersonForm({ open, onOpenChange, defaultValues, onSubmit, isPend
         </Form>
       </DialogContent>
     </Dialog>
+    {/* Sibling, not nested inside the Dialog above — two stacked Radix
+        Dialog portals compose more reliably than a Dialog rendered
+        inside another Dialog's content (focus trap / z-index). */}
+    <FunctionFormDialog
+      open={functionEditor.open}
+      onOpenChange={functionEditor.setOpen}
+      editing={functionEditor.editing}
+      onSubmit={functionEditor.submit}
+      isPending={functionEditor.isPending}
+      error={functionEditor.error}
+    />
+    </>
   );
 }

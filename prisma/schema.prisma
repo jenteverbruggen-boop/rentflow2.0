@@ -83,6 +83,7 @@ model Function {
   name        String               @unique
   dayRate     Decimal?             @db.Decimal(10, 2)
   hourRate    Decimal?             @db.Decimal(10, 2)
+  archived    Boolean              @default(false)
   people      PersonFunction[]
   assignments PeriodPerson[]
   clientRates ClientFunctionRate[]
