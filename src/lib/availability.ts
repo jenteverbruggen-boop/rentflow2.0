@@ -1,6 +1,6 @@
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import type { PrismaClient } from "@/generated/prisma/client";
-import { effectiveWindow } from "@/lib/assignment-window";
+import { effectiveWindow, overlapsWindow, type TimeWindow } from "@/lib/assignment-window";
 
 interface RangeArgs {
   from: Date;
@@ -85,7 +85,7 @@ export async function checkPersonAvailability(
   sameProjectWarning?: { projectId: number; projectName: string };
 }> {
   // `client` accepts a `tx` handle (H1.2/bundleAvailableCount pattern).
-  // Coarse period-level pre-filter, then the precise effectiveWindow()
+  // Coarse period-level pre-filter, then the precise per-window
   // comparison in JS — a window is always inside its own period.
   const candidates = await client.periodPerson.findMany({
     where: {
@@ -97,12 +97,20 @@ export async function checkPersonAvailability(
         AND: [{ startDate: { lt: args.to } }, { endDate: { gt: args.from } }],
       },
     },
-    include: { period: { include: { project: true } } },
+    include: { period: { include: { project: true } }, days: true },
   });
-  const conflict = candidates.find((c) => {
-    const w = effectiveWindow(c);
-    return w.from < args.to && w.to > args.from;
-  });
+  // H6 — an assignment booked for specific days conflicts only on those
+  // days; the days it skips stay free for another project.
+  let conflict: (typeof candidates)[number] | undefined;
+  let overlap: TimeWindow | null = null;
+  for (const candidate of candidates) {
+    const window = overlapsWindow(candidate, { from: args.from, to: args.to });
+    if (window) {
+      conflict = candidate;
+      overlap = window;
+      break;
+    }
+  }
   if (!conflict) return {};
   const project = conflict.period.project;
   if (args.sameProjectId != null && project.id === args.sameProjectId) {
@@ -111,8 +119,9 @@ export async function checkPersonAvailability(
     };
   }
   // H2.1 — names the window too, not just the project, so the confirm
-  // dialog can say when the conflict is.
-  const conflictWindow = effectiveWindow(conflict);
+  // dialog can say when the conflict is. With H6 day rows that is the
+  // specific overlapping day, not the assignment's whole envelope.
+  const conflictWindow = overlap ?? effectiveWindow(conflict);
   return {
     blockingProject: {
       id: project.id,

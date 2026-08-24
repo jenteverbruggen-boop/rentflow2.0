@@ -3,13 +3,11 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatEUR, personLineCost } from "@/lib/pricing";
-import { AssignmentHoursPopover } from "@/components/assignment-hours-popover";
-import type { PeriodPerson } from "@/types";
+import { AssignmentDaysPopover } from "@/components/assignment-days-popover";
+import type { Period, PeriodPerson } from "@/types";
 
 interface Props {
-  periodId: number;
-  periodName: string;
-  hasAnyPeople: boolean;
+  period: Period;
   assignedByRole: [string, PeriodPerson[]][];
   collapsed: Set<string>;
   onToggle: (role: string) => void;
@@ -19,6 +17,10 @@ interface Props {
 }
 
 function formatWindow(pp: PeriodPerson): string | null {
+  // H6 — a day selection is summarised by its count; the exact hours per
+  // day live in the picker itself, which is where they are edited.
+  const dayCount = pp.days?.length ?? 0;
+  if (dayCount > 0) return `${dayCount} ${dayCount === 1 ? "dag" : "dagen"}`;
   if (!pp.startAt || !pp.endAt) return null;
   return `${format(new Date(pp.startAt), "HH:mm")}–${format(new Date(pp.endAt), "HH:mm")}`;
 }
@@ -26,9 +28,7 @@ function formatWindow(pp: PeriodPerson): string | null {
 /** "In &lt;periode&gt;" (assigned) pane, extracted from
  * person-split-editor.tsx (Y3.3) — pure move, no behaviour change. */
 export function PersonAssignedPane({
-  periodId,
-  periodName,
-  hasAnyPeople,
+  period,
   assignedByRole,
   collapsed,
   onToggle,
@@ -39,9 +39,9 @@ export function PersonAssignedPane({
   return (
     <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
       <div className="bg-muted/60 px-3 py-2.5 border-b border-border md:hidden">
-        <h4 className="text-sm font-semibold">In &quot;{periodName}&quot;</h4>
+        <h4 className="text-sm font-semibold">In &quot;{period.name}&quot;</h4>
       </div>
-      <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">In &quot;{periodName}&quot;</h4>
+      <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">In &quot;{period.name}&quot;</h4>
       <div className="hidden md:block h-9" aria-hidden />
       <div className="p-3 md:p-0">
       <ScrollArea className="h-[400px] pr-2">
@@ -79,11 +79,11 @@ export function PersonAssignedPane({
                             {formatWindow(pp) && ` · ${formatWindow(pp)}`}
                           </p>
                         </div>
-                        <AssignmentHoursPopover
-                          periodId={periodId}
+                        <AssignmentDaysPopover
+                          periodId={period.id}
                           assignmentId={pp.id}
-                          startAt={pp.startAt}
-                          endAt={pp.endAt}
+                          period={period}
+                          days={pp.days}
                           invalidateKey={invalidateKey}
                         />
                       </div>
@@ -93,7 +93,7 @@ export function PersonAssignedPane({
               </div>
             );
           })}
-          {!hasAnyPeople && (
+          {period.people.length === 0 && (
             <p className="text-xs text-muted-foreground py-6 text-center">Nog geen personen in deze periode</p>
           )}
         </div>

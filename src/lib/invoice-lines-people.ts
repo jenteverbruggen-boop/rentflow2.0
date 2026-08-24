@@ -1,5 +1,6 @@
 import type { Period } from "@/types";
 import { personLineCost } from "@/lib/pricing";
+import { billedDays, billedHours } from "@/lib/assignment-days";
 import { toNumber } from "@/lib/serialize";
 import type { DraftInvoiceLine } from "@/lib/invoice-lines";
 
@@ -12,10 +13,13 @@ export function personAndTravelLines(
   push: (line: Omit<DraftInvoiceLine, "sortOrder">) => void,
 ): void {
   for (const pp of period.people) {
-    const hourly = pp.billingUnit === "uur" && pp.startAt && pp.endAt;
-    const quantity = hourly
-      ? (new Date(pp.endAt as string).getTime() - new Date(pp.startAt as string).getTime()) / 3_600_000
-      : days;
+    // H6 — the invoiced quantity comes from the same helpers
+    // personLineCost() bills with, so the line reads
+    // "3 dag × €200 = €600" instead of a period-length quantity that
+    // contradicts its own total.
+    const hours = pp.billingUnit === "uur" ? billedHours(pp) : null;
+    const hourly = hours != null;
+    const quantity = hours ?? billedDays(pp, days);
     push({
       section: period.name, kind: "person", description: pp.person.name,
       quantity, unit: hourly ? "uur" : "dag",

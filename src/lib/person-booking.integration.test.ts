@@ -11,6 +11,7 @@ import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@/generated/prisma/client";
 import { checkPersonAvailability } from "@/lib/availability";
 import { bookPersonAssignment } from "@/lib/person-booking";
+import { saveAssignmentDays } from "@/lib/assignment-days-write";
 
 const DB_PATH = path.join(os.tmpdir(), `person-booking-${process.pid}.db`);
 const DB_URL = `file:${DB_PATH}`;
@@ -256,5 +257,88 @@ describe("bookPersonAssignment — transactional race protection (H1.4)", () => 
       where: { periodId: period.id, personId: racer.id },
     });
     expect(rows).toHaveLength(1);
+  });
+});
+
+/**
+ * H6 — day-level bookings against a real DB: the day rows and the
+ * envelope written by saveAssignmentDays must agree, an unselected gap
+ * day must stay bookable by another project, and a selected day must
+ * still conflict. Pure-function coverage lives in assignment-days.test.ts;
+ * this is the part that only a real query can prove.
+ */
+describe("checkPersonAvailability against selected days, real DB (H6)", () => {
+  let personId = 0;
+  let assignmentId = 0;
+
+  beforeAll(async () => {
+    const person = await client.person.create({ data: { name: "Daily Dana", dayPrice: 200 } });
+    personId = person.id;
+    const period = await client.period.create({
+      data: {
+        projectId: ids.projectA,
+        name: "Week",
+        startDate: new Date("2026-10-05T00:00:00Z"),
+        endDate: new Date("2026-10-09T23:59:00Z"),
+      },
+    });
+    const assignment = await client.periodPerson.create({
+      data: { periodId: period.id, personId: person.id, dayPriceSnapshot: 200 },
+    });
+    assignmentId = assignment.id;
+    // Monday and Wednesday only.
+    await saveAssignmentDays(
+      assignment.id,
+      [
+        { startAt: new Date("2026-10-05T08:00:00Z"), endAt: new Date("2026-10-05T17:00:00Z") },
+        { startAt: new Date("2026-10-07T08:00:00Z"), endAt: new Date("2026-10-07T17:00:00Z") },
+      ],
+      client,
+    );
+  }, 30_000);
+
+  it("writes the day rows and keeps startAt/endAt as their envelope", async () => {
+    const row = await client.periodPerson.findUniqueOrThrow({
+      where: { id: assignmentId },
+      include: { days: { orderBy: { startAt: "asc" } } },
+    });
+    expect(row.days).toHaveLength(2);
+    expect(row.startAt?.toISOString()).toBe("2026-10-05T08:00:00.000Z");
+    expect(row.endAt?.toISOString()).toBe("2026-10-07T17:00:00.000Z");
+  });
+
+  it("the unselected Tuesday is free for another project", async () => {
+    const result = await checkPersonAvailability(
+      personId,
+      { from: new Date("2026-10-06T08:00:00Z"), to: new Date("2026-10-06T17:00:00Z") },
+      client,
+    );
+    expect(result.blockingProject).toBeUndefined();
+  });
+
+  it("a selected day still conflicts, and names that day as the window", async () => {
+    const result = await checkPersonAvailability(
+      personId,
+      { from: new Date("2026-10-07T09:00:00Z"), to: new Date("2026-10-07T10:00:00Z") },
+      client,
+    );
+    expect(result.blockingProject?.name).toBe("Project A");
+    expect(result.blockingProject?.from.toISOString()).toBe("2026-10-07T08:00:00.000Z");
+  });
+
+  it("clearing the day set restores the whole-period booking", async () => {
+    await saveAssignmentDays(assignmentId, [], client);
+    const row = await client.periodPerson.findUniqueOrThrow({
+      where: { id: assignmentId },
+      include: { days: true },
+    });
+    expect(row.days).toHaveLength(0);
+    expect(row.startAt).toBeNull();
+    const result = await checkPersonAvailability(
+      personId,
+      { from: new Date("2026-10-06T08:00:00Z"), to: new Date("2026-10-06T17:00:00Z") },
+      client,
+    );
+    expect(result.blockingProject?.name).toBe("Project A");
   });
 });

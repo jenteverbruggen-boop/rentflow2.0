@@ -89,6 +89,7 @@ export async function buildPersonalFeedIcs(
     where: { personId: user.personId },
     include: {
       function: { select: { name: true } },
+      days: { orderBy: { startAt: "asc" } },
       period: {
         select: {
           id: true,
@@ -103,7 +104,18 @@ export async function buildPersonalFeedIcs(
     orderBy: { period: { startDate: "asc" } },
   });
 
-  const events = assignments.map((a) => eventFromPeriod(a.period, a));
+  // H6 — a person booked for specific days gets one event *per day*, not
+  // one block spanning the gaps: a Mon+Fri booking must not black out the
+  // whole week in their calendar. Each day needs its own UID or a client
+  // would collapse them into a single moved event.
+  const events = assignments.flatMap((a) =>
+    a.days.length > 0
+      ? a.days.map((d) => ({
+          ...eventFromPeriod(a.period, { ...a, startAt: d.startAt, endAt: d.endAt }),
+          uid: `period-${a.period.id}-day-${d.id}@rentflow.app`,
+        }))
+      : [eventFromPeriod(a.period, a)],
+  );
   return buildIcsCalendar(events, now);
 }
 

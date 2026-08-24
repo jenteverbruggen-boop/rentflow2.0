@@ -26,20 +26,29 @@ Local dev setup: copy `.env.local.example` to `.env.local` — it points `DATABA
 
 Dev uses `prisma db push` (schema-driven, no migration files). Production migrations live in `prisma/migrations/` and are authored against the Postgres schema **without a local shadow DB**:
 
+Prisma 7 dropped `migrate diff --shadow-database-url` and renamed
+`--to-schema-datamodel` to `--to-schema`. The shadow database now comes from
+`prisma.config.ts`, which reads `SHADOW_DATABASE_URL` from the environment
+(only set it while authoring — `migrate deploy` never touches a shadow DB).
+
 ```bash
-# 1. Start the compose Postgres service
-docker compose up -d db
+# 1. A throwaway Postgres for the shadow database
+docker compose up -d db     # or any Postgres you can create databases in
 
 # 2. Diff current migrations against the updated schema to produce a new migration SQL
+DIR="prisma/migrations/$(date +%Y%m%d%H%M%S)_<name>" && mkdir -p "$DIR" && \
+SHADOW_DATABASE_URL="postgresql://rentflow:rentflow@localhost:5432/rentflow_shadow" \
 npx prisma migrate diff \
   --from-migrations prisma/migrations \
-  --to-schema-datamodel prisma/schema.prisma \
-  --shadow-database-url "postgresql://rentflow:rentflow@localhost:5432/rentflow" \
-  --script > prisma/migrations/$(date +%Y%m%d%H%M%S)_<name>/migration.sql
+  --to-schema prisma/schema.prisma \
+  --script > "$DIR/migration.sql"
 
-# 3. Validate the migration applies cleanly
-docker compose run --rm app sh -c "npx prisma migrate deploy"
+# 3. Validate the whole chain applies cleanly to an empty database
+DATABASE_URL="postgresql://rentflow:rentflow@localhost:5432/rentflow_verify" npx prisma migrate deploy
 ```
+
+If step 2 fails, delete the directory it created — an empty `migration.sql`
+left behind is applied as a real (no-op) migration by `migrate deploy`.
 
 Always author migrations against `prisma/schema.prisma` (Postgres). Never edit `migration_lock.toml` manually.
 

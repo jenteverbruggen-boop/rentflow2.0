@@ -112,9 +112,7 @@ export function PersonSplitEditor({ period, project, onWarnings, onError }: Prop
             onAdd={setPendingAdd}
           />
           <PersonAssignedPane
-            periodId={period.id}
-            periodName={period.name}
-            hasAnyPeople={period.people.length > 0}
+            period={period}
             assignedByRole={assignedByRole}
             collapsed={collapsedRight}
             onToggle={toggleRight}

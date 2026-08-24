@@ -1,6 +1,7 @@
 import { differenceInCalendarDays } from "date-fns";
 import type { Period, PeriodPerson, PeriodStockItem } from "@/types";
 import { toNumber } from "@/lib/serialize";
+import { billedDays, billedHours } from "@/lib/assignment-days";
 
 export function periodDays(
   period: Pick<Period, "startDate" | "endDate">,
@@ -43,13 +44,16 @@ export function materialLineCost(line: PeriodStockItem, days: number): number {
 // rateSnapshot: null, billingUnit: "dag", so this is byte-identical to
 // the pre-H5 call for every historical booking. An "uur" row with no
 // startAt/endAt (H1) bills a day like everything else (Q19 fallback).
+// H6 — an assignment with day rows bills those days (or the sum of their
+// hours); one without keeps billing the whole `days` argument.
 export function personLineCost(line: PeriodPerson, days: number): number {
-  if (line.billingUnit === "uur" && line.startAt && line.endAt) {
-    const hours = (new Date(line.endAt).getTime() - new Date(line.startAt).getTime()) / 3_600_000;
-    const rate = line.rateSnapshot ?? line.dayPriceSnapshot;
-    return lineCost(rate, hours, line);
+  if (line.billingUnit === "uur") {
+    const hours = billedHours(line);
+    if (hours != null) {
+      return lineCost(line.rateSnapshot ?? line.dayPriceSnapshot, hours, line);
+    }
   }
-  return lineCost(line.dayPriceSnapshot, days, line);
+  return lineCost(line.dayPriceSnapshot, billedDays(line, days), line);
 }
 
 export function periodPeopleCost(period: Period): number {

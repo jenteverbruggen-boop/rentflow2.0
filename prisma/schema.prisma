@@ -326,8 +326,26 @@ model PeriodPerson {
   person           Person             @relation(fields: [personId], references: [id], onDelete: Cascade)
   function         Function?          @relation(fields: [functionId], references: [id])
   travelCosts      PersonTravelCost[]
+  days             PeriodPersonDay[]
 
   @@unique([periodId, personId])
+}
+
+/// H6 — a person booked for specific days of a period instead of the
+/// whole run. Zero rows keeps the pre-H6 meaning exactly: the
+/// assignment covers `startAt`/`endAt` when set, else the whole period.
+/// When rows exist, `PeriodPerson.startAt`/`endAt` are maintained as
+/// their envelope (earliest start, latest end) so every consumer that
+/// only knows about the single window — the planning board, the ICS
+/// feed, the availability pre-filter — keeps working unchanged.
+model PeriodPersonDay {
+  id             Int          @id @default(autoincrement())
+  periodPersonId Int
+  startAt        DateTime
+  endAt          DateTime
+  periodPerson   PeriodPerson @relation(fields: [periodPersonId], references: [id], onDelete: Cascade)
+
+  @@index([periodPersonId])
 }
 
 model PersonTravelCost {

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { effectiveWindow, validateAssignmentWindow } from "./assignment-window";
+import {
+  effectiveWindow,
+  effectiveWindows,
+  overlapsWindow,
+  validateAssignmentWindow,
+} from "./assignment-window";
 
 const period = {
   startDate: new Date("2026-06-01T00:00:00Z"),
@@ -65,5 +70,48 @@ describe("validateAssignmentWindow (H1.3)", () => {
       period,
     );
     expect(result).toBeNull();
+  });
+});
+
+describe("effectiveWindows / overlapsWindow with day rows (H6)", () => {
+  const days = [
+    { startAt: new Date("2026-06-01T08:00:00Z"), endAt: new Date("2026-06-01T17:00:00Z") },
+    { startAt: new Date("2026-06-04T08:00:00Z"), endAt: new Date("2026-06-04T17:00:00Z") },
+  ];
+
+  it("returns one window per selected day, earliest first", () => {
+    const result = effectiveWindows({ startAt: null, endAt: null, period, days: [days[1], days[0]] });
+    expect(result).toEqual([
+      { from: days[0].startAt, to: days[0].endAt },
+      { from: days[1].startAt, to: days[1].endAt },
+    ]);
+  });
+
+  it("day rows win over the period fallback", () => {
+    const result = effectiveWindows({ startAt: null, endAt: null, period, days: [days[0]] });
+    expect(result).toEqual([{ from: days[0].startAt, to: days[0].endAt }]);
+  });
+
+  it("the envelope spans first start to last end, so single-window consumers still work", () => {
+    const result = effectiveWindow({ startAt: null, endAt: null, period, days });
+    expect(result).toEqual({ from: days[0].startAt, to: days[1].endAt });
+  });
+
+  it("a gap day between two selected days is free — the point of H6", () => {
+    const assignment = { startAt: null, endAt: null, period, days };
+    const gapDay = { from: new Date("2026-06-02T00:00:00Z"), to: new Date("2026-06-03T00:00:00Z") };
+    expect(overlapsWindow(assignment, gapDay)).toBeNull();
+  });
+
+  it("a selected day does conflict", () => {
+    const assignment = { startAt: null, endAt: null, period, days };
+    const worked = { from: new Date("2026-06-04T09:00:00Z"), to: new Date("2026-06-04T10:00:00Z") };
+    expect(overlapsWindow(assignment, worked)).toEqual({ from: days[1].startAt, to: days[1].endAt });
+  });
+
+  it("with no day rows, the whole period conflicts — unchanged pre-H6 behaviour", () => {
+    const assignment = { startAt: null, endAt: null, period };
+    const gapDay = { from: new Date("2026-06-02T00:00:00Z"), to: new Date("2026-06-03T00:00:00Z") };
+    expect(overlapsWindow(assignment, gapDay)).toEqual({ from: period.startDate, to: period.endDate });
   });
 });

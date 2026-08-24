@@ -70,6 +70,7 @@ function makePerson(
     rateSnapshot?: number | null;
     startAt?: string | null;
     endAt?: string | null;
+    days?: { startAt: string; endAt: string }[];
   },
 ): PeriodPerson {
   return {
@@ -79,6 +80,12 @@ function makePerson(
     functionId: null,
     startAt: opts?.startAt ?? null,
     endAt: opts?.endAt ?? null,
+    days: (opts?.days ?? []).map((d, i) => ({
+      id: i + 1,
+      periodPersonId: 1,
+      startAt: d.startAt,
+      endAt: d.endAt,
+    })),
     overlapAck: false,
     billingUnit: opts?.billingUnit ?? "dag",
     rateSnapshot: opts?.rateSnapshot ?? null,
@@ -401,5 +408,44 @@ describe("travel costs", () => {
     expect(summary.people).toBe(200);
     expect(summary.subtotal).toBe(200);
     expect(summary.total).toBe(350);
+  });
+});
+
+// H6 — a person booked for specific days of the period bills those days,
+// not the period's length.
+describe("personLineCost with selected days (H6)", () => {
+  const twoOfFive = [
+    { startAt: "2026-06-01T08:00:00Z", endAt: "2026-06-01T17:00:00Z" },
+    { startAt: "2026-06-03T08:00:00Z", endAt: "2026-06-03T17:00:00Z" },
+  ];
+
+  it("bills the selected days instead of the period's days", () => {
+    const line = makePerson(200, { days: twoOfFive });
+    expect(personLineCost(line, 5)).toBe(400);
+  });
+
+  it("an empty day set keeps billing the whole period — every pre-H6 row is untouched", () => {
+    const line = makePerson(200, { days: [] });
+    expect(personLineCost(line, 5)).toBe(1000);
+  });
+
+  it("a discount applies to the day-selected total, not the period total", () => {
+    const line = makePerson(200, { days: twoOfFive, discountPct: 10 });
+    expect(personLineCost(line, 5)).toBe(360);
+  });
+
+  it("hourly billing sums the hours of every selected day", () => {
+    const line = makePerson(300, { billingUnit: "uur", rateSnapshot: 45, days: twoOfFive });
+    expect(personLineCost(line, 5)).toBe(18 * 45);
+  });
+
+  it("a period total counts a day-selected person by their days", () => {
+    // 2026-06-01 .. 2026-06-05 = 5 period days
+    const period = makePeriod("2026-06-01", "2026-06-05", [], [
+      makePerson(200, { days: twoOfFive }),
+      makePerson(100),
+    ]);
+    // 200 × 2 selected days + 100 × 5 period days
+    expect(periodPeopleCost(period)).toBe(400 + 500);
   });
 });

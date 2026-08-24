@@ -80,6 +80,23 @@ describe("generateDraftInvoiceLines — standalone/final grouping (J2b.1)", () =
     expect(lines[0].section).toBe("Earlier");
     expect(lines[1].section).toBe("Later");
   });
+  // H6 — an invoice line must not claim a quantity its own total
+  // contradicts.
+  it("a day-selected person is invoiced for the selected days, not the period length", () => {
+    const person = makePerson("Bob", 200);
+    person.days = [
+      { id: 1, periodPersonId: 1, startAt: "2026-06-01T08:00:00Z", endAt: "2026-06-01T17:00:00Z" },
+      { id: 2, periodPersonId: 1, startAt: "2026-06-03T08:00:00Z", endAt: "2026-06-03T17:00:00Z" },
+    ];
+    const period = makePeriod("Week", "2026-06-01", "2026-06-05", { people: [person] });
+    const lines = generateDraftInvoiceLines([period], {
+      invoiceRole: "standalone", vatRate: 21, projectLabel: "Test",
+    });
+    const personLine = lines.find((l) => l.kind === "person")!;
+    expect(personLine.quantity).toBe(2);
+    expect(personLine.unit).toBe("dag");
+    expect(personLine.lineTotalExcl).toBe(400);
+  });
 });
 
 describe("generateDraftInvoiceLines — deposit role", () => {

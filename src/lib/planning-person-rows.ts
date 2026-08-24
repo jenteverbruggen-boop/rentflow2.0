@@ -13,6 +13,8 @@ export interface PersonBooking {
   periodEnd: string;
   startAt: string | null;
   endAt: string | null;
+  /** H6 — how many specific days were selected; 0 means the whole period. */
+  dayCount: number;
   billingUnit: string;
   overlapAck: boolean;
 }
@@ -47,6 +49,7 @@ export async function fetchPlanningPersonRows(
     },
     include: {
       person: { select: { id: true, name: true } },
+      days: { select: { id: true } },
       period: {
         select: {
           id: true,
@@ -72,6 +75,7 @@ export async function fetchPlanningPersonRows(
       periodEnd: a.period.endDate.toISOString(),
       startAt: a.startAt ? a.startAt.toISOString() : null,
       endAt: a.endAt ? a.endAt.toISOString() : null,
+      dayCount: a.days.length,
       billingUnit: a.billingUnit,
       overlapAck: a.overlapAck,
     });
