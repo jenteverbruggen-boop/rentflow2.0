@@ -19,6 +19,7 @@ import {
   isCompanyFeedStillEligible,
 } from "@/lib/calendar-feed";
 import { buildPersonalFeedIcs, buildCompanyFeedIcs } from "@/lib/calendar-feed-ics";
+import { saveAssignmentDays } from "@/lib/assignment-days-write";
 import type { ResolvedAccess } from "@/lib/api-auth";
 
 const DB_PATH = path.join(os.tmpdir(), `calendar-feed-${process.pid}.db`);
@@ -167,6 +168,43 @@ describe("buildPersonalFeedIcs (O1.2)", () => {
     expect(ics).toContain("DTSTART:20260901T080000Z");
     expect(ics).toContain("DTEND:20260901T180000Z");
     expect(ics).toContain("LOCATION:Gent");
+  });
+
+  // H6 — a Mon+Wed booking must not black out the whole week.
+  it("renders one VEVENT per selected day, each with its own UID", async () => {
+    const project = await client.project.create({
+      data: { name: "Day Project", startDate: new Date("2026-10-05"), endDate: new Date("2026-10-09") },
+    });
+    const period = await client.period.create({
+      data: {
+        projectId: project.id,
+        name: "Week",
+        startDate: new Date("2026-10-05T00:00:00Z"),
+        endDate: new Date("2026-10-09T23:59:00Z"),
+      },
+    });
+    const assignment = await client.periodPerson.create({
+      data: { periodId: period.id, personId: ids.alice, dayPriceSnapshot: 300 },
+    });
+    await saveAssignmentDays(
+      assignment.id,
+      [
+        { startAt: new Date("2026-10-05T08:00:00Z"), endAt: new Date("2026-10-05T17:00:00Z") },
+        { startAt: new Date("2026-10-07T08:00:00Z"), endAt: new Date("2026-10-07T17:00:00Z") },
+      ],
+      client,
+    );
+
+    const ics = await buildPersonalFeedIcs(ids.linkedUser, new Date("2026-08-14T09:00:00Z"), client);
+    expect(ics).toContain("DTSTART:20261005T080000Z");
+    expect(ics).toContain("DTSTART:20261007T080000Z");
+    const dayUids = ics.match(new RegExp(`UID:period-${period.id}-day-\\d+@rentflow.app`, "g"));
+    expect(dayUids).toHaveLength(2);
+    // No single block spanning Mon->Wed: the skipped Tuesday stays free.
+    expect(ics).not.toContain(`UID:period-${period.id}@rentflow.app`);
+    expect(ics).not.toContain("DTEND:20261009T235900Z");
+
+    await client.project.delete({ where: { id: project.id } });
   });
 
   it("a user with no linked person gets a single explanatory event, not a blank file", async () => {

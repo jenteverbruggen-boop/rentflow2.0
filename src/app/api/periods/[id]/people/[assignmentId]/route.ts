@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModule, forbidden, badRequest, serverError, notFound } from "@/lib/api-auth";
 import { effectivePersonPrice } from "@/lib/effective-price";
-import { validateAssignmentWindow } from "@/lib/assignment-window";
+import { applyAssignmentWindowUpdate } from "@/lib/assignment-days-write";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
 import { findRejectedField, redactMoney } from "@/lib/redact";
 
@@ -18,13 +18,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const { assignmentId } = await params;
     const body = await req.json();
     if (findRejectedField(body, access, KOSTEN_FIELDS)) return forbidden();
-    const { resnapshotPrice, discountPct, discountAmount, startAt, endAt } = body;
+    const { resnapshotPrice, discountPct, discountAmount, startAt, endAt, days } = body;
     const data: Record<string, unknown> = {};
 
     // H1.3 — a custom hours window needs the period's own dates to
     // validate against; resnapshotPrice already needed the period for
-    // its project id, so both branches share one fetch.
-    const needsPeriod = resnapshotPrice || startAt !== undefined || endAt !== undefined;
+    // its project id, so both branches share one fetch. H6's day set
+    // validates against the same period.
+    const needsPeriod =
+      resnapshotPrice || startAt !== undefined || endAt !== undefined || days !== undefined;
     const current = needsPeriod
       ? await prisma.periodPerson.findUnique({
           where: { id: parseInt(assignmentId) },
@@ -42,24 +44,21 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       data.dayPriceSnapshot = price.amount;
     }
 
-    if (startAt !== undefined || endAt !== undefined) {
-      if (startAt === null && endAt === null) {
-        // Clearing back to "inherit the period window".
-        data.startAt = null;
-        data.endAt = null;
-      } else if (startAt != null && endAt != null) {
-        const window = { startAt: new Date(startAt), endAt: new Date(endAt) };
-        const error = validateAssignmentWindow(window, current!.period);
-        if (error) return badRequest(error);
-        data.startAt = window.startAt;
-        data.endAt = window.endAt;
-      } else {
-        return badRequest("startAt en endAt moeten samen worden opgegeven");
-      }
+    // `current` is non-null whenever a window/day update was asked for —
+    // `needsPeriod && !current` already 404'd above.
+    if (current) {
+      const windowError = await applyAssignmentWindowUpdate(
+        parseInt(assignmentId),
+        { startAt, endAt, days },
+        current.period,
+        data,
+      );
+      if (windowError) return badRequest(windowError);
     }
 
-    if (discountPct !== undefined) data.discountPct = discountPct != null ? toNumber(discountPct) : null;
-    if (discountAmount !== undefined) data.discountAmount = discountAmount != null ? toNumber(discountAmount) : null;
+    for (const [field, value] of Object.entries({ discountPct, discountAmount })) {
+      if (value !== undefined) data[field] = value != null ? toNumber(value) : null;
+    }
     const updated = await prisma.periodPerson.update({
       where: { id: parseInt(assignmentId) },
       data,

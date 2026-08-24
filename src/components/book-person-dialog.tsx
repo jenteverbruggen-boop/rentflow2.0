@@ -51,7 +51,11 @@ export function BookPersonDialog({ person, periodId, clientId, onBooked, onClose
     if (person) {
       setFunctionId(fns.length === 1 ? fns[0].functionId : null);
       setUnit("dag");
-      setConflict(null);
+      // Seeded from the availability list so a known conflict is warned
+      // about *before* the first attempt — the person pane now lets a
+      // busy person through on purpose. A conflict the list did not know
+      // about still arrives as the API's 409 below.
+      setConflict(person.blockingProject ?? null);
       setError("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -15,7 +15,13 @@ export const projectInclude = {
         orderBy: { id: "asc" },
       },
       people: {
-        include: { person: true, function: true, travelCosts: { orderBy: { id: "asc" } } },
+        include: {
+          person: true,
+          function: true,
+          travelCosts: { orderBy: { id: "asc" } },
+          // H6 — the selected days of the assignment, if any.
+          days: { orderBy: { startAt: "asc" } },
+        },
         orderBy: { id: "asc" },
       },
       bundleBookings: {

@@ -9,6 +9,12 @@ import { statusVariant } from "@/lib/utils";
 import type { PersonRow, PersonBooking } from "@/lib/planning-person-rows";
 
 function fmtBookingWindow(b: PersonBooking): string {
+  // H6 — a day-selected booking says how many days, not a solid span that
+  // would read as "unavailable all week".
+  if (b.dayCount > 0 && b.startAt && b.endAt) {
+    const span = `${format(new Date(b.startAt), "d MMM", { locale: nl })} – ${format(new Date(b.endAt), "d MMM yyyy", { locale: nl })}`;
+    return `${span} · ${b.dayCount} ${b.dayCount === 1 ? "dag" : "dagen"}`;
+  }
   if (b.billingUnit === "uur" && b.startAt && b.endAt) {
     return `${format(new Date(b.periodStart), "d MMM", { locale: nl })} ${format(new Date(b.startAt), "HH:mm")}–${format(new Date(b.endAt), "HH:mm")}`;
   }
