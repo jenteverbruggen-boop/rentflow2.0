@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireModule, forbidden, badRequest, serverError } from "@/lib/api-auth";
 import { parseImportFile } from "@/lib/import/parse-file";
 import { detectFormat } from "@/lib/import/format-detection";
+import { normalizeRentmanLocale } from "@/lib/import/rentman-locale";
 import { parseMaterialRows } from "@/lib/import/material-adapter";
 import { buildMaterialPreview, type ExistingMaterial } from "@/lib/import/material-preview";
 import { toNumberOrNull } from "@/lib/serialize";
@@ -30,7 +31,8 @@ export async function POST(req: NextRequest) {
     if (file.size > MAX_SIZE) return badRequest("Bestand is te groot (max. 20 MB)");
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { headers, rows } = await parseImportFile(buffer, file.name);
+    const parsed = await parseImportFile(buffer, file.name);
+    const { headers, rows } = normalizeRentmanLocale(parsed.headers, parsed.rows);
     const format = detectFormat(headers);
     if (format === "unknown") {
       return badRequest(
