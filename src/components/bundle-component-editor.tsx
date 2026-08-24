@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EntityCombobox } from "@/components/entity-combobox";
 import { BundleComponentRow } from "@/components/bundle-component-row";
+import { QuantityInput } from "@/components/quantity-input";
 import { useBundleEditor } from "@/hooks/use-bundle-editor";
 import { useMaterialUpdate } from "@/hooks/use-material-update";
 import { formatEUR } from "@/lib/pricing";
@@ -104,12 +105,11 @@ export function BundleComponentEditor({ material }: BundleComponentEditorProps) 
             </p>
           )}
         </div>
-        <Input
-          type="number"
+        <QuantityInput
           min={1}
           value={qty}
           onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
-          className="w-16 h-10 text-sm"
+          className="h-10 text-sm"
           aria-label="Aantal per set"
         />
         <Button

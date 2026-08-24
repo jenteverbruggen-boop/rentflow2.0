@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { QuantityInput } from "@/components/quantity-input";
 import { formatEUR } from "@/lib/pricing";
 import type { PersonTravelCost } from "@/types";
 
@@ -94,12 +95,11 @@ export function PersonTravelEditor({
           aria-label="Bedrag per keer"
         />
         <span className="text-xs text-muted-foreground">×</span>
-        <Input
-          type="number"
+        <QuantityInput
           min={1}
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
-          className="h-7 w-12 text-xs"
+          className="h-7 text-xs"
           aria-label="Aantal keer"
         />
         <Button

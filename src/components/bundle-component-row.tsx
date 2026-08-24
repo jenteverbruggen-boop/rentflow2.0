@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { QuantityInput } from "@/components/quantity-input";
 import { formatEUR } from "@/lib/pricing";
 import type { Material, MaterialComponent } from "@/types";
 
@@ -40,13 +40,12 @@ export function BundleComponentRow({
         )}
       </div>
       <span className="text-muted-foreground">×</span>
-      <Input
-        type="number"
+      <QuantityInput
         min={1}
         value={qty}
         onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
         onBlur={commit}
-        className="h-6 w-14 text-xs"
+        className="h-6 text-xs"
         aria-label="Aantal per set"
       />
       {child && (
