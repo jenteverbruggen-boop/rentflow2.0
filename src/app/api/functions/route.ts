@@ -7,10 +7,12 @@ import {
   badRequest,
   serverError,
 } from "@/lib/api-auth";
-import { findRejectedField, redactMoney } from "@/lib/redact";
+import { redactMoney } from "@/lib/redact";
+import { findRejectedField, moneyFieldsToIgnore } from "@/lib/money-write-guard";
 import { toNumberOrNull } from "@/lib/serialize";
 
 const RATE_FIELDS = ["dayRate", "hourRate"] as const;
+const USAGE_COUNT_SELECT = { people: true, assignments: true, clientRates: true } as const;
 
 const schema = z.object({
   name: z.string().min(1, "Naam is verplicht"),
@@ -21,7 +23,16 @@ const schema = z.object({
 // L1.1: resolves the phase-1 TODO(L1) markers — dayRate/hourRate landed
 // on Function in DDL-2, redacted here for callers without
 // Kosten/Facturen: lezen and rejected on write without :wijzigen.
-export async function GET() {
+//
+// N?.? — archived functions (mirrors Material.archived) are excluded by
+// default so the person-form picker and the default manager view never
+// offer them; ?includeArchived=1 opts back in (the manager dialog's own
+// "toon gearchiveerde" view, and the person form's chip list, which must
+// still resolve an already-assigned-but-archived function by id).
+// Usage counts are always included so the UI can show what a function is
+// used by, and so the manager dialog can decide "Archiveren" vs.
+// "Verwijderen" without a second round-trip.
+export async function GET(req: NextRequest) {
   const access = await requireModule("personen", "lezen").catch(() => null);
   if (!access) return forbidden();
   // scope: own — deny the standalone catalogue; function names for the
@@ -29,8 +40,12 @@ export async function GET() {
   // (own-data-scoping-design.md §5, Personen).
   if (access.scope === "own") return forbidden();
   try {
+    const { searchParams } = new URL(req.url);
+    const includeArchived = searchParams.get("includeArchived") === "1";
     const functions = await prisma.function.findMany({
+      where: includeArchived ? {} : { archived: false },
       orderBy: { name: "asc" },
+      include: { _count: { select: USAGE_COUNT_SELECT } },
     });
     // Review finding: a caller WITH Kosten/Facturen access previously
     // received a raw Decimal here — redactMoney only nulls fields for
@@ -56,10 +71,27 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.issues[0].message);
-    if (findRejectedField(body, access, RATE_FIELDS)) {
+    // Diff-aware, not presence-only (money-write-guard.ts's
+    // findRejectedMoneyWrite doc comment explains why): a brand-new
+    // function has no persisted rate yet, so `current: null` compares
+    // against the null default — an omitted/null rate on create is
+    // never rejected, only a genuine non-null rate value is.
+    if (findRejectedField(body, access, RATE_FIELDS, null)) {
       return forbidden();
     }
-    const fn = await prisma.function.create({ data: parsed.data });
+    // Money-blind caller: omit the rate keys entirely so Function's own
+    // null default applies, rather than writing whatever redacted value
+    // the caller's form happened to submit (moneyFieldsToIgnore's doc
+    // comment in money-write-guard.ts).
+    const rateIgnore = moneyFieldsToIgnore(access, RATE_FIELDS);
+    const { dayRate, hourRate, ...rest } = parsed.data;
+    const fn = await prisma.function.create({
+      data: {
+        ...rest,
+        ...(rateIgnore.has("dayRate") ? {} : { dayRate }),
+        ...(rateIgnore.has("hourRate") ? {} : { hourRate }),
+      },
+    });
     return NextResponse.json(
       redactMoney({ ...fn, dayRate: toNumberOrNull(fn.dayRate), hourRate: toNumberOrNull(fn.hourRate) }, access),
     );

@@ -4,7 +4,8 @@ import { requireModule, forbidden, badRequest, serverError, notFound } from "@/l
 import { effectivePersonPrice } from "@/lib/effective-price";
 import { applyAssignmentWindowUpdate } from "@/lib/assignment-days-write";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
-import { findRejectedField, redactMoney } from "@/lib/redact";
+import { redactMoney } from "@/lib/redact";
+import { findRejectedField } from "@/lib/money-write-guard";
 
 const KOSTEN_FIELDS = ["discountPct", "discountAmount"] as const;
 

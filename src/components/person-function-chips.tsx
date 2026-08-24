@@ -1,8 +1,7 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { EntityCombobox } from "@/components/entity-combobox";
+import { FunctionChipRow } from "@/components/function-chip-row";
 import type { Function as Fn } from "@/types";
 
 export interface FunctionAssignment {
@@ -16,14 +15,20 @@ interface Props {
   value: FunctionAssignment[];
   onChange: (next: FunctionAssignment[]) => void;
   onCreateFunction: (name: string) => Promise<{ id: number }>;
+  onEditFunction: (fn: Fn) => void;
 }
 
 /** Function chips on the person form (L1.3), extracted so
  * person-form.tsx stays under the 150-line limit. Each assigned
  * function shows an optional per-person day/hour rate override —
  * blank means "use the function's own default" (or Person.dayPrice if
- * the function has none), per effective-price.ts's resolution order. */
-export function PersonFunctionChips({ functions, value, onChange, onCreateFunction }: Props) {
+ * the function has none), per effective-price.ts's resolution order.
+ * The pencil on each row (function-chip-row.tsx) edits that company
+ * default itself, via a dialog person-form.tsx renders as a sibling.
+ * `functions` includes archived rows (so an already-assigned archived
+ * function still resolves here) — only the add-picker below excludes
+ * them, since an archived function must not be assignable again. */
+export function PersonFunctionChips({ functions, value, onChange, onCreateFunction, onEditFunction }: Props) {
   function toggle(functionId: number) {
     const exists = value.some((v) => v.functionId === functionId);
     onChange(
@@ -49,42 +54,20 @@ export function PersonFunctionChips({ functions, value, onChange, onCreateFuncti
             const fn = functions.find((f) => f.id === v.functionId);
             if (!fn) return null;
             return (
-              <div key={v.functionId} className="flex items-center gap-2 text-xs">
-                <span className="min-w-0 flex-1 truncate">{fn.name}</span>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  placeholder={fn.dayRate != null ? `${fn.dayRate}/dag` : "dagtarief"}
-                  value={v.dayRate ?? ""}
-                  onChange={(e) => setRate(v.functionId, "dayRate", e.target.value)}
-                  className="h-8 w-24"
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  placeholder={fn.hourRate != null ? `${fn.hourRate}/uur` : "uurtarief"}
-                  value={v.hourRate ?? ""}
-                  onChange={(e) => setRate(v.functionId, "hourRate", e.target.value)}
-                  className="h-8 w-24"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 text-destructive hover:text-destructive"
-                  onClick={() => toggle(v.functionId)}
-                >
-                  ×
-                </Button>
-              </div>
+              <FunctionChipRow
+                key={v.functionId}
+                fn={fn}
+                assignment={v}
+                onRateChange={(field, raw) => setRate(v.functionId, field, raw)}
+                onEdit={() => onEditFunction(fn)}
+                onRemove={() => toggle(v.functionId)}
+              />
             );
           })}
         </div>
       )}
       <EntityCombobox
-        items={functions.filter((f) => !value.some((v) => v.functionId === f.id))}
+        items={functions.filter((f) => !f.archived && !value.some((v) => v.functionId === f.id))}
         value={null}
         onChange={(id) => id && toggle(id)}
         onCreate={onCreateFunction}

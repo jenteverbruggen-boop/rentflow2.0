@@ -8,16 +8,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useFunctions } from "@/hooks/use-functions";
 import { FunctionFormDialog } from "@/components/function-form-dialog";
+import { FunctionManagerTable } from "@/components/function-manager-table";
 import type { Function as Fn } from "@/types";
 
 interface Props {
@@ -25,20 +18,22 @@ interface Props {
   onOpenChange: (v: boolean) => void;
 }
 
-function formatRate(v: number | null): string {
-  return v == null ? "—" : `€${v.toFixed(2)}`;
-}
-
 /** L1.3 — the functions management page brought in as a dialog reachable
  * from the People page, since functions only ever matter in the context
- * of crew. Lists name + day/hour rate; create/edit/delete. A rate
- * showing "—" may mean "not set" or "redacted for this caller" (N2.1) —
- * indistinguishable by design, same as every other money field in the
- * app when Kosten/Facturen access is missing. */
+ * of crew. Lists name + day/hour rate + usage; create/edit, and either
+ * "Archiveren" (an in-use function) or "Verwijderen" (a genuinely unused
+ * one — function-deletable.ts decides which). Archived functions are
+ * hidden by default behind a "Toon gearchiveerde" toggle, where they can
+ * be "Hersteld". A rate showing "—" may mean "not set" or "redacted for
+ * this caller" (N2.1) — indistinguishable by design, same as every other
+ * money field in the app when Kosten/Facturen access is missing. */
 export function FunctionsManagerDialog({ open, onOpenChange }: Props) {
   const { query, create, update, remove } = useFunctions();
-  const functions = query.data ?? [];
+  const all = query.data ?? [];
+  const active = all.filter((f) => !f.archived);
+  const archived = all.filter((f) => f.archived);
 
+  const [showArchived, setShowArchived] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Fn | null>(null);
   const [error, setError] = useState("");
@@ -55,13 +50,24 @@ export function FunctionsManagerDialog({ open, onOpenChange }: Props) {
   }
   function handleDelete(fn: Fn) {
     if (!confirm(`Functie "${fn.name}" verwijderen?`)) return;
+    setError("");
     remove.mutate(fn.id, { onError: (err) => setError((err as Error).message) });
   }
+  function handleArchive(fn: Fn) {
+    setError("");
+    update.mutate({ id: fn.id, archived: true }, { onError: (err) => setError((err as Error).message) });
+  }
+  function handleRestore(fn: Fn) {
+    setError("");
+    update.mutate({ id: fn.id, archived: false }, { onError: (err) => setError((err as Error).message) });
+  }
+
+  const rowHandlers = { onEdit: openEdit, onArchive: handleArchive, onRestore: handleRestore, onDelete: handleDelete };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
+        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle>Functies</DialogTitle>
           </DialogHeader>
@@ -69,40 +75,20 @@ export function FunctionsManagerDialog({ open, onOpenChange }: Props) {
             <Button size="sm" onClick={openCreate}>+ Nieuwe functie</Button>
           </div>
           {error && <p className="text-xs text-destructive">{error}</p>}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Naam</TableHead>
-                  <TableHead>Dagtarief</TableHead>
-                  <TableHead>Uurtarief</TableHead>
-                  <TableHead className="text-right">Acties</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {functions.map((fn) => (
-                  <TableRow key={fn.id}>
-                    <TableCell className="font-medium">{fn.name}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{formatRate(fn.dayRate)}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{formatRate(fn.hourRate)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(fn)}>Bewerken</Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(fn)}
-                        >
-                          Verwijderen
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <FunctionManagerTable functions={active} {...rowHandlers} />
+
+          {archived.length > 0 && (
+            <div className="pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setShowArchived((v) => !v)}>
+                {showArchived ? "Verberg" : "Toon"} gearchiveerde functies ({archived.length})
+              </Button>
+              {showArchived && (
+                <div className="mt-2">
+                  <FunctionManagerTable functions={archived} showHeader={false} {...rowHandlers} />
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

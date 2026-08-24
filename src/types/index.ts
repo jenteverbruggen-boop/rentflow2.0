@@ -70,6 +70,8 @@ export interface Function {
   name: string;
   dayRate: number | null;
   hourRate: number | null;
+  archived?: boolean;
+  _count?: { people: number; assignments: number; clientRates: number };
 }
 
 export interface PersonFunction {

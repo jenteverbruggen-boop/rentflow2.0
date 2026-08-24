@@ -8,8 +8,11 @@ import {
 } from "@/lib/api-auth";
 import { nextCode } from "@/lib/material-code";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
-import { findRejectedMoneyWrite, redactMoney } from "@/lib/redact";
+import { redactMoney } from "@/lib/redact";
+import { findRejectedMoneyWrite, moneyFieldsToIgnore } from "@/lib/money-write-guard";
 import { serializeMaterialsList } from "@/lib/materials-list";
+
+const MATERIAL_MONEY_FIELDS = ["dayPrice", "setupCost"] as const;
 
 export async function GET(req: NextRequest) {
   const access = await requireModule("materialen", "lezen").catch(() => null);
@@ -100,6 +103,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Money-blind caller: MaterialForm's redacted-to-0/null echo must
+    // not be written — omit the key so Material's own schema default
+    // applies instead (moneyFieldsToIgnore's doc comment).
+    const ignore = moneyFieldsToIgnore(access, MATERIAL_MONEY_FIELDS);
     const material = await prisma.material.create({
       data: {
         name,
@@ -107,8 +114,10 @@ export async function POST(req: NextRequest) {
         categoryId: categoryId ?? null,
         code,
         notes,
-        dayPrice: Number(dayPrice) || 0,
-        setupCost: setupCost != null ? Number(setupCost) : null,
+        ...(ignore.has("dayPrice") ? {} : { dayPrice: Number(dayPrice) || 0 }),
+        ...(ignore.has("setupCost")
+          ? {}
+          : { setupCost: setupCost != null ? Number(setupCost) : null }),
       },
       include: { categoryRel: true },
     });

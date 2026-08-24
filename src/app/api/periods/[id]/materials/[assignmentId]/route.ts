@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireModule, forbidden, badRequest, serverError, notFound } from "@/lib/api-auth";
 import { effectiveMaterialPrice } from "@/lib/effective-price";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
-import { findRejectedField, redactMoney } from "@/lib/redact";
+import { redactMoney } from "@/lib/redact";
+import { findRejectedField } from "@/lib/money-write-guard";
 import { resolvePackingListPatch } from "@/lib/packing-list";
 
 const KOSTEN_FIELDS = ["discountPct", "discountAmount", "resnapshotPrice"] as const;

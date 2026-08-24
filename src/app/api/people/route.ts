@@ -8,7 +8,9 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
-import { findRejectedMoneyWrite, redactMoney } from "@/lib/redact";
+import { redactMoney } from "@/lib/redact";
+import { findRejectedMoneyWrite, moneyFieldsToIgnore } from "@/lib/money-write-guard";
+import { findRejectedFunctionRate, personFunctionRateData } from "@/lib/person-function-rate-guard";
 
 // L1.1: the only person-entity route with no zod schema before this —
 // every other entity route in the codebase validates with one.
@@ -98,12 +100,23 @@ export async function POST(req: NextRequest) {
     const parsed = personSchema.safeParse(body);
     if (!parsed.success) return badRequest(parsed.error.issues[0].message);
     const { name, email, phone, dayPrice, address, postalCode, city, country, functions } = parsed.data;
+
+    // Nothing is persisted yet on a create, so every function assignment
+    // diffs against `null` (findRejectedFunctionRate's create-time
+    // default) — a money-blind caller's redacted-to-null rate is a
+    // no-op there, a genuine non-null rate without Kosten/Facturen:
+    // wijzigen is still rejected.
+    if (functions?.length && findRejectedFunctionRate(functions, access, new Map())) {
+      return forbidden();
+    }
+
+    const dayPriceIgnore = moneyFieldsToIgnore(access, ["dayPrice"]);
     const person = await prisma.person.create({
       data: {
         name,
         email,
         phone,
-        dayPrice: dayPrice ?? 0,
+        ...(dayPriceIgnore.has("dayPrice") ? {} : { dayPrice: dayPrice ?? 0 }),
         address,
         postalCode,
         city,
@@ -112,8 +125,7 @@ export async function POST(req: NextRequest) {
           ? {
               create: functions.map((f) => ({
                 functionId: f.functionId,
-                dayRate: f.dayRate ?? null,
-                hourRate: f.hourRate ?? null,
+                ...personFunctionRateData(f, access),
               })),
             }
           : undefined,

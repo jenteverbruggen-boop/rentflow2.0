@@ -115,37 +115,7 @@ export function redactMoney<T>(value: T, access: ResolvedAccess): T {
   return redactValue(value) as T;
 }
 
-const MONEY_WRITE_FIELDS = ["dayPrice", "setupCost", "bundlePriceOverride"] as const;
-
-/**
- * Generic per-field-presence check: reject a request body containing any
- * of `fields` unless the caller holds Kosten/Facturen: wijzigen. Checks
- * presence, not "does the caller have Kosten access" as a blanket deny —
- * a caller without Kosten access must still be able to write the other
- * fields in the same body (e.g. `role` on a booking PATCH).
- */
-export function findRejectedField(
-  body: Record<string, unknown>,
-  access: ResolvedAccess,
-  fields: readonly string[],
-): string | null {
-  const held = access.permissions.kosten_facturen ?? "geen";
-  if (satisfies(held, "wijzigen")) return null;
-  for (const field of fields) {
-    if (body[field] !== undefined) return field;
-  }
-  return null;
-}
-
-/**
- * For write endpoints (people/[id], materials/[id]): reject a request
- * body that attempts to set a money field without Kosten/Facturen:
- * wijzigen. Returns the offending field name, or null if the write is
- * allowed.
- */
-export function findRejectedMoneyWrite(
-  body: Record<string, unknown>,
-  access: ResolvedAccess,
-): string | null {
-  return findRejectedField(body, access, MONEY_WRITE_FIELDS);
-}
+// findRejectedField/findRejectedMoneyWrite (the write-side guard, as
+// opposed to this file's read-side redaction) live in
+// src/lib/money-write-guard.ts — kept separate to stay under the
+// 150-line file limit.
