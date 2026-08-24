@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireModule, forbidden, badRequest, notFound, serverError } from "@/lib/api-auth";
 import { parseImportFile } from "@/lib/import/parse-file";
 import { detectEntityFormat } from "@/lib/import/format-detection";
+import { normalizeRentmanLocale } from "@/lib/import/rentman-locale";
 import { applyImport } from "@/lib/import/pipeline";
 import { resolveImportEntity, getImportAdapter, IMPORT_ENTITY_MODULE } from "@/lib/import/entity-registry";
 import { rejectedMoneyImportHeader } from "@/lib/import/money-guard";
@@ -56,7 +57,8 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     const adapter = getImportAdapter(entity);
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { headers, rows } = await parseImportFile(buffer, file.name);
+    const parsed = await parseImportFile(buffer, file.name);
+    const { headers, rows } = normalizeRentmanLocale(parsed.headers, parsed.rows);
     const format = detectEntityFormat(headers, adapter.acceptedFormats, adapter.requiredHeaders);
     if (format === "unknown") {
       return badRequest(
