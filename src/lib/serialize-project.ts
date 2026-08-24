@@ -70,6 +70,19 @@ export function serializeProject(project: ProjectWithIncludes) {
           })),
         },
       })),
+      shortages: period.shortages.map((s) => ({
+        ...s,
+        dayPriceSnapshot: toNumber(s.dayPriceSnapshot),
+        setupCostSnapshot: toNumber(s.setupCostSnapshot),
+        discountPct: toNumberOrNull(s.discountPct),
+        discountAmount: toNumberOrNull(s.discountAmount),
+        material: {
+          ...s.material,
+          dayPrice: toNumber(s.material.dayPrice),
+          setupCost: toNumberOrNull(s.material.setupCost),
+          bundlePriceOverride: toNumberOrNull(s.material.bundlePriceOverride),
+        },
+      })),
     })),
     materialPrices: project.materialPrices.map((mp) => ({
       ...mp,

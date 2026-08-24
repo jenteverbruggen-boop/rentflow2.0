@@ -11,7 +11,12 @@ import {
   periodSubtotal,
   projectCostSummary,
 } from "@/lib/pricing";
-import type { Period, PeriodStockItem, PeriodPerson } from "@/types";
+import type {
+  Period,
+  PeriodStockItem,
+  PeriodPerson,
+  PeriodMaterialShortage,
+} from "@/types";
 
 function makeStockItem(
   snapshot: number,
@@ -102,6 +107,45 @@ function makePerson(
       city: null,
       country: null,
       dayPrice: snapshot,
+    },
+  };
+}
+
+function makeShortage(
+  quantity: number,
+  opts?: {
+    dayPriceSnapshot?: number;
+    setupCostSnapshot?: number;
+    discountPct?: number;
+    discountAmount?: number;
+    bundleBookingId?: number;
+  },
+): PeriodMaterialShortage {
+  return {
+    id: 1,
+    periodId: 1,
+    materialId: 1,
+    quantity,
+    bundleBookingId: opts?.bundleBookingId ?? null,
+    dayPriceSnapshot: opts?.dayPriceSnapshot ?? 50,
+    setupCostSnapshot: opts?.setupCostSnapshot ?? 0,
+    discountPct: opts?.discountPct ?? null,
+    discountAmount: opts?.discountAmount ?? null,
+    material: {
+      id: 1,
+      name: "Test",
+      category: null,
+      categoryId: null,
+      code: null,
+      notes: null,
+      dayPrice: opts?.dayPriceSnapshot ?? 50,
+      setupCost: null,
+      isBundle: false,
+      bundlePriceOverride: null,
+      archived: false,
+      costPrice: null,
+      listPrice: null,
+      revenueBefore: null,
     },
   };
 }
@@ -306,6 +350,27 @@ describe("B6 cost split", () => {
     expect(summary.total).toBe(periodTotal(p1) + periodTotal(p2));
     expect(summary.people).toBe(100 + 200);
     expect(summary.materials).toBe(50);
+  });
+});
+
+describe("periodMaterialsCost — overboeken shortages", () => {
+  it("adds a flat shortage's cost on top of real assignments", () => {
+    const period = {
+      ...makePeriod("2026-05-01", "2026-05-02", [makeStockItem(100)], []),
+      shortages: [makeShortage(3, { dayPriceSnapshot: 50 })],
+    };
+    // real: 100 × 2 days = 200; shortage: 50 × 2 days × 3 units = 300
+    expect(periodMaterialsCost(period)).toBe(500);
+  });
+
+  it("a bundle-component shortage contributes 0 — the bundle's own price already carries it", () => {
+    const period = {
+      ...makePeriod("2026-05-01", "2026-05-01", [], []),
+      shortages: [
+        makeShortage(4, { dayPriceSnapshot: 0, bundleBookingId: 99 }),
+      ],
+    };
+    expect(periodMaterialsCost(period)).toBe(0);
   });
 });
 

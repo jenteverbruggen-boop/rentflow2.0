@@ -11,6 +11,8 @@ import { projectInclude } from "@/lib/project-include";
 import { serializeProject } from "@/lib/serialize-project";
 import { redactMoney } from "@/lib/redact";
 import { scopeFilter } from "@/lib/scope-filter";
+import { canOverbook } from "@/lib/material-shortage";
+import { fillShortages, assertNoShortages } from "@/lib/material-shortage-db";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -55,8 +57,36 @@ export async function PUT(req: NextRequest, { params }: Params) {
     if (!name || !startDate || !endDate)
       return badRequest("naam, startdatum en einddatum zijn verplicht");
 
+    const projectId = parseInt(id);
+    const existing = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { status: true },
+    });
+    if (!existing) return notFound();
+
+    // Overboeken (K-series) — leaving concept/geannuleerd is the gate:
+    // first try to resolve any open shortages against stock that has
+    // since freed up or grown, then refuse the whole update (status
+    // unwritten) if anything is still overbooked.
+    const resultStatus = status ?? existing.status;
+    if (!canOverbook(resultStatus)) {
+      await fillShortages(projectId);
+      try {
+        await assertNoShortages(projectId);
+      } catch (e: unknown) {
+        const err = e as { code?: string; message?: string; shortages?: unknown };
+        if (err.code === "OVERBOOK") {
+          return NextResponse.json(
+            { error: err.message, shortages: err.shortages },
+            { status: 409 },
+          );
+        }
+        throw e;
+      }
+    }
+
     const project = await prisma.project.update({
-      where: { id: parseInt(id) },
+      where: { id: projectId },
       data: {
         name,
         client,

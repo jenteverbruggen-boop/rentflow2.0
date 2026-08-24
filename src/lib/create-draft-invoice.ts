@@ -2,12 +2,13 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { buildInvoiceDraft, type BuildInvoiceDraftArgs } from "@/lib/build-invoice-draft";
 import { invoiceInclude } from "@/lib/serialize-invoice";
+import { assertNoShortages } from "@/lib/material-shortage-db";
 
 export type CreateDraftInvoiceArgs = BuildInvoiceDraftArgs;
 
 export class CreateDraftInvoiceError extends Error {
-  code: "NOT_FOUND" | "NO_CLIENT";
-  constructor(code: "NOT_FOUND" | "NO_CLIENT", message: string) {
+  code: "NOT_FOUND" | "NO_CLIENT" | "OVERBOOK";
+  constructor(code: "NOT_FOUND" | "NO_CLIENT" | "OVERBOOK", message: string) {
     super(message);
     this.code = code;
   }
@@ -25,6 +26,21 @@ export async function createDraftInvoice(
   args: CreateDraftInvoiceArgs,
   client: PrismaClient = defaultPrisma,
 ) {
+  // Overboeken (K-series) — a concept project with open shortages must
+  // not be invoiced with silently missing lines.
+  try {
+    await assertNoShortages(args.projectId, client);
+  } catch (e: unknown) {
+    const err = e as { code?: string; message?: string };
+    if (err.code === "OVERBOOK") {
+      throw new CreateDraftInvoiceError(
+        "OVERBOOK",
+        err.message ?? "Project heeft nog overboekt materiaal",
+      );
+    }
+    throw e;
+  }
+
   const draft = await buildInvoiceDraft(args, client);
   if (!draft) throw new CreateDraftInvoiceError("NOT_FOUND", "Project niet gevonden");
   const clientRel = draft.project.clientRel;

@@ -1,6 +1,7 @@
 import { differenceInCalendarDays } from "date-fns";
 import type { Period, PeriodPerson, PeriodStockItem } from "@/types";
 import { toNumber } from "@/lib/serialize";
+import { shortageCost } from "@/lib/material-shortage";
 
 export function periodDays(
   period: Pick<Period, "startDate" | "endDate">,
@@ -83,7 +84,8 @@ export function periodMaterialsCost(period: Period): number {
     (acc, b) => acc + toNumber(b.dayPriceSnapshot) * days * b.quantity,
     0,
   );
-  return Math.round((flat + bundles) * 100) / 100;
+  const shortages = shortageCost(period.shortages ?? [], days);
+  return Math.round((flat + bundles + shortages) * 100) / 100;
 }
 
 /**
@@ -99,33 +101,6 @@ export function periodSubtotal(period: Period): number {
   );
 }
 
-export function projectCostSummary(periods: Period[]): {
-  people: number;
-  materials: number;
-  subtotal: number;
-  travel: number;
-  total: number;
-} {
-  const people =
-    Math.round(periods.reduce((acc, p) => acc + periodPeopleCost(p), 0) * 100) /
-    100;
-  const materials =
-    Math.round(
-      periods.reduce((acc, p) => acc + periodMaterialsCost(p), 0) * 100,
-    ) / 100;
-  const travel =
-    Math.round(periods.reduce((acc, p) => acc + periodTravelCost(p), 0) * 100) /
-    100;
-  const subtotal = Math.round((people + materials) * 100) / 100;
-  return {
-    people,
-    materials,
-    subtotal,
-    travel,
-    total: Math.round((subtotal + travel) * 100) / 100,
-  };
-}
-
 // Travel stays inside the total per Q22 — the accountant's VAT-treatment
 // review (outstanding, does not block this item) is a one-line change here
 // and at the single BTW application site (cost-summary.tsx), not a hunt.
@@ -135,12 +110,8 @@ export function periodTotal(period: Period): number {
   );
 }
 
-export function projectTotal(periods: Period[]): number {
-  return (
-    Math.round(periods.reduce((acc, p) => acc + periodTotal(p), 0) * 100) / 100
-  );
-}
-
-// Split into money-format.ts to keep this file under the 150-line limit
-// (Y1.2) — re-exported so existing import sites are unaffected.
+// Split into money-format.ts and pricing-project.ts to keep this file under
+// the 150-line limit (Y1.2, and again for the K-series shortage cost) —
+// re-exported so existing import sites are unaffected.
 export { BTW_RATE, btwAmount, withBtw, formatEUR } from "@/lib/money-format";
+export { projectCostSummary, projectTotal } from "@/lib/pricing-project";

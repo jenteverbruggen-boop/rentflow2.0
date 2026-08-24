@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
+import { createOrIncrementShortage } from "@/lib/shortage-row";
 
 export async function freeStockItemIds(
   client: PrismaClient,
@@ -41,6 +42,8 @@ export async function lockMaterials(
 interface BookFlatArgs {
   periodId: number;
   materialId: number;
+  /** Only used to name the material in the overboeken warning text. */
+  materialName?: string;
   quantity: number;
   from: Date;
   to: Date;
@@ -48,6 +51,11 @@ interface BookFlatArgs {
   setupCostSnapshot: number;
   discountPct?: number | null;
   discountAmount?: number | null;
+  /** Overboeken — when the requested quantity exceeds what's free, book
+   * every free unit and record the rest as a PeriodMaterialShortage
+   * instead of throwing UNAVAIL. Only the caller (the route, after
+   * checking the project's status) may set this. */
+  allowOverbook?: boolean;
   client?: PrismaClient;
 }
 
@@ -59,19 +67,21 @@ interface BookFlatResult {
 export async function bookFlatMaterial(args: BookFlatArgs): Promise<BookFlatResult> {
   const client = args.client ?? defaultPrisma;
   const result = await client.$transaction(async (tx) => {
-    await lockMaterials(tx as unknown as PrismaClient, [args.materialId]);
-    const free = await freeStockItemIds(tx as unknown as PrismaClient, args.materialId, args.from, args.to);
-    if (free.length < args.quantity) {
+    const txClient = tx as unknown as PrismaClient;
+    await lockMaterials(txClient, [args.materialId]);
+    const free = await freeStockItemIds(txClient, args.materialId, args.from, args.to);
+    const shortfall = args.quantity - free.length;
+    if (shortfall > 0 && !args.allowOverbook) {
       const err = new Error(
         `Niet genoeg vrij. Gevraagd: ${args.quantity}, beschikbaar: ${free.length}`,
       ) as Error & { code: string };
       err.code = "UNAVAIL";
       throw err;
     }
-    const chosen = free.slice(0, args.quantity);
+    const chosen = free.slice(0, Math.min(args.quantity, free.length));
     const created = await Promise.all(
       chosen.map((stockItemId) =>
-        (tx as unknown as PrismaClient).periodStockItem.create({
+        txClient.periodStockItem.create({
           data: {
             periodId: args.periodId,
             stockItemId,
@@ -86,95 +96,24 @@ export async function bookFlatMaterial(args: BookFlatArgs): Promise<BookFlatResu
         }),
       ),
     );
-    return created;
-  });
-  return { assignments: result, warnings: [] };
-}
 
-interface ComponentSpec {
-  childId: number;
-  quantity: number;
-  childName?: string;
-  /** DDL-3 — the component's own day-price at the moment of booking,
-   * snapshotted onto PeriodBundleBookingComponent so K4's payback
-   * pro-rata split has a historical weight to divide by instead of
-   * the live (and later possibly changed) Material.dayPrice. */
-  dayPrice: number;
-}
-
-interface BookBundleArgs {
-  periodId: number;
-  materialId: number;
-  quantity: number;
-  from: Date;
-  to: Date;
-  dayPriceSnapshot: number;
-  components: ComponentSpec[];
-  client?: PrismaClient;
-}
-
-interface BookBundleResult {
-  bundleBooking: unknown;
-  warnings: string[];
-}
-
-export async function bookBundleMaterial(args: BookBundleArgs): Promise<BookBundleResult> {
-  const client = args.client ?? defaultPrisma;
-  const allChildIds = args.components.map((c) => c.childId);
-
-  const booking = await client.$transaction(async (tx) => {
-    const txClient = tx as unknown as PrismaClient;
-    await lockMaterials(txClient, allChildIds);
-
-    for (const comp of args.components) {
-      const free = await freeStockItemIds(txClient, comp.childId, args.from, args.to);
-      const needed = comp.quantity * args.quantity;
-      if (free.length < needed) {
-        const err = new Error(
-          `Onvoldoende voorraad voor component: ${comp.childId}`,
-        ) as Error & { code: string; childId: number };
-        err.code = "UNAVAIL";
-        err.childId = comp.childId;
-        throw err;
-      }
-    }
-
-    const bBooking = await txClient.periodBundleBooking.create({
-      data: {
+    const warnings: string[] = [];
+    if (shortfall > 0) {
+      await createOrIncrementShortage(txClient, {
         periodId: args.periodId,
         materialId: args.materialId,
-        quantity: args.quantity,
+        quantity: shortfall,
         dayPriceSnapshot: args.dayPriceSnapshot,
-      },
-    });
-
-    // DDL-3 — one weight row per component per booking call (not per
-    // unit), so K4's payback can later reconstruct each component's
-    // pro-rata share of this specific bundle booking's revenue.
-    await txClient.periodBundleBookingComponent.createMany({
-      data: args.components.map((comp) => ({
-        bundleBookingId: bBooking.id,
-        materialId: comp.childId,
-        quantity: comp.quantity,
-        dayPriceAtBooking: comp.dayPrice,
-      })),
-    });
-
-    for (const comp of args.components) {
-      const free = await freeStockItemIds(txClient, comp.childId, args.from, args.to);
-      const chosen = free.slice(0, comp.quantity * args.quantity);
-      await txClient.periodStockItem.createMany({
-        data: chosen.map((stockItemId) => ({
-          periodId: args.periodId,
-          stockItemId,
-          dayPriceSnapshot: 0,
-          bundleBookingId: bBooking.id,
-        })),
+        setupCostSnapshot: args.setupCostSnapshot,
+        discountPct: args.discountPct,
+        discountAmount: args.discountAmount,
       });
+      warnings.push(
+        `${shortfall}× ${args.materialName ?? `materiaal #${args.materialId}`} overboekt — niet in voorraad`,
+      );
     }
 
-    return bBooking;
+    return { assignments: created, warnings };
   });
-
-  return { bundleBooking: booking, warnings: [] };
+  return result;
 }

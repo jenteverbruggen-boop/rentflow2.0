@@ -10,6 +10,7 @@ import { LinePricePopover } from "@/components/line-price-popover";
 import { PeriodPeopleSection } from "@/components/period-people-section";
 import { PackingListDialog } from "@/components/packing-list-dialog";
 import { formatEUR, periodDays } from "@/lib/pricing";
+import { OverbookBadge } from "@/components/overbook-badge";
 import { groupMaterialAssignments, materialGroupCost } from "@/lib/grouping";
 import type { Period, Project } from "@/types";
 
@@ -23,7 +24,7 @@ export function PeriodBookings({ period, project }: Props) {
   const [packingListOpen, setPackingListOpen] = useState(false);
   const days = periodDays(period);
   const projectKey = ["project", String(project.id)] as const;
-  const groups = groupMaterialAssignments(period.materials);
+  const groups = groupMaterialAssignments(period.materials, period.shortages);
 
   const removeMaterialAssignment = useMutation({
     mutationFn: (assignmentId: number) =>
@@ -57,25 +58,39 @@ export function PeriodBookings({ period, project }: Props) {
                 return (
                   <div key={g.key} className="flex items-center gap-2 bg-muted/40 rounded-md px-3 py-1.5 text-sm">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">
-                        {g.material.name}{" "}
-                        <span className="text-muted-foreground">×{g.units}</span>
-                      </p>
+                      <div className="font-medium truncate flex items-center gap-1.5">
+                        <span className="truncate">
+                          {g.material.name}{" "}
+                          <span className="text-muted-foreground">×{g.units}</span>
+                        </span>
+                        {g.overbookedUnits > 0 && (
+                          <OverbookBadge
+                            units={g.overbookedUnits}
+                            materialName={g.material.name}
+                          />
+                        )}
+                      </div>
                       {g.material.category && (
                         <p className="text-xs text-muted-foreground">{g.material.category}</p>
                       )}
                     </div>
-                    <LinePricePopover
-                      snapshot={g.dayPriceSnapshot}
-                      basePrice={g.material.dayPrice}
-                      override={override ? override.dayPrice : null}
-                      resnapshotUrl={`/api/periods/${period.id}/materials/${g.assignments[0].id}`}
-                      projectId={project.id}
-                      kind="material"
-                      entityId={g.material.id}
-                      entityName={g.material.name}
-                      invalidateKey={projectKey}
-                    />
+                    {g.assignments.length > 0 ? (
+                      <LinePricePopover
+                        snapshot={g.dayPriceSnapshot}
+                        basePrice={g.material.dayPrice}
+                        override={override ? override.dayPrice : null}
+                        resnapshotUrl={`/api/periods/${period.id}/materials/${g.assignments[0].id}`}
+                        projectId={project.id}
+                        kind="material"
+                        entityId={g.material.id}
+                        entityName={g.material.name}
+                        invalidateKey={projectKey}
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {formatEUR(g.dayPriceSnapshot)}/d
+                      </span>
+                    )}
                     <span className="text-xs text-muted-foreground tabular-nums">
                       {formatEUR(groupCost)}
                     </span>
@@ -83,8 +98,17 @@ export function PeriodBookings({ period, project }: Props) {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 hover:text-destructive"
-                      title="Eén unit verwijderen"
-                      onClick={() => removeMaterialAssignment.mutate(g.assignments[g.assignments.length - 1].id)}
+                      title={
+                        g.assignments.length === 0
+                          ? "Alleen overboekte units — verwijder ze op de Materialen-tab"
+                          : "Eén unit verwijderen"
+                      }
+                      disabled={g.assignments.length === 0}
+                      onClick={() =>
+                        removeMaterialAssignment.mutate(
+                          g.assignments[g.assignments.length - 1].id,
+                        )
+                      }
                     >
                       <X className="h-3 w-3" />
                     </Button>

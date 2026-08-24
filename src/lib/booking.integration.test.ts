@@ -9,7 +9,8 @@ import path from "path";
 import fs from "fs";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@/generated/prisma/client";
-import { bookFlatMaterial, bookBundleMaterial, freeStockItemIds } from "@/lib/booking";
+import { bookFlatMaterial, freeStockItemIds } from "@/lib/booking";
+import { bookBundleMaterial } from "@/lib/bundle-booking";
 import { bundleAvailableCount } from "@/lib/availability";
 
 const DB_PATH = path.join(os.tmpdir(), `booking-integration-${process.pid}.db`);

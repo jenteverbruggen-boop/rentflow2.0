@@ -177,6 +177,7 @@ model Period {
   materials      PeriodStockItem[]
   people         PeriodPerson[]
   bundleBookings PeriodBundleBooking[]
+  shortages      PeriodMaterialShortage[]
 }
 
 model Person {
@@ -218,6 +219,7 @@ model Material {
   usedInBundles       MaterialComponent[]    @relation("BundleChild")
   bundleBookings      PeriodBundleBooking[]
   bundleBookingWeights PeriodBundleBookingComponent[]
+  shortages           PeriodMaterialShortage[]
 }
 
 model StockItem {
@@ -285,6 +287,7 @@ model PeriodBundleBooking {
   material         Material        @relation(fields: [materialId], references: [id], onDelete: Cascade)
   stockItems       PeriodStockItem[]
   components       PeriodBundleBookingComponent[]
+  shortages        PeriodMaterialShortage[]
 }
 
 // DDL-3 — mirrors schema.prisma's PeriodBundleBookingComponent
@@ -299,6 +302,28 @@ model PeriodBundleBookingComponent {
   material          Material            @relation(fields: [materialId], references: [id], onDelete: Cascade)
 
   @@index([bundleBookingId])
+}
+
+// Overboeken (K-series) — mirrors schema.prisma's PeriodMaterialShortage
+// (Decimal -> Float, dev-only). Records units of a material a period
+// wants but that don't physically exist as a PeriodStockItem: either flat
+// quantity booked beyond free stock, or (when bundleBookingId is set) a
+// component shortfall inside a set booking.
+model PeriodMaterialShortage {
+  id                Int                  @id @default(autoincrement())
+  periodId          Int
+  materialId        Int
+  quantity          Int
+  bundleBookingId   Int?
+  dayPriceSnapshot  Float                @default(0)
+  setupCostSnapshot Float                @default(0)
+  discountPct       Float?
+  discountAmount    Float?
+  period            Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  material          Material             @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  bundleBooking     PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
+
+  @@index([periodId])
 }
 
 model PeriodPerson {

@@ -12,10 +12,13 @@ interface Props {
   collapsed: Set<string>;
   onToggle: (cat: string) => void;
   days: number;
-  onRemoveOne: (assignmentId: number) => void;
+  onRemoveOne: (group: MaterialGroup) => void;
   onRemoveAllInGroup: (group: MaterialGroup) => void;
   bundleBookings: PeriodBundleBooking[];
   onRemoveBundle: (bundleBookingId: number) => void;
+  /** Overboeken — ids of the bundle bookings whose components fell short
+   * of stock, so their rows can carry the amber marker. */
+  overbookedBundleIds: Set<number>;
 }
 
 /** "In &lt;periode&gt;" (assigned) pane, extracted from
@@ -31,6 +34,7 @@ export function MaterialAssignedPane({
   onRemoveAllInGroup,
   bundleBookings,
   onRemoveBundle,
+  overbookedBundleIds,
 }: Props) {
   return (
     <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
@@ -70,9 +74,7 @@ export function MaterialAssignedPane({
                           key={g.key}
                           group={g}
                           days={days}
-                          onRemoveOne={() =>
-                            onRemoveOne(g.assignments[g.assignments.length - 1].id)
-                          }
+                          onRemoveOne={() => onRemoveOne(g)}
                           onRemoveAll={() => onRemoveAllInGroup(g)}
                         />
                       ))}
@@ -92,6 +94,7 @@ export function MaterialAssignedPane({
                 booking={b}
                 days={days}
                 onRemove={() => onRemoveBundle(b.id)}
+                overbooked={overbookedBundleIds.has(b.id)}
               />
             ))}
           </div>

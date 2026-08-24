@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireModule, forbidden, badRequest, notFound, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, badRequest, notFound, conflict, serverError } from "@/lib/api-auth";
 import { createDraftInvoice, CreateDraftInvoiceError } from "@/lib/create-draft-invoice";
 import { serializeInvoice, invoiceInclude } from "@/lib/serialize-invoice";
 
@@ -35,7 +35,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(serializeInvoice(invoice), { status: 201 });
   } catch (err) {
     if (err instanceof CreateDraftInvoiceError) {
-      return err.code === "NOT_FOUND" ? notFound() : badRequest(err.message);
+      if (err.code === "NOT_FOUND") return notFound();
+      if (err.code === "OVERBOOK") return conflict(err.message);
+      return badRequest(err.message);
     }
     return serverError((err as Error).message);
   }

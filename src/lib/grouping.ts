@@ -1,6 +1,12 @@
-import type { Material, PeriodBundleBooking, PeriodStockItem } from "@/types";
+import type {
+  Material,
+  PeriodBundleBooking,
+  PeriodMaterialShortage,
+  PeriodStockItem,
+} from "@/types";
 import { lineCost } from "@/lib/pricing";
 import { toNumber } from "@/lib/serialize";
+import { mergeShortagesIntoGroups } from "@/lib/material-shortage";
 
 export interface MaterialGroup {
   key: string;
@@ -10,6 +16,13 @@ export interface MaterialGroup {
   discountPct: number | null;
   discountAmount: number | null;
   assignments: PeriodStockItem[];
+  /** Overboeken — units wanted but not backed by a real assignment. */
+  overbookedUnits: number;
+  /** Overboeken — summed setupCostSnapshot × quantity of the merged
+   * shortage rows (real assignments' setup is already summed separately
+   * in materialGroupCost). 0 for a group built without shortages. */
+  overbookedSetup: number;
+  shortageIds: number[];
 }
 
 export interface NestedCategoryGroup {
@@ -23,16 +36,6 @@ export interface BundleLine {
   componentGroups: MaterialGroup[];
 }
 
-export interface MaterialGroup {
-  key: string;
-  material: Material;
-  units: number;
-  dayPriceSnapshot: number | null;
-  discountPct: number | null;
-  discountAmount: number | null;
-  assignments: PeriodStockItem[];
-}
-
 function groupKey(a: PeriodStockItem): string {
   return [
     a.stockItem.materialId,
@@ -44,6 +47,7 @@ function groupKey(a: PeriodStockItem): string {
 
 export function groupMaterialAssignments(
   materials: PeriodStockItem[],
+  shortages?: PeriodMaterialShortage[],
 ): MaterialGroup[] {
   const map = new Map<string, MaterialGroup>();
   for (const a of materials) {
@@ -61,12 +65,16 @@ export function groupMaterialAssignments(
         discountPct: a.discountPct,
         discountAmount: a.discountAmount,
         assignments: [a],
+        overbookedUnits: 0,
+        overbookedSetup: 0,
+        shortageIds: [],
       });
     }
   }
-  return Array.from(map.values()).sort((a, b) =>
+  const groups = Array.from(map.values()).sort((a, b) =>
     a.material.name.localeCompare(b.material.name),
   );
+  return shortages ? mergeShortagesIntoGroups(groups, shortages) : groups;
 }
 
 export function groupMaterialAssignmentsNested(
@@ -128,5 +136,8 @@ export function materialGroupCost(group: MaterialGroup, days: number): number {
     (s, a) => s + toNumber(a.setupCostSnapshot),
     0,
   );
-  return Math.round((perUnit * group.units + setup) * 100) / 100;
+  return (
+    Math.round((perUnit * group.units + setup + group.overbookedSetup) * 100) /
+    100
+  );
 }

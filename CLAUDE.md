@@ -24,21 +24,33 @@ Local dev setup: copy `.env.local.example` to `.env.local` — it points `DATABA
 
 ## Authoring Postgres migrations
 
-Dev uses `prisma db push` (schema-driven, no migration files). Production migrations live in `prisma/migrations/` and are authored against the Postgres schema **without a local shadow DB**:
+Dev uses `prisma db push` (schema-driven, no migration files). Production migrations live in `prisma/migrations/` and are authored against the Postgres schema.
+
+`--from-migrations` replays the existing migrations, so it needs a throwaway Postgres to replay them into. The compose `db` service publishes no host port, so use a standalone container rather than `docker compose up -d db`. Prisma 7 also **removed** `migrate diff --shadow-database-url` and renamed `--to-schema-datamodel` to `--to-schema`; the shadow URL now comes from `datasource.shadowDatabaseUrl` in `prisma.config.ts`, which reads `SHADOW_DATABASE_URL` from the environment.
 
 ```bash
-# 1. Start the compose Postgres service
-docker compose up -d db
+# 1. Throwaway Postgres for the shadow database (published port, unlike compose's db)
+docker run -d --name rentflow-shadow \
+  -e POSTGRES_USER=rentflow -e POSTGRES_PASSWORD=rentflow -e POSTGRES_DB=rentflow \
+  -p 55432:5432 postgres:15
 
 # 2. Diff current migrations against the updated schema to produce a new migration SQL
-npx prisma migrate diff \
+mkdir -p prisma/migrations/$(date +%Y%m%d%H%M%S)_<name>
+SHADOW_DATABASE_URL="postgresql://rentflow:rentflow@localhost:55432/rentflow" \
+  npx prisma migrate diff \
   --from-migrations prisma/migrations \
-  --to-schema-datamodel prisma/schema.prisma \
-  --shadow-database-url "postgresql://rentflow:rentflow@localhost:5432/rentflow" \
-  --script > prisma/migrations/$(date +%Y%m%d%H%M%S)_<name>/migration.sql
+  --to-schema prisma/schema.prisma \
+  --script > prisma/migrations/<the dir you just made>/migration.sql
 
-# 3. Validate the migration applies cleanly
-docker compose run --rm app sh -c "npx prisma migrate deploy"
+# 3. Validate the whole chain applies cleanly to an empty database
+docker exec rentflow-shadow psql -U rentflow -d postgres -c "CREATE DATABASE verify;"
+DATABASE_URL="postgresql://rentflow:rentflow@localhost:55432/verify" npx prisma migrate deploy
+
+# 4. Confirm no drift is left, then clean up
+SHADOW_DATABASE_URL="postgresql://rentflow:rentflow@localhost:55432/rentflow" \
+  npx prisma migrate diff --from-migrations prisma/migrations \
+  --to-schema prisma/schema.prisma --exit-code   # expect "No difference detected."
+docker rm -f rentflow-shadow
 ```
 
 Always author migrations against `prisma/schema.prisma` (Postgres). Never edit `migration_lock.toml` manually.

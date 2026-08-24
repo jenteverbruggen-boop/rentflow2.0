@@ -30,7 +30,7 @@ function discountLabel(discountPct: number | null, discountAmount: number | null
 export function KostenPeriodTable({ period }: Props) {
   const days = periodDays(period);
   const total = periodTotal(period);
-  const matGroups = groupMaterialAssignments(period.materials);
+  const matGroups = groupMaterialAssignments(period.materials, period.shortages);
   const travelLines = period.people.flatMap((pp) =>
     (pp.travelCosts ?? []).map((travel) => ({
       key: `t-${travel.id}`,
@@ -84,6 +84,11 @@ export function KostenPeriodTable({ period }: Props) {
             <tr key={`m-${g.key}`} className="border-b last:border-0">
               <td className="py-2">
                 {g.material.name} <span className="text-muted-foreground text-xs">×{g.units}</span>
+                {g.overbookedUnits > 0 && (
+                  <span className="ml-1.5 text-xs text-amber-600 dark:text-amber-500">
+                    ({g.overbookedUnits} overboekt)
+                  </span>
+                )}
               </td>
               <td className="py-2 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                 {g.units} × {days} × {formatEUR(g.dayPriceSnapshot)}

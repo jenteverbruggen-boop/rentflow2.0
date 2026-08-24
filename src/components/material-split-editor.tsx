@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useMaterialAvailability } from "@/hooks/use-availability";
 import { useMaterialSplitMutations } from "@/hooks/use-material-split-mutations";
 import { periodDays } from "@/lib/pricing";
-import { groupMaterialAssignments, type MaterialGroup } from "@/lib/grouping";
+import { groupMaterialAssignments } from "@/lib/grouping";
+import { canOverbook } from "@/lib/material-shortage";
 import {
   groupAvailableByCategory,
   groupAssignedByCategory,
@@ -44,26 +45,42 @@ export function MaterialSplitEditor({
   };
   const mats = useMaterialAvailability(range);
   const days = periodDays(period);
-  const groups = groupMaterialAssignments(period.materials);
+  const shortages = useMemo(() => period.shortages ?? [], [period.shortages]);
+  const groups = groupMaterialAssignments(period.materials, shortages);
+  // Overboeken — only concept/geannuleerd may exceed real stock; the server
+  // enforces this too, this is just what the UI offers.
+  const overbookable = canOverbook(project.status);
+  const overbookedBundleIds = useMemo(
+    () =>
+      new Set(
+        shortages
+          .filter((s) => s.bundleBookingId != null)
+          .map((s) => s.bundleBookingId as number),
+      ),
+    [shortages],
+  );
 
-  const { add, removeOne, removeBundle } = useMaterialSplitMutations({
-    periodId: period.id,
-    projectId: project.id,
-    onWarnings,
-    onError,
-  });
+  const { add, removeBundle, removeOneFromGroup, removeAllInGroup } =
+    useMaterialSplitMutations({
+      periodId: period.id,
+      projectId: project.id,
+      onWarnings,
+      onError,
+    });
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return (mats.data ?? []).filter((m) => {
-      if (m.availableCount === 0) return false;
+      // A fully-booked or stockless material must stay reachable when
+      // overbooking is allowed — otherwise it can never be quoted.
+      if (m.availableCount === 0 && !overbookable) return false;
       if (!q) return true;
       return (
         m.material.name.toLowerCase().includes(q) ||
         (m.material.category ?? "").toLowerCase().includes(q)
       );
     });
-  }, [mats.data, search]);
+  }, [mats.data, search, overbookable]);
 
   const byCategory = useMemo(
     () => groupAvailableByCategory(filtered),
@@ -87,10 +104,6 @@ export function MaterialSplitEditor({
     [groups],
   );
 
-  function removeAllInGroup(group: MaterialGroup) {
-    for (const a of group.assignments) removeOne.mutate(a.id);
-  }
-
   return (
     <Card>
       <CardContent className="pt-5">
@@ -107,6 +120,7 @@ export function MaterialSplitEditor({
             }
             onAdd={(args) => add.mutate(args)}
             addPending={add.isPending}
+            overbookable={overbookable}
           />
           <MaterialAssignedPane
             periodName={period.name}
@@ -117,10 +131,11 @@ export function MaterialSplitEditor({
             collapsed={collapsedRight}
             onToggle={toggleRight}
             days={days}
-            onRemoveOne={(id) => removeOne.mutate(id)}
+            onRemoveOne={removeOneFromGroup}
             onRemoveAllInGroup={removeAllInGroup}
             bundleBookings={period.bundleBookings ?? []}
             onRemoveBundle={(id) => removeBundle.mutate(id)}
+            overbookedBundleIds={overbookedBundleIds}
           />
         </div>
       </CardContent>

@@ -26,7 +26,7 @@ function fmtDate(d: string) {
 export function CostPeriodSection({ period, project }: Props) {
   const days = periodDays(period);
   const total = periodTotal(period);
-  const matGroups = groupMaterialAssignments(period.materials);
+  const matGroups = groupMaterialAssignments(period.materials, period.shortages);
   const travelLines = period.people.flatMap((pp) =>
     (pp.travelCosts ?? []).map((travel) => ({
       key: `t-${travel.id}`,

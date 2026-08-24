@@ -212,6 +212,22 @@ export interface StockItemAssignment {
   };
 }
 
+/** Overboeken — a period wants N units of a material that don't exist as
+ * a PeriodStockItem (flat shortfall), or N components missing inside a
+ * set booking (`bundleBookingId` set). See src/lib/material-shortage.ts. */
+export interface PeriodMaterialShortage {
+  id: number;
+  periodId: number;
+  materialId: number;
+  quantity: number;
+  bundleBookingId: number | null;
+  dayPriceSnapshot: number;
+  setupCostSnapshot: number;
+  discountPct: number | null;
+  discountAmount: number | null;
+  material: Material;
+}
+
 export interface PeriodStockItem {
   id: number;
   periodId: number;
@@ -265,6 +281,7 @@ export interface Period {
   materials: PeriodStockItem[];
   people: PeriodPerson[];
   bundleBookings?: PeriodBundleBooking[];
+  shortages?: PeriodMaterialShortage[];
 }
 
 /** O1.1 — one row per (user, feed kind). `kind` is `"personal"` (the

@@ -6,7 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusSelect } from "@/components/status-select";
 import { ProjectEditButton } from "@/components/project-edit-button";
+import { OverbookBadge } from "@/components/overbook-badge";
 import { formatEUR, projectTotal } from "@/lib/pricing";
+import { projectShortageLines } from "@/lib/project-shortages";
 import type { Project } from "@/types";
 
 interface Props {
@@ -18,6 +20,11 @@ interface Props {
 export function ProjectDetailHeader({ project }: Props) {
   const router = useRouter();
   const total = projectTotal(project.periods);
+  // Overboeken — visible from every tab, not just Materialen.
+  const overbooked = projectShortageLines(project).reduce(
+    (sum, l) => sum + l.quantity,
+    0,
+  );
 
   return (
     <>
@@ -73,6 +80,7 @@ export function ProjectDetailHeader({ project }: Props) {
                   {formatEUR(total)}
                 </p>
               </div>
+              {overbooked > 0 && <OverbookBadge units={overbooked} />}
               <StatusSelect project={project} />
             </div>
           </div>

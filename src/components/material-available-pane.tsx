@@ -12,8 +12,13 @@ interface Props {
   onToggle: (cat: string) => void;
   qtyMap: Record<number, number>;
   onQtyChange: (materialId: number, qty: number) => void;
-  onAdd: (args: { materialId: number; quantity: number }) => void;
+  onAdd: (args: {
+    materialId: number;
+    quantity: number;
+    allowOverbook: boolean;
+  }) => void;
   addPending: boolean;
+  overbookable: boolean;
 }
 
 /** "Beschikbaar" pane, extracted from material-split-editor.tsx (Y3.6) —
@@ -28,6 +33,7 @@ export function MaterialAvailablePane({
   onQtyChange,
   onAdd,
   addPending,
+  overbookable,
 }: Props) {
   return (
     <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
@@ -72,15 +78,17 @@ export function MaterialAvailablePane({
                           item={m}
                           qty={qtyMap[m.material.id] ?? 1}
                           onQtyChange={(qty) => onQtyChange(m.material.id, qty)}
-                          onAdd={() =>
+                          onAdd={(allowOverbook) =>
                             onAdd({
                               materialId: m.material.id,
                               quantity: m.material.isBundle
                                 ? 1
                                 : (qtyMap[m.material.id] ?? 1),
+                              allowOverbook,
                             })
                           }
                           addPending={addPending}
+                          overbookable={overbookable}
                         />
                       ))}
                     </div>

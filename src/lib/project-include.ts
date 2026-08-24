@@ -24,6 +24,10 @@ export const projectInclude = {
         },
         orderBy: { id: "asc" },
       },
+      shortages: {
+        include: { material: { include: { categoryRel: true } } },
+        orderBy: { id: "asc" },
+      },
     },
   },
   materialPrices: { include: { material: true } },
