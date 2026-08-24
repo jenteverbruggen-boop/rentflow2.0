@@ -35,9 +35,14 @@ export function PersonTravelEditor({
       const res = await fetch(base, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: label || null, unitCost, quantity }),
+        // An emptied quantity field means "once", not zero — the API
+        // rejects 0 (min 1) and this used to fail silently.
+        body: JSON.stringify({ label: label || null, unitCost, quantity: quantity || 1 }),
       });
-      if (!res.ok) throw new Error((await res.json()).error ?? "Mislukt");
+      // A non-JSON body (proxy error page, crash) must not surface as an
+      // unreadable SyntaxError — report the status instead.
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error ?? `Mislukt (${res.status})`);
     },
     onSuccess: () => {
       invalidate();
@@ -48,7 +53,13 @@ export function PersonTravelEditor({
   });
 
   const remove = useMutation({
-    mutationFn: (id: number) => fetch(`${base}/${id}`, { method: "DELETE" }),
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${base}/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? `Verwijderen mislukt (${res.status})`);
+      }
+    },
     onSuccess: invalidate,
   });
 
@@ -111,6 +122,11 @@ export function PersonTravelEditor({
           +
         </Button>
       </div>
+      {(add.error || remove.error) && (
+        <p className="text-[11px] text-destructive">
+          {((add.error ?? remove.error) as Error).message}
+        </p>
+      )}
     </div>
   );
 }

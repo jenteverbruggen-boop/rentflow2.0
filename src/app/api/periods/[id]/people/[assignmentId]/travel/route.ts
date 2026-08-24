@@ -12,10 +12,27 @@ import { toNumber } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string; assignmentId: string }> };
 
+/** A Belgian keyboard types "12,50"; `Number("12,50")` is NaN, which
+ * surfaced as an unhelpful "Expected number, received nan". Blank means
+ * "not given" so the field's own default applies rather than coercing to
+ * 0 and failing the min. */
+const money = z.preprocess(
+  (v) => (typeof v === "string" ? v.trim().replace(",", ".") || undefined : v),
+  z.coerce.number("Bedrag is verplicht").min(0, "Bedrag mag niet negatief zijn"),
+);
+const count = z.preprocess(
+  (v) => (typeof v === "string" ? v.trim() || undefined : v),
+  z.coerce
+    .number("Aantal moet een getal zijn")
+    .int("Aantal moet een heel getal zijn")
+    .min(1, "Aantal moet minstens 1 zijn")
+    .default(1),
+);
+
 const schema = z.object({
   label: z.string().optional().nullable(),
-  unitCost: z.coerce.number().min(0),
-  quantity: z.coerce.number().int().min(1).default(1),
+  unitCost: money,
+  quantity: count,
 });
 
 export async function GET(_req: NextRequest, { params }: Params) {
