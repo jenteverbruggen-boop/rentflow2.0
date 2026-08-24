@@ -8,11 +8,18 @@ import {
   conflict,
   serverError,
 } from "@/lib/api-auth";
-import { toNumber, toNumberOrNull } from "@/lib/serialize";
 import { redactMoney } from "@/lib/redact";
 import { findRejectedMoneyWrite, moneyFieldsToIgnore } from "@/lib/money-write-guard";
+import { materialMoneyData, serializeMaterialMoney } from "@/lib/material-money-fields";
 
-const MATERIAL_MONEY_FIELDS = ["dayPrice", "setupCost", "bundlePriceOverride"] as const;
+const MATERIAL_MONEY_FIELDS = [
+  "dayPrice",
+  "setupCost",
+  "bundlePriceOverride",
+  "costPrice",
+  "listPrice",
+  "revenueBefore",
+] as const;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -31,9 +38,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       redactMoney(
         {
           ...material,
-          dayPrice: toNumber(material.dayPrice),
-          setupCost: toNumberOrNull(material.setupCost),
-          bundlePriceOverride: toNumberOrNull(material.bundlePriceOverride),
+          ...serializeMaterialMoney(material),
           totalStock: material.stockItems.length,
         },
         access,
@@ -52,35 +57,31 @@ export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
     const body = await req.json();
-    const {
-      name,
-      category,
-      categoryId,
-      code,
-      dayPrice,
-      setupCost,
-      notes,
-      isBundle,
-      bundlePriceOverride,
-      archived,
-    } = body;
+    const { name, category, categoryId, code, notes, isBundle, archived } = body;
     if (!name) return badRequest("naam is verplicht");
 
     // Compared against the persisted row, not just checked for presence
-    // (money-write-guard.ts's findRejectedMoneyWrite doc comment) — MaterialForm
-    // always resubmits dayPrice/setupCost/bundlePriceOverride on every
-    // save, so a presence-only check would block a caller without
-    // Kosten/Facturen: wijzigen from saving any material edit at all.
+    // (money-write-guard.ts's findRejectedMoneyWrite doc comment) —
+    // useMaterialUpdate always resubmits every money field on every save,
+    // so a presence-only check would block a caller without Kosten/
+    // Facturen: wijzigen from saving any material edit at all.
     const currentMaterial = await prisma.material.findUnique({
       where: { id: parseInt(id) },
-      select: { dayPrice: true, setupCost: true, bundlePriceOverride: true },
+      select: {
+        dayPrice: true,
+        setupCost: true,
+        bundlePriceOverride: true,
+        costPrice: true,
+        listPrice: true,
+        revenueBefore: true,
+      },
     });
     if (findRejectedMoneyWrite(body, access, currentMaterial)) return forbidden();
 
-    // Money-blind caller: MaterialForm's redacted-to-0/null echo must
-    // never overwrite the persisted price — omit the key entirely so
-    // Prisma leaves that column untouched (moneyFieldsToIgnore's doc
-    // comment in money-write-guard.ts).
+    // Money-blind caller: useMaterialUpdate's redacted-to-0/null echo
+    // must never overwrite the persisted price — materialMoneyData omits
+    // the key entirely so Prisma leaves that column untouched
+    // (moneyFieldsToIgnore's doc comment in money-write-guard.ts).
     const ignore = moneyFieldsToIgnore(access, MATERIAL_MONEY_FIELDS);
     try {
       const material = await prisma.material.update({
@@ -91,31 +92,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
           categoryId: categoryId ?? null,
           code: code ?? null,
           notes,
-          ...(ignore.has("dayPrice") ? {} : { dayPrice: Number(dayPrice) || 0 }),
-          ...(ignore.has("setupCost")
-            ? {}
-            : { setupCost: setupCost != null ? Number(setupCost) : null }),
           isBundle: Boolean(isBundle),
-          ...(ignore.has("bundlePriceOverride")
-            ? {}
-            : {
-                bundlePriceOverride:
-                  bundlePriceOverride != null ? Number(bundlePriceOverride) : null,
-              }),
+          ...materialMoneyData(body, ignore),
           ...(archived !== undefined ? { archived: Boolean(archived) } : {}),
         },
         include: { categoryRel: true },
       });
       return NextResponse.json(
-        redactMoney(
-          {
-            ...material,
-            dayPrice: toNumber(material.dayPrice),
-            setupCost: toNumberOrNull(material.setupCost),
-            bundlePriceOverride: toNumberOrNull(material.bundlePriceOverride),
-          },
-          access,
-        ),
+        redactMoney({ ...material, ...serializeMaterialMoney(material) }, access),
       );
     } catch (e: unknown) {
       if ((e as { code?: string })?.code === "P2002")

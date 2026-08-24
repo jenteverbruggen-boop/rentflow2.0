@@ -50,6 +50,20 @@ export function MaterialSummaryGrid({ material, onSave }: MaterialSummaryGridPro
         type="number"
         onSave={(v) => onSave("setupCost", v)}
       />
+      <InlineEditField
+        label="Aankoopprijs (per unit)"
+        value={material.costPrice}
+        displayValue={material.costPrice != null ? formatEUR(material.costPrice) : "—"}
+        type="number"
+        onSave={(v) => onSave("costPrice", v)}
+      />
+      <InlineEditField
+        label="Al terugverdiend (vóór RentFlow)"
+        value={material.revenueBefore}
+        displayValue={material.revenueBefore != null ? formatEUR(material.revenueBefore) : "—"}
+        type="number"
+        onSave={(v) => onSave("revenueBefore", v)}
+      />
     </div>
   );
 }

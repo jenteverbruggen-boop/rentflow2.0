@@ -8,12 +8,23 @@ export type EditableMaterialField =
   | "code"
   | "notes"
   | "isBundle"
-  | "bundlePriceOverride";
+  | "bundlePriceOverride"
+  | "costPrice"
+  | "listPrice"
+  | "revenueBefore";
+
+const NULLABLE_NUMBER_FIELDS = new Set<EditableMaterialField>([
+  "bundlePriceOverride",
+  "setupCost",
+  "costPrice",
+  "listPrice",
+  "revenueBefore",
+]);
 
 function coerce(field: EditableMaterialField, rawValue: string) {
   if (field === "dayPrice") return Number(rawValue);
   if (field === "isBundle") return rawValue === "true";
-  if (field === "bundlePriceOverride" || field === "setupCost")
+  if (NULLABLE_NUMBER_FIELDS.has(field))
     return rawValue.trim() === "" ? null : Number(rawValue);
   return rawValue || null;
 }
@@ -39,6 +50,9 @@ export function useMaterialUpdate(material: Material | null) {
         setupCost: material.setupCost,
         isBundle: material.isBundle,
         bundlePriceOverride: material.bundlePriceOverride,
+        costPrice: material.costPrice,
+        listPrice: material.listPrice,
+        revenueBefore: material.revenueBefore,
         [field]: coerce(field, rawValue),
       }),
     });

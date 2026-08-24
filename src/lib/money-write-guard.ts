@@ -3,7 +3,7 @@ import { satisfies } from "@/lib/modules";
 import { toNumber } from "@/lib/serialize";
 import { moneyVisible } from "@/lib/redact";
 
-const MONEY_WRITE_FIELDS = ["dayPrice", "setupCost", "bundlePriceOverride"] as const;
+const MONEY_WRITE_FIELDS = ["dayPrice", "setupCost", "bundlePriceOverride", "costPrice", "listPrice", "revenueBefore"] as const;
 
 /**
  * Normalises one side of a money-field comparison — a raw request-body

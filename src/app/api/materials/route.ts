@@ -7,12 +7,19 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { nextCode } from "@/lib/material-code";
-import { toNumber, toNumberOrNull } from "@/lib/serialize";
 import { redactMoney } from "@/lib/redact";
 import { findRejectedMoneyWrite, moneyFieldsToIgnore } from "@/lib/money-write-guard";
 import { serializeMaterialsList } from "@/lib/materials-list";
+import { materialMoneyData, serializeMaterialMoney } from "@/lib/material-money-fields";
 
-const MATERIAL_MONEY_FIELDS = ["dayPrice", "setupCost"] as const;
+const MATERIAL_MONEY_FIELDS = [
+  "dayPrice",
+  "setupCost",
+  "bundlePriceOverride",
+  "costPrice",
+  "listPrice",
+  "revenueBefore",
+] as const;
 
 export async function GET(req: NextRequest) {
   const access = await requireModule("materialen", "lezen").catch(() => null);
@@ -72,16 +79,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     if (findRejectedMoneyWrite(body, access)) return forbidden();
-    const {
-      name,
-      category,
-      categoryId,
-      code: manualCode,
-      dayPrice,
-      setupCost,
-      notes,
-      initialStock,
-    } = body;
+    const { name, category, categoryId, code: manualCode, notes, initialStock } = body;
     if (!name) return badRequest("naam is verplicht");
 
     let code: string | null = manualCode ?? null;
@@ -103,9 +101,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Money-blind caller: MaterialForm's redacted-to-0/null echo must
-    // not be written — omit the key so Material's own schema default
-    // applies instead (moneyFieldsToIgnore's doc comment).
+    // Money-blind caller: a redacted-to-0/null echo must not be written —
+    // materialMoneyData omits the key so Material's own schema default
+    // applies instead (moneyFieldsToIgnore's doc comment). MaterialForm
+    // never sends costPrice/listPrice/revenueBefore on create (K4 — set
+    // afterwards via the detail pane's inline edit), so those three come
+    // through as `null` here, matching payback.ts's "unknown cost price"
+    // convention.
     const ignore = moneyFieldsToIgnore(access, MATERIAL_MONEY_FIELDS);
     const material = await prisma.material.create({
       data: {
@@ -114,10 +116,7 @@ export async function POST(req: NextRequest) {
         categoryId: categoryId ?? null,
         code,
         notes,
-        ...(ignore.has("dayPrice") ? {} : { dayPrice: Number(dayPrice) || 0 }),
-        ...(ignore.has("setupCost")
-          ? {}
-          : { setupCost: setupCost != null ? Number(setupCost) : null }),
+        ...materialMoneyData(body, ignore),
       },
       include: { categoryRel: true },
     });
@@ -132,12 +131,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json(
       redactMoney(
-        {
-          ...material,
-          dayPrice: toNumber(material.dayPrice),
-          setupCost: toNumberOrNull(material.setupCost),
-          totalStock: stock,
-        },
+        { ...material, ...serializeMaterialMoney(material), totalStock: stock },
         access,
       ),
     );

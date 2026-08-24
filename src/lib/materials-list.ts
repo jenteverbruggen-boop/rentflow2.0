@@ -10,6 +10,9 @@ interface MaterialRow {
   dayPrice: unknown;
   setupCost: unknown;
   bundlePriceOverride: unknown;
+  costPrice: unknown;
+  listPrice: unknown;
+  revenueBefore: unknown;
   _count: { stockItems: number };
   components: {
     childId: number;
@@ -53,6 +56,14 @@ export function serializeMaterialsList<T extends MaterialRow>(
       dayPrice: toNumber(m.dayPrice),
       setupCost: toNumberOrNull(m.setupCost),
       bundlePriceOverride: toNumberOrNull(m.bundlePriceOverride),
+      // K4: these were previously spread through unconverted — a raw
+      // Decimal on Postgres serializes via toJSON() as a string, so a
+      // money-visible caller silently got costPrice/listPrice/
+      // revenueBefore as strings in prod while dev (SQLite Float) looked
+      // fine. See the "Money rule" in CLAUDE.md.
+      costPrice: toNumberOrNull(m.costPrice),
+      listPrice: toNumberOrNull(m.listPrice),
+      revenueBefore: toNumberOrNull(m.revenueBefore),
       totalStock: m._count.stockItems,
       usedInSets,
     };
