@@ -17,6 +17,11 @@ export function CalendarFeedLinks() {
   const personal = feeds?.find((f) => f.kind === "personal");
   const company = feeds?.find((f) => f.kind === "company");
   const canCompany = me?.scope !== "own" && satisfies(me?.permissions.planning ?? "geen", "lezen");
+  // Keyed on personId alone, not on `linkedPersonMissing` — that flag is
+  // scope: own only, but a scope: all account with no linked Person gets
+  // the same empty personal feed (buildPersonalFeedIcs falls back to its
+  // explanatory event) and was never told why.
+  const personalFeedEmpty = me !== undefined && me.personId === null;
 
   return (
     <Card>
@@ -30,7 +35,16 @@ export function CalendarFeedLinks() {
           maar om de paar uur (Apple/Outlook pollen vaker) — een wijziging
           hier is dus niet meteen zichtbaar in Google.
         </p>
-        <CalendarFeedRow kind="personal" label="Mijn diensten" feed={personal} />
+        <CalendarFeedRow
+          kind="personal"
+          label="Mijn diensten"
+          feed={personal}
+          warning={
+            personalFeedEmpty
+              ? "Je account is niet gekoppeld aan een personeelsprofiel, dus deze feed blijft leeg. Vraag een beheerder om de koppeling te maken."
+              : undefined
+          }
+        />
         {canCompany && (
           <CalendarFeedRow kind="company" label="Volledig bedrijf" feed={company} />
         )}

@@ -53,7 +53,7 @@ rentflow2.0/
 │   │       ├── projects/         # CRUD + [id]/periods + [id]/prices/{material,person}/[xId]
 │   │       ├── periods/          # [id] CRUD + [id]/materials + [id]/people
 │   │       ├── people/           # CRUD + /available
-│   │       ├── materials/        # CRUD + /available + [id]/stock-items
+│   │       ├── materials/        # CRUD + /available + [id]/stock-items (+ /bulk add/remove)
 │   │       └── stock-items/      # [id] PATCH / DELETE
 │   ├── proxy.ts                  # Edge JWT guard (Next.js 16 — not middleware.ts)
 │   ├── components/
@@ -241,6 +241,8 @@ All endpoints except `/api/auth/*` and `/api/calendar/:token` require authentica
 | `DELETE` | `/api/materials/:id/components/:componentId` | Remove a component from a set |
 | `GET` | `/api/materials/:id/stock-items` | List individual units of a material |
 | `POST` | `/api/materials/:id/stock-items` | Add a unit — `unitNumber` auto-assigned, `identifier` optional |
+| `POST` | `/api/materials/:id/stock-items/bulk` | Add `count` (1-500) blank units in one transaction, numbered after the current max — `{ added, fromUnit, toUnit }` |
+| `DELETE` | `/api/materials/:id/stock-items/bulk` | Remove units by `{ count }` (the `count` highest unit numbers) or by `{ ids }`. All-or-nothing: if any targeted unit has ever been booked, nothing is deleted and the response is `409` with `{ error, blockedUnits, removable }`; an id not belonging to the material is a `400` |
 | `PATCH` | `/api/stock-items/:id` | Edit a unit's identifier or notes |
 | `DELETE` | `/api/stock-items/:id` | Delete a unit — `409` if it is currently booked |
 | `GET` | `/api/people` | List all people (with `dayPrice`) |
@@ -270,7 +272,7 @@ All endpoints except `/api/auth/*` and `/api/calendar/:token` require authentica
 | `GET` | `/api/calendar-feeds` | List the caller's own calendar-feed tokens — gated on `planning: lezen` (the module the feed content belongs to) |
 | `POST` | `/api/calendar-feeds` | Issue or reissue (revoke-then-recreate) a feed token — body `{ kind: "personal"\|"company" }`. `kind: "company"` additionally requires `scope: all` and is refused (`400`) for `scope: own` regardless of matrix level |
 | `DELETE` | `/api/calendar-feeds/:id` | Revoke one of the caller's own feed tokens — `404` if it belongs to someone else |
-| `GET` | `/api/calendar/:token` | Token-authenticated (not cookie-authenticated) iCalendar feed — `text/calendar`. Resolves the token to a `personal` (the linked person's own bookings, or a single explanatory event if no person is linked) or `company` (every project/period, unfiltered) feed. A bogus/revoked token is `404`, never a redirect. A company feed's token is revoked automatically when the issuing user's role or that role's scope changes |
+| `GET` | `/api/calendar/:token` | Token-authenticated (not cookie-authenticated) iCalendar feed — `text/calendar`. Resolves the token to a `personal` (the linked person's own bookings, or a single explanatory event if no person is linked) or `company` (every project/period, unfiltered) feed. A bogus/revoked token is `404`, never a redirect. A company feed's token is revoked automatically when the issuing user's role or that role's scope changes. Periods carrying real hours are emitted as UTC timestamps; a period stored as a bare midnight-UTC window (legacy/imported data) is emitted as a whole-day `VALUE=DATE` event, so a Brussels client no longer renders it starting 02:00 and spilling into the next day |
 
 ---
 

@@ -108,8 +108,15 @@ export function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
-export function conflict(message: string) {
-  return NextResponse.json({ error: message }, { status: 409 });
+/**
+ * `extra` merges additional JSON fields alongside `error` — e.g. the
+ * bulk stock-item delete route reports `blockedUnits`/`removable`
+ * alongside its message so the UI can render a precise conflict without
+ * re-fetching. Optional and additive, so every existing single-message
+ * call site is unaffected.
+ */
+export function conflict(message: string, extra?: Record<string, unknown>) {
+  return NextResponse.json({ error: message, ...extra }, { status: 409 });
 }
 
 export function notFound() {
