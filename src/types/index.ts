@@ -258,13 +258,26 @@ export interface PersonTravelCost {
   quantity: number;
 }
 
+/** H6 — one selected day (or part of a day) of a person's assignment.
+ * An assignment with no `days` covers its whole period, exactly as
+ * before H6. */
+export interface AssignmentDay {
+  id: number;
+  periodPersonId: number;
+  startAt: string;
+  endAt: string;
+}
+
 export interface PeriodPerson {
   id: number;
   periodId: number;
   personId: number;
   functionId: number | null;
+  /** The assignment's envelope: its own window (H1.3), or the earliest
+   * start / latest end of its `days` (H6), or null for "whole period". */
   startAt: string | null;
   endAt: string | null;
+  days?: AssignmentDay[];
   overlapAck: boolean;
   billingUnit: "dag" | "uur";
   rateSnapshot: number | null;
@@ -351,7 +364,10 @@ export interface MaterialAvailability {
 export interface PersonAvailability {
   person: Person & { basePrice: number | null; hasOverride: boolean };
   isAvailable: boolean;
-  blockingProject?: { id: number; name: string };
+  /** H2.1 — the API also names the conflicting *window* (ISO strings), not
+   * just the project, so the booking dialog can warn with dates before
+   * the user confirms a double booking. */
+  blockingProject?: { id: number; name: string; from: string; to: string };
   sameProjectWarning?: { projectId: number; projectName: string };
 }
 

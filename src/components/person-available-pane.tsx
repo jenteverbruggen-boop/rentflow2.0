@@ -63,6 +63,13 @@ export function PersonAvailablePane({
                       } else {
                         statusText = `Bezet (${p.blockingProject?.name})`;
                       }
+                      // A person booked elsewhere stays clickable: the API
+                      // supports the double booking behind an explicit
+                      // `allowOverlap` confirm (H2.1), so blocking the
+                      // button here made that path unreachable. Only an
+                      // already-assigned person is refused — that one is a
+                      // hard unique constraint, not a warning.
+                      const busy = !alreadyAssigned && !p.isAvailable;
                       return (
                         <div
                           key={p.person.id}
@@ -76,10 +83,17 @@ export function PersonAvailablePane({
                           </div>
                           <Button
                             size="icon"
+                            variant={busy ? "destructive" : "default"}
                             className="h-7 w-7"
-                            disabled={alreadyAssigned || !p.isAvailable}
+                            disabled={alreadyAssigned}
                             onClick={() => onAdd(p)}
-                            title={alreadyAssigned ? "Al toegewezen aan deze periode" : "Toevoegen aan periode"}
+                            title={
+                              alreadyAssigned
+                                ? "Al toegewezen aan deze periode"
+                                : busy
+                                  ? `Dubbel boeken — staat al op "${p.blockingProject?.name}"`
+                                  : "Toevoegen aan periode"
+                            }
                           >
                             <ArrowRight className="h-3.5 w-3.5" />
                           </Button>
