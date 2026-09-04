@@ -24,13 +24,21 @@ model User {
 
 model CalendarFeed {
   id        Int      @id @default(autoincrement())
-  userId    Int
-  kind      String // "personal" | "company"
+  // Exactly one of userId/personId is set: a "company" feed belongs to
+  // the user who issued it, a "person" feed to the person whose bookings
+  // it lists — the latter needs no user account at all. Both columns are
+  // nullable so the two unique constraints below can coexist (NULLs are
+  // distinct in Postgres and SQLite alike).
+  userId    Int?
+  personId  Int?
+  kind      String // "person" | "company"
   token     String   @unique
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person    Person?  @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@unique([userId, kind])
+  @@unique([personId])
 }
 
 model Role {
@@ -71,7 +79,7 @@ model Client {
 }
 
 model Location {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   name       String
   address    String?
   postalCode String?
@@ -172,13 +180,13 @@ model ProjectPersonPrice {
 }
 
 model Period {
-  id             Int                   @id @default(autoincrement())
+  id             Int                      @id @default(autoincrement())
   projectId      Int
   name           String
   startDate      DateTime
   endDate        DateTime
-  updatedAt      DateTime              @default(now()) @updatedAt
-  project        Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  updatedAt      DateTime                 @default(now()) @updatedAt
+  project        Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   materials      PeriodStockItem[]
   people         PeriodPerson[]
   bundleBookings PeriodBundleBooking[]
@@ -199,32 +207,33 @@ model Person {
   projectPrices ProjectPersonPrice[]
   functions     PersonFunction[]
   userAccount   User?
+  calendarFeeds CalendarFeed[]
   documents     PersonDocument[]
 }
 
 model Material {
-  id                  Int                    @id @default(autoincrement())
-  name                String
-  category            String?
-  categoryId          Int?
-  code                String?                @unique
-  notes               String?
-  dayPrice            Float                  @default(0)
-  setupCost           Float?
-  isBundle            Boolean                @default(false)
-  bundlePriceOverride Float?
-  archived            Boolean                @default(false)
-  costPrice           Float?
-  listPrice           Float?
-  revenueBefore       Float?
-  categoryRel         Category?              @relation(fields: [categoryId], references: [id])
-  stockItems          StockItem[]
-  projectPrices       ProjectMaterialPrice[]
-  components          MaterialComponent[]    @relation("BundleParent")
-  usedInBundles       MaterialComponent[]    @relation("BundleChild")
-  bundleBookings      PeriodBundleBooking[]
+  id                   Int                            @id @default(autoincrement())
+  name                 String
+  category             String?
+  categoryId           Int?
+  code                 String?                        @unique
+  notes                String?
+  dayPrice             Float                          @default(0)
+  setupCost            Float?
+  isBundle             Boolean                        @default(false)
+  bundlePriceOverride  Float?
+  archived             Boolean                        @default(false)
+  costPrice            Float?
+  listPrice            Float?
+  revenueBefore        Float?
+  categoryRel          Category?                      @relation(fields: [categoryId], references: [id])
+  stockItems           StockItem[]
+  projectPrices        ProjectMaterialPrice[]
+  components           MaterialComponent[]            @relation("BundleParent")
+  usedInBundles        MaterialComponent[]            @relation("BundleChild")
+  bundleBookings       PeriodBundleBooking[]
   bundleBookingWeights PeriodBundleBookingComponent[]
-  shortages           PeriodMaterialShortage[]
+  shortages            PeriodMaterialShortage[]
 }
 
 model StockItem {
@@ -254,7 +263,7 @@ model PersonDocument {
 }
 
 model PeriodStockItem {
-  id               Int                  @id @default(autoincrement())
+  id                Int                  @id @default(autoincrement())
   periodId          Int
   stockItemId       Int
   dayPriceSnapshot  Float
@@ -264,9 +273,9 @@ model PeriodStockItem {
   bundleBookingId   Int?
   shippedAt         DateTime?
   returnedAt        DateTime?
-  period           Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  stockItem        StockItem            @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
-  bundleBooking    PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
+  period            Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  stockItem         StockItem            @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+  bundleBooking     PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
 
   @@unique([periodId, stockItemId])
 }
@@ -283,13 +292,13 @@ model MaterialComponent {
 }
 
 model PeriodBundleBooking {
-  id               Int             @id @default(autoincrement())
+  id               Int                            @id @default(autoincrement())
   periodId         Int
   materialId       Int
-  quantity         Int             @default(1)
+  quantity         Int                            @default(1)
   dayPriceSnapshot Float
-  period           Period          @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  material         Material        @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  period           Period                         @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  material         Material                       @relation(fields: [materialId], references: [id], onDelete: Cascade)
   stockItems       PeriodStockItem[]
   components       PeriodBundleBookingComponent[]
   shortages        PeriodMaterialShortage[]
@@ -414,12 +423,12 @@ model Invoice {
   createdAt         DateTime  @default(now())
   finalizedAt       DateTime?
 
-  client            Client        @relation(fields: [clientId], references: [id])
-  project           Project?      @relation(fields: [projectId], references: [id])
-  creditNoteOf      Invoice?      @relation("CreditNoteOf", fields: [creditNoteOfId], references: [id])
-  creditNotes       Invoice[]     @relation("CreditNoteOf")
-  lines             InvoiceLine[]
-  payments          Payment[]
+  client       Client        @relation(fields: [clientId], references: [id])
+  project      Project?      @relation(fields: [projectId], references: [id])
+  creditNoteOf Invoice?      @relation("CreditNoteOf", fields: [creditNoteOfId], references: [id])
+  creditNotes  Invoice[]     @relation("CreditNoteOf")
+  lines        InvoiceLine[]
+  payments     Payment[]
 
   @@index([projectId])
   @@index([clientId])
@@ -428,44 +437,44 @@ model Invoice {
 }
 
 model InvoiceLine {
-  id             Int      @id @default(autoincrement())
-  invoiceId      Int
-  section        String?
-  kind           String
-  description    String
-  quantity       Float
-  unit           String
-  unitPrice      Float
-  vatRate        Float
-  lineTotalExcl  Float
-  sortOrder      Int
-  sourceKind     String?
-  sourceId       Int?
+  id            Int     @id @default(autoincrement())
+  invoiceId     Int
+  section       String?
+  kind          String
+  description   String
+  quantity      Float
+  unit          String
+  unitPrice     Float
+  vatRate       Float
+  lineTotalExcl Float
+  sortOrder     Int
+  sourceKind    String?
+  sourceId      Int?
 
-  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
 }
 
 model Payment {
-  id          Int       @id @default(autoincrement())
-  invoiceId   Int
-  amount      Float
-  paidAt      DateTime
-  method      String?
-  reference   String?
-  notes       String?
-  createdAt   DateTime  @default(now())
+  id        Int      @id @default(autoincrement())
+  invoiceId Int
+  amount    Float
+  paidAt    DateTime
+  method    String?
+  reference String?
+  notes     String?
+  createdAt DateTime @default(now())
 
-  invoice     Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
 }
 
 model InvoiceCounter {
-  series   String
-  year     Int
-  lastSeq  Int     @default(0)
+  series  String
+  year    Int
+  lastSeq Int    @default(0)
 
   @@id([series, year])
 }
@@ -474,14 +483,14 @@ model InvoiceCounter {
 // apply (update or replace); a row only exists for imports that
 // actually landed, never for a preview or a refused replace.
 model ImportAudit {
-  id         Int      @id @default(autoincrement())
-  entity     String
-  mode       String // "update" | "replace"
-  userId     Int
-  fileName   String
-  rowCounts  Json
-  blockedBy  Json?
-  createdAt  DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  entity    String
+  mode      String // "update" | "replace"
+  userId    Int
+  fileName  String
+  rowCounts Json
+  blockedBy Json?
+  createdAt DateTime @default(now())
 
   @@index([entity, createdAt])
 }

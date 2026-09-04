@@ -9,7 +9,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   if (!access) return forbidden();
   try {
     const { id } = await params;
-    const revoked = await revokeFeedToken(access.id, parseInt(id, 10));
+    const revoked = await revokeFeedToken(access, parseInt(id, 10));
     if (!revoked) return notFound();
     return NextResponse.json({ success: true });
   } catch (err) {

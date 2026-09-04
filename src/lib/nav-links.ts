@@ -8,6 +8,8 @@ export interface NavLink {
   /** Omitted for links visible to every authenticated user regardless of
    * the matrix (only Dashboard today). */
   module?: ModuleKey;
+  /** Renders a count of pending user↔person link suggestions. */
+  badge?: "person-link";
 }
 
 /**
@@ -22,7 +24,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/projects", label: "Projecten", icon: "📁", module: "projecten" },
   { href: "/planning", label: "Planning", icon: "📅", module: "planning" },
   { href: "/notes", label: "Notities", icon: "📝", module: "notities" },
-  { href: "/people", label: "Personen", icon: "👥", module: "personen" },
+  { href: "/people", label: "Personen", icon: "👥", module: "personen", badge: "person-link" },
   { href: "/materials", label: "Materialen", icon: "📦", module: "materialen" },
   { href: "/clients", label: "Klanten", icon: "🏢", module: "klanten" },
   { href: "/locations", label: "Locaties", icon: "📍", module: "locaties" },
@@ -32,7 +34,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/import", label: "Importeren", icon: "⬆️", module: "materialen" },
   { href: "/facturen", label: "Facturen", icon: "🧾", module: "kosten_facturen" },
   { href: "/cijfers", label: "Cijfers", icon: "📊", module: "cijfers" },
-  { href: "/users", label: "Gebruikers", icon: "👤", module: "gebruikers" },
+  { href: "/users", label: "Gebruikers", icon: "👤", module: "gebruikers", badge: "person-link" },
   { href: "/settings", label: "Instellingen", icon: "⚙️", module: "instellingen" },
 ];
 

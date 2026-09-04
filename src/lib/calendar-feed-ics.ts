@@ -61,32 +61,16 @@ function eventFromPeriod(period: {
   };
 }
 
-/** A single explanatory event rather than a blank file — an empty .ics
- * with zero VEVENTs looks broken to a calendar client, and a user with
- * no linked person has nothing else to show them. */
-function noPersonEvent(now: Date): IcsEvent {
-  return {
-    uid: `no-person-link@rentflow.app`,
-    sequence: Math.floor(now.getTime() / 1000),
-    summary: "RentFlow: geen personeelsprofiel gekoppeld",
-    description:
-      "Je gebruikersaccount is niet gekoppeld aan een personeelsprofiel, dus er zijn geen boekingen om te tonen. Vraag een beheerder om de koppeling te maken.",
-    start: now,
-    end: now,
-  };
-}
-
-/** O1.2 — every period the user's linked person is booked on. */
-export async function buildPersonalFeedIcs(
-  userId: number,
+/** O1.2 — every period the person is booked on. Keyed on the person
+ * itself, not on a user account: someone with no login still has
+ * bookings, and an admin can hand them the URL from the People page. */
+export async function buildPersonFeedIcs(
+  personId: number,
   now: Date,
   client: PrismaClient = defaultPrisma,
 ): Promise<string> {
-  const user = await client.user.findUnique({ where: { id: userId }, select: { personId: true } });
-  if (!user?.personId) return buildIcsCalendar([noPersonEvent(now)], now);
-
   const assignments = await client.periodPerson.findMany({
-    where: { personId: user.personId },
+    where: { personId },
     include: {
       function: { select: { name: true } },
       days: { orderBy: { startAt: "asc" } },

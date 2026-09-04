@@ -6,22 +6,23 @@ import { useCalendarFeeds } from "@/hooks/use-calendar-feeds";
 import { useAuthMe } from "@/hooks/use-auth-me";
 import { satisfies } from "@/lib/modules";
 
-/** O1.4 — feed-link management: a personal "mijn diensten" feed for
- * everyone with planning access, plus a company-wide feed for anyone
+/** O1.4 — feed-link management: the caller's own "mijn diensten" feed
+ * for everyone with planning access, plus a company-wide feed for anyone
  * whose role is scope: all and has planning: lezen (mirrors
  * issueFeedToken's own O1.3 rule, so the "Aanmaken" button for a caller
- * who can't actually get one is never shown in the first place). */
+ * who can't actually get one is never shown in the first place).
+ *
+ * The personal row stays here even though every person's feed is also
+ * reachable from the People page: this is the only place a freelancer
+ * with planning access but no `personen` access can find their own link.
+ * Both surfaces issue the same person-scoped token. */
 export function CalendarFeedLinks() {
   const { data: me } = useAuthMe();
   const { data: feeds } = useCalendarFeeds();
-  const personal = feeds?.find((f) => f.kind === "personal");
+  const personal = feeds?.find((f) => f.kind === "person");
   const company = feeds?.find((f) => f.kind === "company");
   const canCompany = me?.scope !== "own" && satisfies(me?.permissions.planning ?? "geen", "lezen");
-  // Keyed on personId alone, not on `linkedPersonMissing` — that flag is
-  // scope: own only, but a scope: all account with no linked Person gets
-  // the same empty personal feed (buildPersonalFeedIcs falls back to its
-  // explanatory event) and was never told why.
-  const personalFeedEmpty = me !== undefined && me.personId === null;
+  const noLinkedPerson = me !== undefined && me.personId === null;
 
   return (
     <Card>
@@ -36,12 +37,13 @@ export function CalendarFeedLinks() {
           hier is dus niet meteen zichtbaar in Google.
         </p>
         <CalendarFeedRow
-          kind="personal"
+          kind="person"
           label="Mijn diensten"
           feed={personal}
+          disabled={noLinkedPerson}
           warning={
-            personalFeedEmpty
-              ? "Je account is niet gekoppeld aan een personeelsprofiel, dus deze feed blijft leeg. Vraag een beheerder om de koppeling te maken."
+            noLinkedPerson
+              ? "Je account is niet gekoppeld aan een personeelsprofiel, dus er is geen persoonlijke feed. Vraag een beheerder om de koppeling te maken."
               : undefined
           }
         />

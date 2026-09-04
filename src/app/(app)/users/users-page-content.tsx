@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserForm } from "@/components/user-form";
 import { DeleteUserDialog } from "./delete-user-dialog";
+import { PersonLinkSuggestionsBanner } from "@/components/person-link-suggestions-banner";
 import { useUsers } from "@/hooks/use-users";
 import type { User } from "@/types";
 
@@ -48,6 +49,8 @@ export function UsersPageContent() {
         <h2 className="text-2xl font-bold">Gebruikers</h2>
         <Button onClick={openCreate}>+ Nieuwe gebruiker</Button>
       </div>
+
+      <PersonLinkSuggestionsBanner />
 
       <Table>
         <TableHeader>
