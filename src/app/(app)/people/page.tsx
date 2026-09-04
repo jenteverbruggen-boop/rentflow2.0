@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { PersonForm } from "@/components/person-form";
-import { PersonDocuments } from "@/components/person-documents";
+import { PersonCard } from "./person-card";
+import { PersonLinkSuggestionsBanner } from "@/components/person-link-suggestions-banner";
 import { FunctionsManagerDialog } from "@/components/functions-manager-dialog";
 import type { Person } from "@/types";
 
@@ -66,71 +64,18 @@ export default function PeoplePage() {
         </div>
       </div>
 
+      <PersonLinkSuggestionsBanner />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {people.map((p) => (
-          <Card
+          <PersonCard
             key={p.id}
-            className="cursor-pointer"
-            onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}
-          >
-            <CardContent className="pt-4 space-y-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-medium">{p.name}</p>
-                  {p.functions && p.functions.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {p.functions.map((f) => (
-                        <Badge
-                          key={f.functionId}
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {f.function?.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  {p.email && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {p.email}
-                    </p>
-                  )}
-                </div>
-                <div
-                  className="flex gap-1 shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      setEditing(p);
-                      setOpen(true);
-                    }}
-                  >
-                    ✏️
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      if (confirm("Verwijderen?")) remove.mutate(p.id);
-                    }}
-                  >
-                    🗑️
-                  </Button>
-                </div>
-              </div>
-              {expandedId === p.id && (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Separator className="my-2" />
-                  <PersonDocuments personId={p.id} />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            person={p}
+            expanded={expandedId === p.id}
+            onToggle={() => setExpandedId(expandedId === p.id ? null : p.id)}
+            onEdit={() => { setEditing(p); setOpen(true); }}
+            onDelete={() => { if (confirm("Verwijderen?")) remove.mutate(p.id); }}
+          />
         ))}
       </div>
 

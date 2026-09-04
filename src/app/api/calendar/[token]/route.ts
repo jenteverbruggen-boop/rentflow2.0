@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveFeedToken, isCompanyFeedStillEligible } from "@/lib/calendar-feed";
-import { buildPersonalFeedIcs, buildCompanyFeedIcs } from "@/lib/calendar-feed-ics";
+import { buildPersonFeedIcs, buildCompanyFeedIcs } from "@/lib/calendar-feed-ics";
 
 type Params = { params: Promise<{ token: string }> };
 
@@ -24,15 +24,24 @@ export async function GET(_req: NextRequest, { params }: Params) {
   // Same 404 as a bogus token, never a distinguishing error, so this
   // can't be used to probe whether a token is merely ineligible vs.
   // truly nonexistent.
-  if (feed.kind === "company" && !(await isCompanyFeedStillEligible(feed.userId))) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (feed.kind === "company") {
+    const eligible =
+      feed.userId !== null && (await isCompanyFeedStillEligible(feed.userId));
+    if (!eligible) return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   const now = new Date();
-  const ics =
-    feed.kind === "company"
-      ? await buildCompanyFeedIcs(now)
-      : await buildPersonalFeedIcs(feed.userId, now);
+  let ics: string;
+  if (feed.kind === "company") {
+    ics = await buildCompanyFeedIcs(now);
+  } else if (feed.personId !== null) {
+    ics = await buildPersonFeedIcs(feed.personId, now);
+  } else {
+    // A non-company feed with no person cannot exist under the current
+    // schema; treating it as absent beats serving an empty calendar that
+    // a client would silently keep polling.
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   return new NextResponse(ics, {
     status: 200,

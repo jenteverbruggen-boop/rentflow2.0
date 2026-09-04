@@ -5,8 +5,8 @@ import type { AccessLevel } from "@/types";
 const LEVELS: AccessLevel[] = ["geen", "lezen", "wijzigen", "verwijderen"];
 
 describe("MODULES", () => {
-  it("has exactly ten entries", () => {
-    expect(MODULES).toHaveLength(10);
+  it("has exactly eleven entries", () => {
+    expect(MODULES).toHaveLength(11);
   });
 
   it("uses the exact Dutch labels from the decided design", () => {
@@ -22,6 +22,7 @@ describe("MODULES", () => {
       "Cijfers",
       "Gebruikers",
       "Instellingen",
+      "Notities",
     ]);
   });
 });

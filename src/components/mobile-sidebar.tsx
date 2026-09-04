@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuthMe } from "@/hooks/use-auth-me";
 import { visibleNavLinks } from "@/lib/nav-links";
+import { NavSuggestionBadge } from "@/components/nav-suggestion-badge";
 
 export function MobileTopBar() {
   const [open, setOpen] = useState(false);
@@ -41,7 +42,7 @@ export function MobileTopBar() {
             <SheetTitle className="text-xl font-bold text-primary text-left">RentFlow</SheetTitle>
           </SheetHeader>
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-            {links.map(({ href, label, icon }) => (
+            {links.map(({ href, label, icon, badge }) => (
               <Link
                 key={href}
                 href={href}
@@ -50,6 +51,7 @@ export function MobileTopBar() {
               >
                 <span>{icon}</span>
                 {label}
+                {badge === "person-link" && <NavSuggestionBadge />}
               </Link>
             ))}
           </nav>

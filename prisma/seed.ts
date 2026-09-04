@@ -589,20 +589,20 @@ async function main() {
     ],
   });
 
-  // O1.1 — link jan@ to Alice so the personal ICS feed has real bookings
-  // to render in dev (admin@ stays personId: null, exercising O1.2's
-  // "no linked person" explanatory-event path instead). One feed token
-  // per kind per user, `node:crypto`-random per O1.1's own requirement —
-  // never `Math.random`, never the JWT.
-  const jan = await prisma.user.update({
+  // O1.1 — link jan@ to Alice so a person feed with real bookings exists
+  // in dev; admin@ stays personId: null so the Settings page's "no linked
+  // person" state stays reachable too. Bob gets a feed without any user
+  // account at all, which is the case the People page exists for. Tokens
+  // are `node:crypto`-random per O1.1 — never `Math.random`, never the JWT.
+  await prisma.user.update({
     where: { email: "jan@rentflow.dev" },
     data: { personId: alice.id },
   });
   const admin = await prisma.user.findUniqueOrThrow({ where: { email: "admin@rentflow.dev" } });
   await prisma.calendarFeed.createMany({
     data: [
-      { userId: jan.id, kind: "personal", token: randomBytes(24).toString("hex") },
-      { userId: admin.id, kind: "personal", token: randomBytes(24).toString("hex") },
+      { personId: alice.id, kind: "person", token: randomBytes(24).toString("hex") },
+      { personId: bob.id, kind: "person", token: randomBytes(24).toString("hex") },
       // Company feed — only ever issued to a scope: all role (O1.3);
       // both seeded roles qualify, admin@ gets the seeded one.
       { userId: admin.id, kind: "company", token: randomBytes(24).toString("hex") },

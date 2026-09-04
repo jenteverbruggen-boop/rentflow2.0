@@ -7,16 +7,22 @@ import type { CalendarFeed, CalendarFeedKind } from "@/types";
 
 interface Props {
   kind: CalendarFeedKind;
+  /** Omit for "my own linked person"; set when an admin manages someone
+   * else's feed from the People page. */
+  personId?: number;
   label: string;
   feed?: CalendarFeed;
   /** Standing caveat about what this feed will contain — shown under the
    * URL, so it reads as belonging to this feed rather than to the card. */
   warning?: string;
+  /** No feed can exist for this row yet (e.g. the caller has no linked
+   * person). The warning explains why; the actions just go inert. */
+  disabled?: boolean;
 }
 
 /** O1.4 — one row per feed kind: the URL (once issued) with copy, or an
  * "Aanmaken" action when none exists yet, plus revoke-and-reissue. */
-export function CalendarFeedRow({ kind, label, feed, warning }: Props) {
+export function CalendarFeedRow({ kind, personId, label, feed, warning, disabled }: Props) {
   const [copied, setCopied] = useState(false);
   const issue = useIssueCalendarFeed();
   const revoke = useRevokeCalendarFeed();
@@ -35,8 +41,8 @@ export function CalendarFeedRow({ kind, label, feed, warning }: Props) {
   }
 
   return (
-    <div className="rounded-lg border p-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="@container rounded-lg border p-3">
+      <div className="flex flex-col gap-2 @md:flex-row @md:items-center @md:justify-between">
         <div className="min-w-0 space-y-1">
           <p className="text-sm font-medium">{label}</p>
           {url ? (
@@ -56,8 +62,8 @@ export function CalendarFeedRow({ kind, label, feed, warning }: Props) {
           <Button
             size="sm"
             variant="outline"
-            disabled={issue.isPending}
-            onClick={() => issue.mutate(kind)}
+            disabled={disabled || issue.isPending}
+            onClick={() => issue.mutate({ kind, personId })}
           >
             {feed ? "Opnieuw genereren" : "Aanmaken"}
           </Button>

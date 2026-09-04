@@ -4,6 +4,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { Separator } from "./ui/separator";
 import { resolveCurrentAccess } from "@/lib/api-auth";
 import { visibleNavLinks } from "@/lib/nav-links";
+import { NavSuggestionBadge } from "./nav-suggestion-badge";
 
 // Server Component — resolves permissions directly via
 // resolveCurrentAccess() rather than a client-side fetch to /api/auth/me
@@ -20,8 +21,8 @@ export async function Sidebar() {
       </div>
 
       <nav className="flex-1 p-3 space-y-1">
-        {links.map(({ href, label, icon }) => (
-          <SidebarLink key={href} href={href} label={label} icon={icon} />
+        {links.map(({ href, label, icon, badge }) => (
+          <SidebarLink key={href} href={href} label={label} icon={icon} badge={badge} />
         ))}
       </nav>
 
@@ -38,10 +39,12 @@ function SidebarLink({
   href,
   label,
   icon,
+  badge,
 }: {
   href: string;
   label: string;
   icon: string;
+  badge?: "person-link";
 }) {
   return (
     <Link
@@ -50,6 +53,7 @@ function SidebarLink({
     >
       <span>{icon}</span>
       {label}
+      {badge === "person-link" && <NavSuggestionBadge />}
     </Link>
   );
 }

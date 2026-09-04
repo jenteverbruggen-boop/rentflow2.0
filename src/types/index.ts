@@ -15,7 +15,8 @@ export type ModuleKey =
   | "kosten_facturen"
   | "cijfers"
   | "gebruikers"
-  | "instellingen";
+  | "instellingen"
+  | "notities";
 
 export type AccessLevel = "geen" | "lezen" | "wijzigen" | "verwijderen";
 
@@ -320,17 +321,30 @@ export interface Period {
   shortages?: PeriodMaterialShortage[];
 }
 
-/** O1.1 — one row per (user, feed kind). `kind` is `"personal"` (the
- * caller's own bookings) or `"company"` (every project/period, gated on
- * module access and never issued to a scope:own role). */
-export type CalendarFeedKind = "personal" | "company";
+/** `"person"` lists one person's own bookings and is keyed on that
+ * person, so someone with no login can still be handed a URL;
+ * `"company"` lists every project/period and is keyed on the user who
+ * issued it, gated on module access and never issued to a scope:own
+ * role. */
+export type CalendarFeedKind = "person" | "company";
 
 export interface CalendarFeed {
   id: number;
-  userId: number;
+  userId: number | null;
+  personId: number | null;
   kind: CalendarFeedKind;
   token: string;
   createdAt: string;
+}
+
+/** An unlinked user whose e-mail matches exactly one unlinked person.
+ * Only ever a suggestion — applying it is an explicit admin action. */
+export interface PersonLinkSuggestion {
+  userId: number;
+  userName: string;
+  userEmail: string;
+  personId: number;
+  personName: string;
 }
 
 export interface ProjectMaterialPrice {
@@ -378,6 +392,33 @@ export interface MaterialAvailability {
   availableCount: number;
   availableStockItemIds: number[];
   sharedComponents?: string[];
+}
+
+export interface NoteImage {
+  id: number;
+  noteId: number;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export interface Note {
+  id: number;
+  title: string;
+  body: string;
+  noteDate: string;
+  projectId: number | null;
+  clientId: number | null;
+  createdById: number | null;
+  createdByName: string;
+  updatedById: number | null;
+  updatedByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  project?: { id: number; name: string } | null;
+  client?: { id: number; name: string } | null;
+  images: NoteImage[];
 }
 
 export interface PersonAvailability {

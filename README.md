@@ -1,6 +1,6 @@
 # RentFlow 2.0
 
-A rental-planning tool for managing **projects**, **periods**, **people**, and **materials**. Each project contains one or more named **periods** (date ranges that may overlap); bookings live on a period. Materials are split into individually traceable **stock items** so units assigned to a project can be tracked. People and materials each have a day price; a project can override that price for any material or person to negotiate project-specific rates. Projects produce an itemised cost overview with optional per-booking discounts. Materials can also be grouped into **sets** (bundles): a set owns no stock itself but has a recipe of component materials, the number of complete sets is auto-calculated from component stock (with a warning for the leftover incomplete set), and booking a set reserves its components atomically. Bookings can also carry one-time costs: a per-unit setup/teardown cost on a material (charged once, not per day) and per-person travel costs entered on a period booking (rate × number of trips/nights). The project cost overview breaks totals into Personen, Materialen, and Reiskosten. Each period's material bookings also have a packing-list checklist — tick-boxes per physical unit for "verzonden"/"terug" — so it's visible what's currently out, overdue, or back. The project detail page is tab-based — `Overzicht`, `Periodes` (with a Gantt-style timeline), `Personen`, `Materialen`, and `Kosten`. RentFlow rejects cross-project double-bookings and warns on same-project overlaps.
+A rental-planning tool for managing **projects**, **periods**, **people**, and **materials**. Each project contains one or more named **periods** (date ranges that may overlap); bookings live on a period. Materials are split into individually traceable **stock items** so units assigned to a project can be tracked. People and materials each have a day price; a project can override that price for any material or person to negotiate project-specific rates. Projects produce an itemised cost overview with optional per-booking discounts. Materials can also be grouped into **sets** (bundles): a set owns no stock itself but has a recipe of component materials, the number of complete sets is auto-calculated from component stock (with a warning for the leftover incomplete set), and booking a set reserves its components atomically. Bookings can also carry one-time costs: a per-unit setup/teardown cost on a material (charged once, not per day) and per-person travel costs entered on a period booking (rate × number of trips/nights). The project cost overview breaks totals into Personen, Materialen, and Reiskosten. Each period's material bookings also have a packing-list checklist — tick-boxes per physical unit for "verzonden"/"terug" — so it's visible what's currently out, overdue, or back. The project detail page is tab-based — `Overzicht`, `Periodes` (with a Gantt-style timeline), `Personen`, `Materialen`, `Kosten`, and `Notities`. RentFlow rejects cross-project double-bookings and warns on same-project overlaps. Freeform **notes** (a call or meeting with a customer, optionally with photos) can be created unassigned and linked to a project or a client later — visible on that project's Notities tab, or in a general Notities view filterable by project, client, or unassigned, with who created/last edited each note tracked.
 
 ---
 
@@ -47,14 +47,17 @@ rentflow2.0/
 │   │   │   ├── projects/         # List + [id] tabbed detail page
 │   │   │   ├── people/
 │   │   │   ├── materials/
-│   │   │   └── planning/
+│   │   │   ├── planning/
+│   │   │   └── notes/             # General notes view (filter by project/client/unassigned)
 │   │   └── api/                  # Next.js Route Handlers
 │   │       ├── auth/             # login, register, logout
 │   │       ├── projects/         # CRUD + [id]/periods + [id]/prices/{material,person}/[xId]
 │   │       ├── periods/          # [id] CRUD + [id]/materials + [id]/people
 │   │       ├── people/           # CRUD + /available
 │   │       ├── materials/        # CRUD + /available + [id]/stock-items (+ /bulk add/remove)
-│   │       └── stock-items/      # [id] PATCH / DELETE
+│   │       ├── stock-items/      # [id] PATCH / DELETE
+│   │       ├── notes/            # CRUD + [id]/images
+│   │       └── note-images/      # [id] GET (serve bytes) / DELETE
 │   ├── proxy.ts                  # Edge JWT guard (Next.js 16 — not middleware.ts)
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui components (do not edit)
@@ -76,7 +79,10 @@ rentflow2.0/
 │   │   ├── project-periods-tab.tsx
 │   │   ├── project-persons-tab.tsx
 │   │   ├── project-materials-tab.tsx
-│   │   └── project-costs-tab.tsx
+│   │   ├── project-costs-tab.tsx
+│   │   ├── project-notes-tab.tsx
+│   │   ├── note-list.tsx / note-card.tsx / note-form-dialog.tsx  # General + per-project notes UI
+│   │   └── note-images.tsx           # Photo upload/thumbnail grid on a note
 │   ├── lib/
 │   │   ├── prisma.ts             # Singleton PrismaClient
 │   │   ├── auth.ts               # signToken / verifyToken
@@ -85,9 +91,12 @@ rentflow2.0/
 │   │   ├── availability.ts       # Stock item + person conflict / warning logic
 │   │   ├── effective-price.ts    # Server-side resolver: project override → fallback to global
 │   │   ├── project-include.ts    # Shared Prisma include for project queries
+│   │   ├── notes.ts              # Note list/get/create/update/delete + serializer
+│   │   ├── note-images.ts        # NoteImage store/get/delete (Bytes in Postgres, mirrors documents.ts)
 │   │   └── utils.ts              # cn(), statusVariant()
 │   ├── hooks/
-│   │   └── use-availability.ts   # TanStack Query wrappers for /available endpoints
+│   │   ├── use-availability.ts   # TanStack Query wrappers for /available endpoints
+│   │   └── use-notes.ts          # TanStack Query wrappers for /api/notes
 │   ├── providers/
 │   │   └── query-provider.tsx    # TanStack QueryClientProvider
 │   └── types/index.ts            # Shared domain types
@@ -190,7 +199,7 @@ docker compose up -d
 
 ## API Overview
 
-All endpoints except `/api/auth/*` and `/api/calendar/:token` require authentication via an httpOnly cookie (`rentflow_token`) set on login. `/api/calendar/:token` is token-authenticated instead — the token itself is the credential, so a request for a bogus/revoked token returns a plain `404` rather than the cookie-auth redirect to `/login`. Money fields (`dayPrice`, `dayPriceSnapshot`, `setupCost`, `discountPct`/`discountAmount`, travel costs, price overrides, `dayRate`/`hourRate` on functions, etc.) are stripped from every response below for a caller whose role lacks `Kosten/Facturen` read access — those fields then arrive as `null` (or an empty array/`false` for whole-record fields), not omitted from the JSON shape. A role with `scope: own` (own-data-only, for freelancers) additionally sees `GET /api/projects`/`GET /api/projects/:id` filtered to only the projects they're booked on (every period of an owned project, not just their own), never sees money regardless of their `Kosten/Facturen` level, cannot write anywhere, and gets `403` on every standalone catalogue endpoint (people, materials, clients, locations, categories, functions) plus `/api/people/available` and `/api/materials/available` — that data is visible only embedded in their own projects. The one exception is person documents: a `scope: own` caller can still read their own attesten, just not anyone else's. On the **write** side the mirror rule applies: a caller who cannot *see* money cannot meaningfully send it back (the full-record forms echo the redacted `null`/`0` they were given), so submitted money fields from such a caller are ignored entirely — the request succeeds and the persisted values are left untouched, rather than being rejected or overwritten with the redacted placeholder. A caller who *can* see money but lacks `Kosten/Facturen: wijzigen` is still `403`'d on any value that actually differs from what is stored, and an unchanged echo is let through so the rest of the body can save.
+All endpoints except `/api/auth/*` and `/api/calendar/:token` require authentication via an httpOnly cookie (`rentflow_token`) set on login. `/api/calendar/:token` is token-authenticated instead — the token itself is the credential, so a request for a bogus/revoked token returns a plain `404` rather than the cookie-auth redirect to `/login`. Money fields (`dayPrice`, `dayPriceSnapshot`, `setupCost`, `discountPct`/`discountAmount`, travel costs, price overrides, `dayRate`/`hourRate` on functions, etc.) are stripped from every response below for a caller whose role lacks `Kosten/Facturen` read access — those fields then arrive as `null` (or an empty array/`false` for whole-record fields), not omitted from the JSON shape. A role with `scope: own` (own-data-only, for freelancers) additionally sees `GET /api/projects`/`GET /api/projects/:id` filtered to only the projects they're booked on (every period of an owned project, not just their own), never sees money regardless of their `Kosten/Facturen` level, is read-only everywhere, and gets `403` on every standalone catalogue endpoint (people, materials, clients, locations, categories, functions) plus `/api/people/available` and `/api/materials/available` — that data is visible only embedded in their own projects. Two deliberate exceptions to read-only: a `scope: own` caller can still read their own person documents (attesten), just not anyone else's; and can create/edit notes (never delete), but only against a project they're actually booked on, and only edit a note they themselves wrote — see `/api/notes` below. On the **write** side the mirror rule applies: a caller who cannot *see* money cannot meaningfully send it back (the full-record forms echo the redacted `null`/`0` they were given), so submitted money fields from such a caller are ignored entirely — the request succeeds and the persisted values are left untouched, rather than being rejected or overwritten with the redacted placeholder. A caller who *can* see money but lacks `Kosten/Facturen: wijzigen` is still `403`'d on any value that actually differs from what is stored, and an unchanged echo is let through so the rest of the body can save.
 
 | Method | Path | Description |
 |---|---|---|
@@ -273,10 +282,19 @@ All endpoints except `/api/auth/*` and `/api/calendar/:token` require authentica
 | `POST` | `/api/invoices/:id/payments` | Record a payment `{ amount, paidAt, method?, reference?, notes? }` — `400` if the invoice is `concept` or a credit note. `201 Payment`; may flip the invoice to `betaald` in the same transaction once the balance reaches zero |
 | `PATCH`/`DELETE` | `/api/invoices/:id/payments/:paymentId` | Edit (`200 Payment`) or remove (`204`) a payment; may flip the invoice back to `verzonden` if the correction re-opens a balance |
 | `GET` | `/api/stats?from&to` | Aggregate business figures — module `Cijfers`, denied entirely (`403`) for `scope: own` regardless of matrix level. Returns `{ range, revenueByMonth, revenueByClient, personUtilisation, topMaterials, payback }`. Booked revenue is attributed to the *period* (pro-rata split by calendar days across a month boundary); invoiced revenue to the *invoice's own* invoiceDate month — the two series are not directly comparable by design. Archived materials are excluded from `topMaterials` and `payback`. `payback: { best, worst }` (each up to 10 materials with `{ materialId, name, code, earned, costBasis, paybackPct }`) ignores `from`/`to` entirely — it's lifetime-to-date; a material with no known cost price is excluded, never shown at 0% |
-| `GET` | `/api/calendar-feeds` | List the caller's own calendar-feed tokens — gated on `planning: lezen` (the module the feed content belongs to) |
-| `POST` | `/api/calendar-feeds` | Issue or reissue (revoke-then-recreate) a feed token — body `{ kind: "personal"\|"company" }`. `kind: "company"` additionally requires `scope: all` and is refused (`400`) for `scope: own` regardless of matrix level |
-| `DELETE` | `/api/calendar-feeds/:id` | Revoke one of the caller's own feed tokens — `404` if it belongs to someone else |
-| `GET` | `/api/calendar/:token` | Token-authenticated (not cookie-authenticated) iCalendar feed — `text/calendar`. Resolves the token to a `personal` (the linked person's own bookings, or a single explanatory event if no person is linked) or `company` (every project/period, unfiltered) feed. A bogus/revoked token is `404`, never a redirect. A company feed's token is revoked automatically when the issuing user's role or that role's scope changes. Periods carrying real hours are emitted as UTC timestamps; a period stored as a bare midnight-UTC window (legacy/imported data) is emitted as a whole-day `VALUE=DATE` event, so a Brussels client no longer renders it starting 02:00 and spilling into the next day |
+| `GET` | `/api/calendar-feeds` | List the caller's own calendar-feed tokens (their company feed plus the person feed of whoever they are linked to) — gated on `planning: lezen` (the module the feed content belongs to). `?all=1` returns every *person* feed instead, for the People page's per-person links, and additionally requires `personen: lezen` |
+| `POST` | `/api/calendar-feeds` | Issue or reissue (revoke-then-recreate) a feed token — body `{ kind: "person"\|"company", personId? }`. `kind: "company"` additionally requires `scope: all` and is refused (`400`) for `scope: own` regardless of matrix level. For `kind: "person"`, an omitted `personId` means the caller's own linked person (self-service on `planning: lezen`); naming someone else's `personId` requires `personen: wijzigen`, and a caller with no linked person and no `personId` gets a `400` |
+| `DELETE` | `/api/calendar-feeds/:id` | Revoke a feed token, under the same rule that governs issuing it (own company feed, own person feed, or anyone's person feed with `personen: wijzigen`) — `404`, never `403`, when the caller may not touch it, so feed ids cannot be enumerated |
+| `GET` | `/api/person-link-suggestions` | Unlinked users whose e-mail matches exactly one unlinked person — module `Gebruikers`, read. Read-only and advisory: applying a suggestion goes through `PATCH /api/users/:id`. Matching is case-insensitive exact e-mail only, and is skipped when the address is ambiguous on either side; names are never compared |
+| `GET` | `/api/calendar/:token` | Token-authenticated (not cookie-authenticated) iCalendar feed — `text/calendar`. Resolves the token to a `person` (that person's own bookings) or `company` (every project/period, unfiltered) feed. A person feed is keyed on the **person**, not on a user account, so someone who never logs in can still be handed a subscribable URL from the People page. A bogus/revoked token is `404`, never a redirect. A company feed's token is revoked automatically when the issuing user's role or that role's scope changes. Periods carrying real hours are emitted as UTC timestamps; a period stored as a bare midnight-UTC window (legacy/imported data) is emitted as a whole-day `VALUE=DATE` event, so a Brussels client no longer renders it starting 02:00 and spilling into the next day |
+| `GET` | `/api/notes?projectId&clientId&unassigned&q` | List notes — module `Notities`. `unassigned=1` returns only notes with neither `projectId` nor `clientId` set; `q` does a plain (case-sensitive on Postgres, case-insensitive on SQLite dev) substring match on title/body. A note can be linked to a project or a client, never both. `scope: own` only ever sees notes on a project they're booked on — `clientId`/`unassigned` are ignored for them |
+| `POST` | `/api/notes` | Create a note — body `{ title, body, noteDate?, projectId?, clientId? }` (`noteDate` defaults to now). Stamps `createdById`/`createdByName` from the caller; `400` if both `projectId` and `clientId` are set. One of the two deliberate write exceptions for `scope: own` (see the API Overview intro): `projectId` is required and must be a project they're booked on, `clientId` is refused outright |
+| `GET` | `/api/notes/:id` | Get one note with its linked project/client and image metadata (never the image bytes). `scope: own` gets `404`, not `403`, for a note outside their own projects |
+| `PUT` | `/api/notes/:id` | Update a note, including assigning/unassigning it to a project or client. Stamps `updatedById`/`updatedByName` from the caller. `scope: own` may only edit a note they themselves wrote, on a project they're still booked on, and any `projectId`/`clientId` they send is silently ignored rather than honoured |
+| `DELETE` | `/api/notes/:id` | Delete a note (cascades its images) — always denied (`403`) for `scope: own`, unlike create/update |
+| `POST` | `/api/notes/:id/images` | Upload a photo (`multipart/form-data`, field `file`, `image/*` only) — `400` over 5 MB or past 10 images on the note. `scope: own` may only add a photo to a note they themselves wrote |
+| `GET` | `/api/note-images/:id` | Serve one note photo's bytes inline. `scope: own` gets `404` for a photo outside their own projects |
+| `DELETE` | `/api/note-images/:id` | Remove one photo from a note. `scope: own` may only remove a photo from a note they themselves wrote |
 
 ---
 

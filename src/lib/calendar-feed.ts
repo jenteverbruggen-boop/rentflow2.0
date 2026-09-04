@@ -20,36 +20,80 @@ export async function resolveFeedToken(
   return client.calendarFeed.findUnique({ where: { token } });
 }
 
-/** O1.4 — issue or reissue (revoke-then-create, via `upsert`) a token for
- * the calling user. `kind: "company"` requires `planning: lezen` and is
- * refused outright for `scope: own` (O1.3's own-scoped-role rule). */
+/** O1.4 — issue or reissue (revoke-then-create, via `upsert`) a feed.
+ * `kind: "company"` requires `planning: lezen` and is refused outright
+ * for `scope: own` (O1.3's own-scoped-role rule). `kind: "person"`
+ * targets a person rather than the caller: issuing one for your own
+ * linked person is self-service, issuing one for anybody else is an
+ * administrative act and needs `personen: wijzigen`. */
 export async function issueFeedToken(
   access: ResolvedAccess,
   kind: CalendarFeedKind,
+  personId: number | null,
   client: PrismaClient = defaultPrisma,
 ): Promise<{ token: string } | { error: string }> {
+  const token = generateFeedToken();
+
   if (kind === "company") {
     if (access.scope === "own") return { error: "Bedrijfsfeed is niet beschikbaar voor dit account" };
     if (!satisfies(access.permissions.planning ?? "geen", "lezen")) {
       return { error: "Onvoldoende rechten voor de bedrijfsfeed" };
     }
+    await client.calendarFeed.upsert({
+      where: { userId_kind: { userId: access.id, kind } },
+      create: { userId: access.id, kind, token },
+      update: { token },
+    });
+    return { token };
   }
-  const token = generateFeedToken();
+
+  const target = personId ?? access.personId;
+  if (target === null) {
+    return { error: "Je account is niet gekoppeld aan een personeelsprofiel" };
+  }
+  if (!canManagePersonFeed(access, target)) {
+    return { error: "Onvoldoende rechten voor de agenda-feed van deze persoon" };
+  }
+  const person = await client.person.findUnique({ where: { id: target } });
+  if (!person) return { error: "Persoon niet gevonden" };
+
   await client.calendarFeed.upsert({
-    where: { userId_kind: { userId: access.id, kind } },
-    create: { userId: access.id, kind, token },
+    where: { personId: target },
+    create: { personId: target, kind: "person", token },
     update: { token },
   });
   return { token };
 }
 
+/** Your own person feed is yours to manage on `planning: lezen` alone —
+ * the Settings page offers it to every planning-capable role, including
+ * a freelancer with no `personen` access at all. Anyone else's is an
+ * administrative act on someone else's data, hence `personen: wijzigen`
+ * rather than the read level the People page itself is gated on. */
+export function canManagePersonFeed(access: ResolvedAccess, personId: number): boolean {
+  if (access.personId === personId) {
+    return satisfies(access.permissions.planning ?? "geen", "lezen");
+  }
+  return satisfies(access.permissions.personen ?? "geen", "wijzigen");
+}
+
+/** Mirrors `issueFeedToken`'s own authorisation exactly — revoking a
+ * feed is as consequential as reissuing one, and a caller who may not
+ * hand out a person's URL may not silently break their subscription
+ * either. A feed the caller may not touch is reported as absent rather
+ * than forbidden, so this cannot enumerate other people's feed ids. */
 export async function revokeFeedToken(
-  userId: number,
+  access: ResolvedAccess,
   id: number,
   client: PrismaClient = defaultPrisma,
 ): Promise<boolean> {
   const feed = await client.calendarFeed.findUnique({ where: { id } });
-  if (!feed || feed.userId !== userId) return false;
+  if (!feed) return false;
+  const allowed =
+    feed.personId !== null
+      ? canManagePersonFeed(access, feed.personId)
+      : feed.userId === access.id;
+  if (!allowed) return false;
   await client.calendarFeed.delete({ where: { id } });
   return true;
 }
@@ -80,16 +124,10 @@ export async function isCompanyFeedStillEligible(
   return satisfies(level, "lezen");
 }
 
-/** O1.3 — "revoke the token when a user's role or scope changes" is
- * enforced here, called from the two write paths that can invalidate a
- * company feed's eligibility: reassigning a user's role
- * (`PATCH /api/users/[id]`) and editing a role's own scope
- * (`PUT /api/roles/[id]`). Only the `company` kind is ever revoked this
- * way — the personal feed's eligibility never depends on role/scope.
- * A pure `planning` matrix downgrade (neither `roleId` nor `scope`
- * touched) is now caught instead by `isCompanyFeedStillEligible`'s
- * per-request check above, so this eager revoke and that lazy check
- * together cover every eligibility-changing edit. */
+/** O1.3 — called from the two write paths that can invalidate a company
+ * feed: reassigning a user's role (`PATCH /api/users/[id]`) and editing
+ * a role's scope (`PUT /api/roles/[id]`). Only `company` is revoked this
+ * way; a person feed's eligibility never depends on role or scope. */
 export async function revokeCompanyFeedForUser(
   userId: number,
   client: PrismaClient = defaultPrisma,

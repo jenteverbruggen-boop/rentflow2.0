@@ -246,7 +246,10 @@ describe("calendar-feeds (O1.4) — own-row restriction, not a blanket deny", ()
     expect(handler("calendar-feeds/route.ts", "GET")).toContain("userId: access.id");
   });
 
-  it("DELETE /api/calendar-feeds/[id] checks ownership via revokeFeedToken(access.id, ...)", () => {
-    expect(handler("calendar-feeds/[id]/route.ts", "DELETE")).toContain("revokeFeedToken(access.id");
+  // The whole ResolvedAccess is handed over, not just the id: a person
+  // feed is owned by a person, so revokeFeedToken needs the caller's
+  // personId and permissions to decide, not only who they are.
+  it("DELETE /api/calendar-feeds/[id] checks ownership via revokeFeedToken(access, ...)", () => {
+    expect(handler("calendar-feeds/[id]/route.ts", "DELETE")).toContain("revokeFeedToken(access,");
   });
 });

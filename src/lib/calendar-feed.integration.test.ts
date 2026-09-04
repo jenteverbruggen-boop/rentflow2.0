@@ -18,7 +18,7 @@ import {
   revokeCompanyFeedsForRole,
   isCompanyFeedStillEligible,
 } from "@/lib/calendar-feed";
-import { buildPersonalFeedIcs, buildCompanyFeedIcs } from "@/lib/calendar-feed-ics";
+import { buildPersonFeedIcs, buildCompanyFeedIcs } from "@/lib/calendar-feed-ics";
 import { saveAssignmentDays } from "@/lib/assignment-days-write";
 import type { ResolvedAccess } from "@/lib/api-auth";
 
@@ -91,18 +91,43 @@ function access(overrides: Partial<ResolvedAccess>): ResolvedAccess {
 }
 
 describe("issueFeedToken (O1.4)", () => {
-  it("issues a personal token for any caller", async () => {
-    const result = await issueFeedToken(access({ id: ids.allUser }), "personal", client);
+  it("issues a person token for a caller with a linked person", async () => {
+    const result = await issueFeedToken(
+      access({ id: ids.linkedUser, personId: ids.alice }),
+      "person",
+      null,
+      client,
+    );
+    expect("token" in result).toBe(true);
+  });
+
+  it("refuses a person token for a caller with no linked person", async () => {
+    const result = await issueFeedToken(access({ id: ids.allUser }), "person", null, client);
+    expect("error" in result).toBe(true);
+  });
+
+  it("refuses another person's feed without personen: wijzigen", async () => {
+    const result = await issueFeedToken(access({ id: ids.allUser }), "person", ids.alice, client);
+    expect("error" in result).toBe(true);
+  });
+
+  it("allows another person's feed with personen: wijzigen", async () => {
+    const result = await issueFeedToken(
+      access({ id: ids.allUser, permissions: { planning: "lezen", personen: "wijzigen" } }),
+      "person",
+      ids.alice,
+      client,
+    );
     expect("token" in result).toBe(true);
   });
 
   it("issues a company token for a scope: all caller with planning access", async () => {
-    const result = await issueFeedToken(access({ id: ids.allUser, scope: "all" }), "company", client);
+    const result = await issueFeedToken(access({ id: ids.allUser, scope: "all" }), "company", null, client);
     expect("token" in result).toBe(true);
   });
 
   it("refuses a company token for a scope: own caller (O1.3)", async () => {
-    const result = await issueFeedToken(access({ id: ids.ownUser, scope: "own" }), "company", client);
+    const result = await issueFeedToken(access({ id: ids.ownUser, scope: "own" }), "company", null, client);
     expect("error" in result).toBe(true);
   });
 
@@ -110,15 +135,16 @@ describe("issueFeedToken (O1.4)", () => {
     const result = await issueFeedToken(
       access({ id: ids.allUser, scope: "all", permissions: { planning: "geen" } }),
       "company",
+      null,
       client,
     );
     expect("error" in result).toBe(true);
   });
 
   it("reissuing replaces the old token — the old one no longer resolves", async () => {
-    const first = await issueFeedToken(access({ id: ids.allUser }), "personal", client);
+    const first = await issueFeedToken(access({ id: ids.linkedUser, personId: ids.alice }), "person", null, client);
     if (!("token" in first)) throw new Error("expected token");
-    const second = await issueFeedToken(access({ id: ids.allUser }), "personal", client);
+    const second = await issueFeedToken(access({ id: ids.linkedUser, personId: ids.alice }), "person", null, client);
     if (!("token" in second)) throw new Error("expected token");
 
     expect(first.token).not.toBe(second.token);
@@ -128,23 +154,46 @@ describe("issueFeedToken (O1.4)", () => {
 });
 
 describe("revokeFeedToken", () => {
-  it("revokes only the caller's own feed, not another user's", async () => {
-    const issued = await issueFeedToken(access({ id: ids.allUser }), "personal", client);
+  it("revokes only the caller's own company feed, not another user's", async () => {
+    const issued = await issueFeedToken(access({ id: ids.allUser, scope: "all" }), "company", null, client);
     if (!("token" in issued)) throw new Error("expected token");
     const feed = await client.calendarFeed.findUniqueOrThrow({ where: { token: issued.token } });
 
-    expect(await revokeFeedToken(ids.ownUser, feed.id, client)).toBe(false);
+    expect(await revokeFeedToken(access({ id: ids.ownUser }), feed.id, client)).toBe(false);
     expect(await resolveFeedToken(issued.token, client)).not.toBeNull();
 
-    expect(await revokeFeedToken(ids.allUser, feed.id, client)).toBe(true);
+    expect(await revokeFeedToken(access({ id: ids.allUser }), feed.id, client)).toBe(true);
     expect(await resolveFeedToken(issued.token, client)).toBeNull();
+  });
+
+  it("refuses to revoke someone else's person feed without personen: wijzigen", async () => {
+    const issued = await issueFeedToken(
+      access({ id: ids.linkedUser, personId: ids.alice }),
+      "person",
+      null,
+      client,
+    );
+    if (!("token" in issued)) throw new Error("expected token");
+    const feed = await client.calendarFeed.findUniqueOrThrow({ where: { token: issued.token } });
+
+    expect(await revokeFeedToken(access({ id: ids.allUser }), feed.id, client)).toBe(false);
+    expect(await resolveFeedToken(issued.token, client)).not.toBeNull();
+
+    expect(
+      await revokeFeedToken(access({ id: ids.linkedUser, personId: ids.alice }), feed.id, client),
+    ).toBe(true);
   });
 });
 
 describe("revocation on role/scope change (O1.3)", () => {
   it("revokeCompanyFeedForUser removes only the company-kind feed", async () => {
-    const company = await issueFeedToken(access({ id: ids.linkedUser }), "company", client);
-    const personal = await issueFeedToken(access({ id: ids.linkedUser }), "personal", client);
+    const company = await issueFeedToken(access({ id: ids.linkedUser }), "company", null, client);
+    const personal = await issueFeedToken(
+      access({ id: ids.linkedUser, personId: ids.alice }),
+      "person",
+      null,
+      client,
+    );
     if (!("token" in company) || !("token" in personal)) throw new Error("expected tokens");
 
     await revokeCompanyFeedForUser(ids.linkedUser, client);
@@ -153,7 +202,7 @@ describe("revocation on role/scope change (O1.3)", () => {
   });
 
   it("revokeCompanyFeedsForRole removes every company feed for users on that role", async () => {
-    const issued = await issueFeedToken(access({ id: ids.allUser, scope: "all" }), "company", client);
+    const issued = await issueFeedToken(access({ id: ids.allUser, scope: "all" }), "company", null, client);
     if (!("token" in issued)) throw new Error("expected token");
 
     await revokeCompanyFeedsForRole(ids.allRole, client);
@@ -161,9 +210,9 @@ describe("revocation on role/scope change (O1.3)", () => {
   });
 });
 
-describe("buildPersonalFeedIcs (O1.2)", () => {
+describe("buildPersonFeedIcs (O1.2)", () => {
   it("renders one VEVENT per booking using the assignment's real times", async () => {
-    const ics = await buildPersonalFeedIcs(ids.linkedUser, new Date("2026-08-14T09:00:00Z"), client);
+    const ics = await buildPersonFeedIcs(ids.alice, new Date("2026-08-14T09:00:00Z"), client);
     expect(ics).toContain(`UID:period-${ids.period}@rentflow.app`);
     expect(ics).toContain("DTSTART:20260901T080000Z");
     expect(ics).toContain("DTEND:20260901T180000Z");
@@ -195,7 +244,7 @@ describe("buildPersonalFeedIcs (O1.2)", () => {
       client,
     );
 
-    const ics = await buildPersonalFeedIcs(ids.linkedUser, new Date("2026-08-14T09:00:00Z"), client);
+    const ics = await buildPersonFeedIcs(ids.alice, new Date("2026-08-14T09:00:00Z"), client);
     expect(ics).toContain("DTSTART:20261005T080000Z");
     expect(ics).toContain("DTSTART:20261007T080000Z");
     const dayUids = ics.match(new RegExp(`UID:period-${period.id}-day-\\d+@rentflow.app`, "g"));
@@ -207,10 +256,12 @@ describe("buildPersonalFeedIcs (O1.2)", () => {
     await client.project.delete({ where: { id: project.id } });
   });
 
-  it("a user with no linked person gets a single explanatory event, not a blank file", async () => {
-    const ics = await buildPersonalFeedIcs(ids.allUser, new Date("2026-08-14T09:00:00Z"), client);
-    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
-    expect(ics).toContain("geen personeelsprofiel gekoppeld");
+  it("a person with no bookings yields a calendar with no events", async () => {
+    const bob = await client.person.create({ data: { name: "Bob", dayPrice: 100 } });
+    const ics = await buildPersonFeedIcs(bob.id, new Date("2026-08-14T09:00:00Z"), client);
+    expect(ics).toContain("BEGIN:VCALENDAR");
+    expect(ics.match(/BEGIN:VEVENT/g)).toBeNull();
+    await client.person.delete({ where: { id: bob.id } });
   });
 });
 

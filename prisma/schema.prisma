@@ -18,17 +18,27 @@ model User {
   person        Person?        @relation(fields: [personId], references: [id])
   roleRel       Role           @relation(fields: [roleId], references: [id])
   calendarFeeds CalendarFeed[]
+  notesCreated  Note[]         @relation("NoteCreatedBy")
+  notesUpdated  Note[]         @relation("NoteUpdatedBy")
 }
 
 model CalendarFeed {
   id        Int      @id @default(autoincrement())
-  userId    Int
-  kind      String // "personal" | "company"
+  // Exactly one of userId/personId is set: a "company" feed belongs to
+  // the user who issued it, a "person" feed to the person whose bookings
+  // it lists — the latter needs no user account at all. Both columns are
+  // nullable so the two unique constraints below can coexist (NULLs are
+  // distinct in Postgres and SQLite alike).
+  userId    Int?
+  personId  Int?
+  kind      String // "person" | "company"
   token     String   @unique
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  person    Person?  @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@unique([userId, kind])
+  @@unique([personId])
 }
 
 model Role {
@@ -65,17 +75,18 @@ model Client {
   projects      Project[]
   functionRates ClientFunctionRate[]
   invoices      Invoice[]
+  clientNotes   Note[]
 }
 
 model Location {
-  id       Int      @id @default(autoincrement())
-  name     String
-  address  String?
+  id         Int       @id @default(autoincrement())
+  name       String
+  address    String?
   postalCode String?
-  city     String?
-  phone    String?
-  notes    String?
-  projects Project[]
+  city       String?
+  phone      String?
+  notes      String?
+  projects   Project[]
 }
 
 model Function {
@@ -143,6 +154,7 @@ model Project {
   materialPrices ProjectMaterialPrice[]
   personPrices   ProjectPersonPrice[]
   invoices       Invoice[]
+  projectNotes   Note[]
 }
 
 model ProjectMaterialPrice {
@@ -168,13 +180,13 @@ model ProjectPersonPrice {
 }
 
 model Period {
-  id             Int                   @id @default(autoincrement())
+  id             Int                      @id @default(autoincrement())
   projectId      Int
   name           String
   startDate      DateTime
   endDate        DateTime
-  updatedAt      DateTime              @default(now()) @updatedAt
-  project        Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  updatedAt      DateTime                 @default(now()) @updatedAt
+  project        Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   materials      PeriodStockItem[]
   people         PeriodPerson[]
   bundleBookings PeriodBundleBooking[]
@@ -182,45 +194,46 @@ model Period {
 }
 
 model Person {
-  id             Int                  @id @default(autoincrement())
-  name           String
-  email          String?
-  phone          String?
-  address        String?
-  postalCode     String?
-  city           String?
-  country        String?
-  dayPrice       Decimal              @default(0) @db.Decimal(10, 2)
-  periods        PeriodPerson[]
-  projectPrices  ProjectPersonPrice[]
-  functions      PersonFunction[]
-  userAccount    User?
-  documents      PersonDocument[]
+  id            Int                  @id @default(autoincrement())
+  name          String
+  email         String?
+  phone         String?
+  address       String?
+  postalCode    String?
+  city          String?
+  country       String?
+  dayPrice      Decimal              @default(0) @db.Decimal(10, 2)
+  periods       PeriodPerson[]
+  projectPrices ProjectPersonPrice[]
+  functions     PersonFunction[]
+  userAccount   User?
+  calendarFeeds CalendarFeed[]
+  documents     PersonDocument[]
 }
 
 model Material {
-  id                  Int                    @id @default(autoincrement())
-  name                String
-  category            String?
-  categoryId          Int?
-  code                String?                @unique
-  notes               String?
-  dayPrice            Decimal                @default(0) @db.Decimal(10, 2)
-  setupCost           Decimal?               @db.Decimal(10, 2)
-  isBundle            Boolean                @default(false)
-  bundlePriceOverride Decimal?               @db.Decimal(10, 2)
-  archived            Boolean                @default(false)
-  costPrice           Decimal?               @db.Decimal(10, 2)
-  listPrice           Decimal?               @db.Decimal(10, 2)
-  revenueBefore       Decimal?               @db.Decimal(10, 2)
-  categoryRel         Category?              @relation(fields: [categoryId], references: [id])
-  stockItems          StockItem[]
-  projectPrices       ProjectMaterialPrice[]
-  components          MaterialComponent[]    @relation("BundleParent")
-  usedInBundles       MaterialComponent[]    @relation("BundleChild")
-  bundleBookings      PeriodBundleBooking[]
+  id                   Int                            @id @default(autoincrement())
+  name                 String
+  category             String?
+  categoryId           Int?
+  code                 String?                        @unique
+  notes                String?
+  dayPrice             Decimal                        @default(0) @db.Decimal(10, 2)
+  setupCost            Decimal?                       @db.Decimal(10, 2)
+  isBundle             Boolean                        @default(false)
+  bundlePriceOverride  Decimal?                       @db.Decimal(10, 2)
+  archived             Boolean                        @default(false)
+  costPrice            Decimal?                       @db.Decimal(10, 2)
+  listPrice            Decimal?                       @db.Decimal(10, 2)
+  revenueBefore        Decimal?                       @db.Decimal(10, 2)
+  categoryRel          Category?                      @relation(fields: [categoryId], references: [id])
+  stockItems           StockItem[]
+  projectPrices        ProjectMaterialPrice[]
+  components           MaterialComponent[]            @relation("BundleParent")
+  usedInBundles        MaterialComponent[]            @relation("BundleChild")
+  bundleBookings       PeriodBundleBooking[]
   bundleBookingWeights PeriodBundleBookingComponent[]
-  shortages           PeriodMaterialShortage[]
+  shortages            PeriodMaterialShortage[]
 }
 
 model StockItem {
@@ -250,7 +263,7 @@ model PersonDocument {
 }
 
 model PeriodStockItem {
-  id               Int                  @id @default(autoincrement())
+  id                Int                  @id @default(autoincrement())
   periodId          Int
   stockItemId       Int
   dayPriceSnapshot  Decimal              @db.Decimal(10, 2)
@@ -260,9 +273,9 @@ model PeriodStockItem {
   bundleBookingId   Int?
   shippedAt         DateTime?
   returnedAt        DateTime?
-  period           Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  stockItem        StockItem            @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
-  bundleBooking    PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
+  period            Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  stockItem         StockItem            @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+  bundleBooking     PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
 
   @@unique([periodId, stockItemId])
 }
@@ -279,13 +292,13 @@ model MaterialComponent {
 }
 
 model PeriodBundleBooking {
-  id               Int             @id @default(autoincrement())
+  id               Int                            @id @default(autoincrement())
   periodId         Int
   materialId       Int
-  quantity         Int             @default(1)
-  dayPriceSnapshot Decimal         @db.Decimal(10, 2)
-  period           Period          @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  material         Material        @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  quantity         Int                            @default(1)
+  dayPriceSnapshot Decimal                        @db.Decimal(10, 2)
+  period           Period                         @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  material         Material                       @relation(fields: [materialId], references: [id], onDelete: Cascade)
   stockItems       PeriodStockItem[]
   components       PeriodBundleBookingComponent[]
   shortages        PeriodMaterialShortage[]
@@ -422,12 +435,12 @@ model Invoice {
   createdAt         DateTime  @default(now())
   finalizedAt       DateTime?
 
-  client            Client        @relation(fields: [clientId], references: [id])
-  project           Project?      @relation(fields: [projectId], references: [id])
-  creditNoteOf      Invoice?      @relation("CreditNoteOf", fields: [creditNoteOfId], references: [id])
-  creditNotes       Invoice[]     @relation("CreditNoteOf")
-  lines             InvoiceLine[]
-  payments          Payment[]
+  client       Client        @relation(fields: [clientId], references: [id])
+  project      Project?      @relation(fields: [projectId], references: [id])
+  creditNoteOf Invoice?      @relation("CreditNoteOf", fields: [creditNoteOfId], references: [id])
+  creditNotes  Invoice[]     @relation("CreditNoteOf")
+  lines        InvoiceLine[]
+  payments     Payment[]
 
   @@index([projectId])
   @@index([clientId])
@@ -436,44 +449,44 @@ model Invoice {
 }
 
 model InvoiceLine {
-  id             Int      @id @default(autoincrement())
-  invoiceId      Int
-  section        String?
-  kind           String
-  description    String
-  quantity       Decimal  @db.Decimal(10, 2)
-  unit           String
-  unitPrice      Decimal  @db.Decimal(10, 2)
-  vatRate        Decimal  @db.Decimal(5, 2)
-  lineTotalExcl  Decimal  @db.Decimal(10, 2)
-  sortOrder      Int
-  sourceKind     String?
-  sourceId       Int?
+  id            Int     @id @default(autoincrement())
+  invoiceId     Int
+  section       String?
+  kind          String
+  description   String
+  quantity      Decimal @db.Decimal(10, 2)
+  unit          String
+  unitPrice     Decimal @db.Decimal(10, 2)
+  vatRate       Decimal @db.Decimal(5, 2)
+  lineTotalExcl Decimal @db.Decimal(10, 2)
+  sortOrder     Int
+  sourceKind    String?
+  sourceId      Int?
 
-  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
 }
 
 model Payment {
-  id          Int       @id @default(autoincrement())
-  invoiceId   Int
-  amount      Decimal   @db.Decimal(10, 2)
-  paidAt      DateTime
-  method      String?
-  reference   String?
-  notes       String?
-  createdAt   DateTime  @default(now())
+  id        Int      @id @default(autoincrement())
+  invoiceId Int
+  amount    Decimal  @db.Decimal(10, 2)
+  paidAt    DateTime
+  method    String?
+  reference String?
+  notes     String?
+  createdAt DateTime @default(now())
 
-  invoice     Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
 }
 
 model InvoiceCounter {
-  series   String
-  year     Int
-  lastSeq  Int     @default(0)
+  series  String
+  year    Int
+  lastSeq Int    @default(0)
 
   @@id([series, year])
 }
@@ -482,14 +495,58 @@ model InvoiceCounter {
 // apply (update or replace); a row only exists for imports that
 // actually landed, never for a preview or a refused replace.
 model ImportAudit {
-  id         Int      @id @default(autoincrement())
-  entity     String
-  mode       String // "update" | "replace"
-  userId     Int
-  fileName   String
-  rowCounts  Json
-  blockedBy  Json?
-  createdAt  DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  entity    String
+  mode      String // "update" | "replace"
+  userId    Int
+  fileName  String
+  rowCounts Json
+  blockedBy Json?
+  createdAt DateTime @default(now())
 
   @@index([entity, createdAt])
+}
+
+// Notes — freeform records of a call/meeting with a customer, optionally
+// filed under a project or client (or neither, until someone assigns it
+// from the general notes view). createdById/updatedById are nullable and
+// SetNull on user deletion (users are hard-deletable, see
+// api/users/[id]/route.ts) — createdByName/updatedByName snapshot the
+// name at write time so attribution survives a deleted account.
+model Note {
+  id            Int      @id @default(autoincrement())
+  title         String
+  body          String
+  noteDate      DateTime @default(now())
+  projectId     Int?
+  clientId      Int?
+  createdById   Int?
+  createdByName String
+  updatedById   Int?
+  updatedByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  project   Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  client    Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy User?       @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?       @relation("NoteUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  images    NoteImage[]
+
+  @@index([projectId])
+  @@index([clientId])
+  @@index([noteDate])
+}
+
+model NoteImage {
+  id        Int      @id @default(autoincrement())
+  noteId    Int
+  filename  String
+  mimeType  String
+  sizeBytes Int
+  data      Bytes
+  createdAt DateTime @default(now())
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
 }
