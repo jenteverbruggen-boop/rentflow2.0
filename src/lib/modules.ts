@@ -22,6 +22,7 @@ export const MODULES: { key: ModuleKey; label: string }[] = [
   { key: "cijfers", label: "Cijfers" },
   { key: "gebruikers", label: "Gebruikers" },
   { key: "instellingen", label: "Instellingen" },
+  { key: "notities", label: "Notities" },
 ];
 
 export const moduleKeySchema = z.enum([
@@ -35,6 +36,7 @@ export const moduleKeySchema = z.enum([
   "cijfers",
   "gebruikers",
   "instellingen",
+  "notities",
 ]);
 
 export const accessLevelSchema = z.enum([

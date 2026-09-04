@@ -13,7 +13,7 @@ describe("auth/me's permissions map (N4.1)", () => {
     for (const m of MODULES) {
       full[m.key] = partial[m.key] ?? "geen";
     }
-    expect(Object.keys(full)).toHaveLength(10);
+    expect(Object.keys(full)).toHaveLength(11);
     expect(full.projecten).toBe("wijzigen");
     expect(full.kosten_facturen).toBe("geen");
   });

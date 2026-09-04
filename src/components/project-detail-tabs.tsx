@@ -4,9 +4,10 @@ import { ProjectPeriodsTab } from "@/components/project-periods-tab";
 import { ProjectPersonsTab } from "@/components/project-persons-tab";
 import { ProjectMaterialsTab } from "@/components/project-materials-tab";
 import { ProjectCostsTab } from "@/components/project-costs-tab";
+import { ProjectNotesTab } from "@/components/project-notes-tab";
 import type { Project } from "@/types";
 
-export type TabKey = "overview" | "periods" | "persons" | "materials" | "costs";
+export type TabKey = "overview" | "periods" | "persons" | "materials" | "costs" | "notes";
 
 interface Props {
   project: Project;
@@ -36,6 +37,7 @@ export function ProjectDetailTabs({
           <TabsTrigger value="persons">Personen</TabsTrigger>
           <TabsTrigger value="materials">Materialen</TabsTrigger>
           <TabsTrigger value="costs">Kosten</TabsTrigger>
+          <TabsTrigger value="notes">Notities</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="overview" className="mt-4">
@@ -64,6 +66,9 @@ export function ProjectDetailTabs({
       </TabsContent>
       <TabsContent value="costs" className="mt-4">
         <ProjectCostsTab project={project} />
+      </TabsContent>
+      <TabsContent value="notes" className="mt-4">
+        <ProjectNotesTab project={project} />
       </TabsContent>
     </Tabs>
   );

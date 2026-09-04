@@ -15,7 +15,8 @@ export type ModuleKey =
   | "kosten_facturen"
   | "cijfers"
   | "gebruikers"
-  | "instellingen";
+  | "instellingen"
+  | "notities";
 
 export type AccessLevel = "geen" | "lezen" | "wijzigen" | "verwijderen";
 
@@ -366,6 +367,33 @@ export interface Project {
   periods: Period[];
   materialPrices: ProjectMaterialPrice[];
   personPrices: ProjectPersonPrice[];
+}
+
+export interface NoteImage {
+  id: number;
+  noteId: number;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export interface Note {
+  id: number;
+  title: string;
+  body: string;
+  noteDate: string;
+  projectId: number | null;
+  clientId: number | null;
+  createdById: number | null;
+  createdByName: string;
+  updatedById: number | null;
+  updatedByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  project?: { id: number; name: string } | null;
+  client?: { id: number; name: string } | null;
+  images: NoteImage[];
 }
 
 export interface MaterialAvailability {

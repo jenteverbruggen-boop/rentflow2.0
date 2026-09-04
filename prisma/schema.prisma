@@ -18,6 +18,8 @@ model User {
   person        Person?        @relation(fields: [personId], references: [id])
   roleRel       Role           @relation(fields: [roleId], references: [id])
   calendarFeeds CalendarFeed[]
+  notesCreated  Note[]         @relation("NoteCreatedBy")
+  notesUpdated  Note[]         @relation("NoteUpdatedBy")
 }
 
 model CalendarFeed {
@@ -65,6 +67,7 @@ model Client {
   projects      Project[]
   functionRates ClientFunctionRate[]
   invoices      Invoice[]
+  clientNotes   Note[]
 }
 
 model Location {
@@ -143,6 +146,7 @@ model Project {
   materialPrices ProjectMaterialPrice[]
   personPrices   ProjectPersonPrice[]
   invoices       Invoice[]
+  projectNotes   Note[]
 }
 
 model ProjectMaterialPrice {
@@ -492,4 +496,48 @@ model ImportAudit {
   createdAt  DateTime @default(now())
 
   @@index([entity, createdAt])
+}
+
+// Notes — freeform records of a call/meeting with a customer, optionally
+// filed under a project or client (or neither, until someone assigns it
+// from the general notes view). createdById/updatedById are nullable and
+// SetNull on user deletion (users are hard-deletable, see
+// api/users/[id]/route.ts) — createdByName/updatedByName snapshot the
+// name at write time so attribution survives a deleted account.
+model Note {
+  id            Int      @id @default(autoincrement())
+  title         String
+  body          String
+  noteDate      DateTime @default(now())
+  projectId     Int?
+  clientId      Int?
+  createdById   Int?
+  createdByName String
+  updatedById   Int?
+  updatedByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  project   Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  client    Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy User?       @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?       @relation("NoteUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  images    NoteImage[]
+
+  @@index([projectId])
+  @@index([clientId])
+  @@index([noteDate])
+}
+
+model NoteImage {
+  id        Int      @id @default(autoincrement())
+  noteId    Int
+  filename  String
+  mimeType  String
+  sizeBytes Int
+  data      Bytes
+  createdAt DateTime @default(now())
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
 }

@@ -81,13 +81,27 @@ export async function resolveCurrentAccess(): Promise<ResolvedAccess> {
  * this module — a "Freelancer" role accidentally granted `verwijderen`
  * still gets refused, because this check runs before (and vetoes) the
  * matrix check below (own-data-scoping-design.md:74-80).
+ *
+ * `opts.allowOwnWrite` is the one deliberate, opt-in exception to that
+ * veto — a second one after the person-documents own-read exception in
+ * own-data-scoping-design.md. Today only the notities create/update/
+ * image routes pass it, so a freelancer can log a note against a
+ * project they're actually booked on. Passing it does NOT itself grant
+ * anything: the matrix check below still applies (a role with
+ * `notities: geen` is still refused), and it is still the calling
+ * route's job to scope *which* records the caller may touch (which
+ * project, whose note) — this flag only lifts the blanket "own is
+ * read-only" veto for that one call, nothing else.
  */
 export async function requireModule(
   module: ModuleKey,
   level: AccessLevel,
+  opts?: { allowOwnWrite?: boolean },
 ): Promise<ResolvedAccess> {
   const access = await resolveCurrentAccess();
-  if (access.scope === "own" && level !== "lezen") throw new Error("Forbidden");
+  if (access.scope === "own" && level !== "lezen" && !opts?.allowOwnWrite) {
+    throw new Error("Forbidden");
+  }
   const held = access.permissions[module] ?? "geen";
   if (!satisfies(held, level)) throw new Error("Forbidden");
   return access;

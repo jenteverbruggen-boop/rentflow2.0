@@ -142,6 +142,47 @@ describe("requireModule", () => {
     );
     await expect(requireModule("projecten", "verwijderen")).rejects.toThrow();
   });
+
+  // notities own-write exception — opt-in only, and still gated by the
+  // matrix underneath (own-data-scoping-design.md's veto is lifted, not
+  // removed).
+  it("scope: own with allowOwnWrite passes wijzigen when the matrix grants it", async () => {
+    mockAuthenticatedAs(1);
+    mockPrisma.user.findUnique.mockResolvedValue(
+      roleRow("own", { notities: "wijzigen" }),
+    );
+    await expect(
+      requireModule("notities", "wijzigen", { allowOwnWrite: true }),
+    ).resolves.toBeTruthy();
+  });
+
+  it("scope: own with allowOwnWrite still blocks wijzigen when the matrix says geen", async () => {
+    mockAuthenticatedAs(1);
+    mockPrisma.user.findUnique.mockResolvedValue(roleRow("own", {}));
+    await expect(
+      requireModule("notities", "wijzigen", { allowOwnWrite: true }),
+    ).rejects.toThrow();
+  });
+
+  it("scope: own with allowOwnWrite still blocks verwijderen (only wijzigen-level calls opt in)", async () => {
+    mockAuthenticatedAs(1);
+    mockPrisma.user.findUnique.mockResolvedValue(
+      roleRow("own", { notities: "verwijderen" }),
+    );
+    await expect(
+      requireModule("notities", "verwijderen"),
+    ).rejects.toThrow();
+  });
+
+  it("allowOwnWrite has no effect on scope: all — matrix rules alone decide", async () => {
+    mockAuthenticatedAs(1);
+    mockPrisma.user.findUnique.mockResolvedValue(
+      roleRow("all", { notities: "geen" }),
+    );
+    await expect(
+      requireModule("notities", "wijzigen", { allowOwnWrite: true }),
+    ).rejects.toThrow();
+  });
 });
 
 describe("permission resolution end to end (N1.6)", () => {
@@ -154,6 +195,7 @@ describe("permission resolution end to end (N1.6)", () => {
     const ALL_MODULES = [
       "projecten", "planning", "personen", "materialen", "klanten",
       "locaties", "kosten_facturen", "cijfers", "gebruikers", "instellingen",
+      "notities",
     ];
     const perms = Object.fromEntries(ALL_MODULES.map((m) => [m, "verwijderen"]));
     mockPrisma.user.findUnique.mockResolvedValue(roleRow("all", perms));
