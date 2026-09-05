@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/date-input";
 import { NoteLinkPicker } from "@/components/note-link-picker";
+import { NoteImages } from "@/components/note-images";
 import type { Note } from "@/types";
 import type { NoteFormValues } from "@/hooks/use-notes";
 
@@ -70,7 +71,7 @@ export function NoteFormDialog({ open, onOpenChange, defaultValues, initialProje
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg" aria-describedby={undefined}>
+      <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{defaultValues ? "Notitie bewerken" : "Nieuwe notitie"}</DialogTitle>
         </DialogHeader>
@@ -117,6 +118,12 @@ export function NoteFormDialog({ open, onOpenChange, defaultValues, initialProje
                 onChange={({ projectId: p, clientId: c }) => { setProjectId(p); setClientId(c); }}
               />
             </div>
+            {defaultValues && (
+              <div className="space-y-2">
+                <Label>Foto&apos;s</Label>
+                <NoteImages noteId={defaultValues.id} editable />
+              </div>
+            )}
             <div className="flex gap-3 pt-2">
               <Button type="submit" className="flex-1" disabled={isPending}>
                 {isPending ? "Bezig..." : defaultValues ? "Opslaan" : "Aanmaken"}

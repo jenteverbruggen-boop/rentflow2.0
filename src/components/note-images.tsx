@@ -3,22 +3,29 @@
 import { useRef, useState } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useNote } from "@/hooks/use-notes";
 import { useNoteImageMutations } from "@/hooks/use-note-images";
 import type { NoteImage } from "@/types";
 
 interface Props {
   noteId: number;
-  images: NoteImage[];
   editable: boolean;
 }
 
 const MAX_IMAGES_PER_NOTE = 10;
 
-export function NoteImages({ noteId, images, editable }: Props) {
+/** Full upload/delete photo manager — lives in the edit dialog only.
+ * Fetches its own live copy of the note (rather than taking `images` as
+ * a prop) so an upload/delete shows up immediately: the dialog's
+ * `defaultValues` is a snapshot taken when "Bewerken" was clicked and
+ * doesn't itself update as mutations invalidate the notes query. */
+export function NoteImages({ noteId, editable }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [deleting, setDeleting] = useState<NoteImage | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { data: note } = useNote(noteId);
   const { upload, remove } = useNoteImageMutations(noteId);
+  const images = note?.images ?? [];
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -35,6 +42,7 @@ export function NoteImages({ noteId, images, editable }: Props) {
           {images.map((img) => (
             <div key={img.id} className="relative group">
               <a href={`/api/note-images/${img.id}`} target="_blank" rel="noreferrer">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={`/api/note-images/${img.id}`}
                   alt={img.filename}
