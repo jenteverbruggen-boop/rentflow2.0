@@ -23,6 +23,10 @@ prisma/seed-data/*.csv
 *.log
 npm-debug.log*
 
+# TypeScript incremental build cache — a local artifact that differs on
+# every tsc run/machine, never meaningful to diff or commit
+tsconfig.tsbuildinfo
+
 # OS artefacts
 .DS_Store
 Thumbs.db
