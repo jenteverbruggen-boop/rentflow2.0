@@ -27,12 +27,19 @@ export function NoteImages({ noteId, editable }: Props) {
   const { upload, remove } = useNoteImageMutations(noteId);
   const images = note?.images ?? [];
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!file) return;
+    if (files.length === 0) return;
     setError(null);
-    upload.mutate(file, { onError: (err) => setError(err.message) });
+
+    const remaining = MAX_IMAGES_PER_NOTE - images.length;
+    const toUpload = files.slice(0, remaining);
+    if (files.length > toUpload.length) {
+      setError(`Maximaal ${MAX_IMAGES_PER_NOTE} foto's per notitie — ${files.length - toUpload.length} niet geselecteerd`);
+    }
+    if (toUpload.length === 0) return;
+    upload.mutate(toUpload, { onError: (err) => setError(err.message) });
   }
 
   return (
@@ -66,12 +73,12 @@ export function NoteImages({ noteId, editable }: Props) {
       {editable && images.length < MAX_IMAGES_PER_NOTE && (
         <>
           <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={upload.isPending}>
-            {upload.isPending ? "Uploaden..." : "📷 Foto toevoegen"}
+            {upload.isPending ? "Uploaden..." : "📷 Foto's toevoegen"}
           </Button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
         </>
       )}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-xs text-destructive whitespace-pre-line">{error}</p>}
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => { if (!o) setDeleting(null); }}>
         <AlertDialogContent>
