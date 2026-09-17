@@ -72,6 +72,14 @@ export function PermissionMatrix() {
                 {roles.map((r) => (
                   <th key={r.id} className="py-2 pr-3 text-left text-xs font-semibold uppercase text-muted-foreground">
                     {r.label}
+                    {r.scope === "own" && (
+                      <span
+                        className="ml-1 normal-case font-normal text-muted-foreground/70"
+                        title="Deze rol is beperkt tot eigen gegevens — wijzigen/verwijderen worden altijd geweigerd."
+                      >
+                        (eigen)
+                      </span>
+                    )}
                   </th>
                 ))}
               </tr>

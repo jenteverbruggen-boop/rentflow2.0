@@ -47,9 +47,21 @@ export async function PUT(req: NextRequest) {
     // means: which roles hold this permission, then are any actual users
     // assigned to one of those roles — not merely "does a RolePermission
     // row exist" (an unassigned throwaway role holding the permission
-    // must not count as coverage).
-    const rolesWithInstellingenDelete = rolesHolding(permissions, "instellingen", "verwijderen");
-    const rolesWithGebruikersDelete = rolesHolding(permissions, "gebruikers", "verwijderen");
+    // must not count as coverage). Scope-aware (B2b): a scope: "own" role
+    // is excluded from coverage for anything above "lezen" — see
+    // rolesHolding's doc comment for why.
+    const roleScopes = await prisma.role.findMany({ select: { id: true, scope: true } });
+    const roles = roleScopes.map((r) => ({
+      id: r.id,
+      scope: r.scope === "own" ? ("own" as const) : ("all" as const),
+    }));
+    const rolesWithInstellingenDelete = rolesHolding(
+      permissions,
+      roles,
+      "instellingen",
+      "verwijderen",
+    );
+    const rolesWithGebruikersDelete = rolesHolding(permissions, roles, "gebruikers", "verwijderen");
 
     const [instellingenCoverage, gebruikersCoverage] = await Promise.all([
       prisma.user.count({ where: { roleId: { in: rolesWithInstellingenDelete } } }),
