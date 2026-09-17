@@ -11,6 +11,7 @@ import {
 import { redactMoney } from "@/lib/redact";
 import { findRejectedMoneyWrite, moneyFieldsToIgnore } from "@/lib/money-write-guard";
 import { materialMoneyData, serializeMaterialMoney } from "@/lib/material-money-fields";
+import { resolveLegacyCategoryName } from "@/lib/material-category";
 
 const MATERIAL_MONEY_FIELDS = [
   "dayPrice",
@@ -83,12 +84,23 @@ export async function PUT(req: NextRequest, { params }: Params) {
     // the key entirely so Prisma leaves that column untouched
     // (moneyFieldsToIgnore's doc comment in money-write-guard.ts).
     const ignore = moneyFieldsToIgnore(access, MATERIAL_MONEY_FIELDS);
+    // B3 — once categoryId is set, the legacy `category` string must
+    // stop drifting from it (display code reads categoryRel?.name ?? category
+    // everywhere, so a stale string here is invisible but wrong at rest).
+    let resolvedCategoryName: string | null | undefined;
+    if (categoryId != null) {
+      const categoryRow = await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { name: true },
+      });
+      resolvedCategoryName = categoryRow?.name;
+    }
     try {
       const material = await prisma.material.update({
         where: { id: parseInt(id) },
         data: {
           name,
-          category,
+          category: resolveLegacyCategoryName(categoryId, category, resolvedCategoryName),
           categoryId: categoryId ?? null,
           code: code ?? null,
           notes,
