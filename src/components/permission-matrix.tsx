@@ -64,13 +64,21 @@ export function PermissionMatrix() {
         <CardTitle className="text-base">Rechtenmatrix</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Both the header row and the Module column stay pinned while
+            scrolling (B2c) — live prod already has 5 roles, wide enough
+            that the module names would otherwise scroll out of view. */}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[480px]">
             <thead>
               <tr className="border-b">
-                <th className="py-2 pr-4 text-left text-xs font-semibold uppercase text-muted-foreground">Module</th>
+                <th className="sticky left-0 top-0 z-30 border-r bg-card py-2 pr-4 text-left text-xs font-semibold uppercase text-muted-foreground">
+                  Module
+                </th>
                 {roles.map((r) => (
-                  <th key={r.id} className="py-2 pr-3 text-left text-xs font-semibold uppercase text-muted-foreground">
+                  <th
+                    key={r.id}
+                    className="sticky top-0 z-20 bg-card py-2 pr-3 text-left text-xs font-semibold uppercase text-muted-foreground"
+                  >
                     {r.label}
                     {r.scope === "own" && (
                       <span

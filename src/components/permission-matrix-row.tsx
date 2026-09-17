@@ -41,7 +41,9 @@ export function PermissionMatrixRow({
 }: Props) {
   return (
     <tr className="border-b last:border-0">
-      <td className="py-2 pr-4 text-sm font-medium whitespace-nowrap">{moduleLabel}</td>
+      <td className="sticky left-0 z-10 border-r bg-card py-2 pr-4 text-sm font-medium whitespace-nowrap">
+        {moduleLabel}
+      </td>
       {roles.map((r) => {
         const isOwnScope = r.scope === "own";
         return (
