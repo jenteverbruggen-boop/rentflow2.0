@@ -6,6 +6,23 @@ that was re-verified by hand.
 
 Ordered by (impact × confidence) ÷ effort. B3 and B5 are the quick wins.
 
+> **STATUS 2026-09-17 — all items implemented and on `main`.** B1, B2a, B2b,
+> B2c, B2d, B3, B4 and B5 are done; `tsc --noEmit`, `eslint`, 972 tests and
+> `next build` all pass. Two caveats survive implementation:
+> 1. **B4's header-alias table is unverified** — the customer's real client
+>    export still has not been supplied, so every Dutch header spelling in
+>    `src/lib/import/rentman-clients-locale.ts` is an educated guess modelled
+>    on the equipment export. Extending it is a one-line change. The other
+>    three B4 defects (delimiter, encoding, match key) are confirmed fixes.
+> 2. **B1 has a residual edge** — `window.print()` now waits for the settings
+>    *data*, but not for the logo `<img>` bytes. A logo-less first print is
+>    still possible and would need an `onload` gate.
+>
+> Also note B2a's regression test landed at the hook level
+> (`src/hooks/use-matrix-state.test.ts`), not as a component render test:
+> Radix `<Select>` hangs indefinitely under jsdom. `jsdom` and
+> `@testing-library/react` were added as devDependencies.
+
 ---
 
 ## B1 — "Facturen moet je dubbel duwen op afdrukken"
