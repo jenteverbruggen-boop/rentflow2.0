@@ -15,7 +15,16 @@ async function fetchPermissions(): Promise<PermissionCell[]> {
 
 export function usePermissions() {
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: ["permissions"], queryFn: fetchPermissions });
+  // refetchOnWindowFocus is disabled for THIS query only (not the global
+  // default in query-provider.tsx, which other screens rely on) — a
+  // matrix edit session routinely outlives the 30s staleTime, and an
+  // alt-tab-triggered background refetch must not race unsaved edits
+  // back onto the screen (B2a).
+  const query = useQuery({
+    queryKey: ["permissions"],
+    queryFn: fetchPermissions,
+    refetchOnWindowFocus: false,
+  });
 
   const save = useMutation({
     mutationFn: (permissions: PermissionCell[]) =>
@@ -28,9 +37,13 @@ export function usePermissions() {
         if (!r.ok) throw new Error((data as { error: string }).error ?? "Opslaan mislukt");
         return data;
       }),
-    onSuccess: () => {
-      // Makes the change visible immediately, no refresh needed — and
-      // /api/auth/me's own permissions map depends on the same table.
+    onSuccess: (_data, permissions) => {
+      // Seed the cache with exactly what was saved so the UI reflects it
+      // instantly (no flicker back to the pre-save value while the
+      // revalidating refetch below is in flight) — /api/auth/me's own
+      // permissions map depends on the same table, so it still needs a
+      // real refetch.
+      queryClient.setQueryData(["permissions"], permissions);
       queryClient.invalidateQueries({ queryKey: ["permissions"] });
       queryClient.invalidateQueries({ queryKey: ["auth-me"] });
     },

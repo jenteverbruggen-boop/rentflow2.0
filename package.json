@@ -61,6 +61,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.1",
+    "@testing-library/react": "^16.3.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsbarcode": "^3.11.4",
     "@types/jsonwebtoken": "^9.0.9",
@@ -72,6 +73,7 @@
     "@vitest/ui": "^4.1.10",
     "eslint": "^9",
     "eslint-config-next": "^16.2.9",
+    "jsdom": "^25.0.1",
     "tailwindcss": "^4.3.1",
     "tsx": "^4.22.4",
     "typescript": "^5",

@@ -1,57 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MODULES, satisfies } from "@/lib/modules";
 import { useRoles } from "@/hooks/use-roles";
-import { usePermissions, type PermissionCell } from "@/hooks/use-permissions";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useAuthMe } from "@/hooks/use-auth-me";
+import { useMatrixState } from "@/hooks/use-matrix-state";
 import { PermissionMatrixRow } from "@/components/permission-matrix-row";
 import { PermissionMatrixWarnDialog } from "@/components/permission-matrix-warn-dialog";
-import type { AccessLevel, ModuleKey } from "@/types";
-
-type MatrixState = Record<string, AccessLevel>;
-
-function cellKey(roleId: number, module: string) {
-  return `${roleId}:${module}`;
-}
 
 /** Modules as rows, roles as columns, a four-level select per cell
  * (N3.2). Self-lockout checks and the atomic replace live server-side
  * (PUT /api/permissions); this component's own job is the "would this
- * remove MY access" warning, which needs the current user's own role. */
+ * remove MY access" warning, which needs the current user's own role.
+ *
+ * Local edits and server data are kept as two separate maps via
+ * useMatrixState (B2a) — see that hook for why. */
 export function PermissionMatrix() {
   const { query: rolesQuery } = useRoles();
   const roles = rolesQuery.data ?? [];
   const { query: permsQuery, save } = usePermissions();
   const { data: me } = useAuthMe();
+  const { getAccess, setAccess, toCells, isDirty, clearDirty } = useMatrixState(permsQuery.data);
 
-  const [matrix, setMatrix] = useState<MatrixState>({});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!permsQuery.data) return;
-    const next: MatrixState = {};
-    for (const p of permsQuery.data) next[cellKey(p.roleId, p.module)] = p.access;
-    setMatrix(next);
-  }, [permsQuery.data]);
-
-  function getAccess(roleId: number, module: ModuleKey): AccessLevel {
-    return matrix[cellKey(roleId, module)] ?? "geen";
-  }
-  function setAccess(roleId: number, module: ModuleKey, access: AccessLevel) {
-    setMatrix((prev) => ({ ...prev, [cellKey(roleId, module)]: access }));
-  }
-
-  function toCells(): PermissionCell[] {
-    const cells: PermissionCell[] = [];
-    for (const r of roles) {
-      for (const m of MODULES) cells.push({ roleId: r.id, module: m.key, access: getAccess(r.id, m.key) });
-    }
-    return cells;
-  }
 
   // "Exceeds" the recommendation isn't relevant here (that's N3.3) — this
   // is a plain regression check: did the CURRENT user's own role lose
@@ -70,7 +45,10 @@ export function PermissionMatrix() {
 
   function doSave() {
     setError("");
-    save.mutate(toCells(), { onError: (err) => setError((err as Error).message) });
+    save.mutate(toCells(roles), {
+      onSuccess: () => clearDirty(),
+      onError: (err) => setError((err as Error).message),
+    });
   }
 
   function handleSaveClick() {
@@ -113,7 +91,10 @@ export function PermissionMatrix() {
           </table>
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
-        <div className="flex justify-end">
+        <div className="flex items-center justify-end gap-3">
+          {isDirty && (
+            <output className="text-xs text-muted-foreground">Niet-opgeslagen wijzigingen</output>
+          )}
           <Button onClick={handleSaveClick} disabled={save.isPending}>
             {save.isPending ? "Bezig…" : "Matrix opslaan"}
           </Button>
