@@ -40,7 +40,7 @@ export default function InvoiceDetailPage() {
           <p className="text-sm text-muted-foreground truncate">{invoice.clientName}</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Link href={`/facturen/${invoice.id}/print`}>
+          <Link href={`/facturen/${invoice.id}/print?autoprint=1`}>
             <Button variant="outline">Afdrukken</Button>
           </Link>
           {isConcept && (

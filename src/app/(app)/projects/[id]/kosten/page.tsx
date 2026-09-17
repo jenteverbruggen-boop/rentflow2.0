@@ -8,6 +8,7 @@ import { PrintLayout } from "@/components/print/print-layout";
 import { DocumentHeader } from "@/components/print/document-header";
 import { CostSummary } from "@/components/cost-summary";
 import { KostenPeriodTable } from "@/components/kosten-period-table";
+import { useSettings } from "@/hooks/use-settings";
 import type { Project } from "@/types";
 
 export default function KostenPrintPage() {
@@ -17,8 +18,9 @@ export default function KostenPrintPage() {
     queryKey: ["project", id],
     queryFn: () => fetch(`/api/projects/${id}`).then((r) => r.json()),
   });
+  const { data: settings, isLoading: settingsLoading } = useSettings();
 
-  if (isLoading) return <p className="p-6">Laden...</p>;
+  if (isLoading || settingsLoading) return <p className="p-6">Laden...</p>;
   if (!project) return <p className="p-6">Project niet gevonden</p>;
 
   const clientName = project.clientRel?.name ?? project.client;
@@ -40,6 +42,7 @@ export default function KostenPrintPage() {
     <PrintLayout>
       <div className="p-6 max-w-4xl mx-auto space-y-6 text-sm">
         <DocumentHeader
+          company={settings}
           meta={{
             opdrachtgever: clientName,
             opdrachtgeverAdres: clientAddr,

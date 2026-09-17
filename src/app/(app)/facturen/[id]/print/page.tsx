@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -10,14 +10,8 @@ import { DocumentHeader } from "@/components/print/document-header";
 import { InvoiceLinesSection } from "@/components/invoice-lines-section";
 import { InvoiceSummary } from "@/components/invoice-summary";
 import { formatEUR } from "@/lib/pricing";
+import { useSettings } from "@/hooks/use-settings";
 import type { Invoice } from "@/types";
-
-interface InvoiceSettings {
-  invoicePaymentTermDays?: string;
-  invoiceBankAccountHolder?: string;
-  invoiceFooter?: string;
-  companyIban?: string;
-}
 
 function fmtDate(d: string) {
   return format(new Date(d), "dd-MM-yyyy", { locale: nl });
@@ -29,27 +23,43 @@ function fmtDate(d: string) {
  * shape as project-costs-tab.tsx's PRINT_CSS (design doc §8.5) — J3
  * later folds all four into one shared stylesheet, deliberately not
  * blocking this item on that one.
+ *
+ * B1 — settings now come from the shared useSettings() query (one
+ * cached call instead of two independent ones), and both queries gate
+ * `isLoading`/`ready` so the print button (and ?autoprint=1) can't fire
+ * against a half-loaded document.
  */
 export default function InvoicePrintPage() {
   const { id } = useParams<{ id: string }>();
-  const [settings, setSettings] = useState<InvoiceSettings>({});
+  const searchParams = useSearchParams();
+  const autoprint = searchParams.get("autoprint") === "1";
+  const printedRef = useRef(false);
 
-  useEffect(() => {
-    fetch("/api/settings").then((r) => r.json()).then(setSettings).catch(() => {});
-  }, []);
+  const { data: settings = {}, isLoading: settingsLoading } = useSettings();
 
-  const { data: invoice, isLoading } = useQuery<Invoice>({
+  const { data: invoice, isLoading: invoiceLoading } = useQuery<Invoice>({
     queryKey: ["invoice", Number(id)],
     queryFn: () => fetch(`/api/invoices/${id}`).then((r) => r.json()),
   });
+
+  const isLoading = invoiceLoading || settingsLoading;
+  const ready = !isLoading && !!invoice;
+
+  useEffect(() => {
+    if (autoprint && ready && !printedRef.current) {
+      printedRef.current = true;
+      window.print();
+    }
+  }, [autoprint, ready]);
 
   if (isLoading) return <p className="p-6">Laden...</p>;
   if (!invoice) return <p className="p-6">Factuur niet gevonden</p>;
 
   return (
-    <PrintLayout>
+    <PrintLayout ready={ready}>
       <div className="p-6 max-w-4xl mx-auto space-y-6 text-sm">
         <DocumentHeader
+          company={settings}
           meta={{
             opdrachtgever: invoice.clientName,
             opdrachtgeverAdres:

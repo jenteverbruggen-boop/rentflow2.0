@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 
 interface CompanyInfo {
@@ -14,6 +14,11 @@ interface CompanyInfo {
 }
 
 interface DocumentHeaderProps {
+  // B1 — the caller now owns the settings fetch (one shared useSettings()
+  // query instead of one per document instance) and passes the resolved
+  // company block down. Optional/defaulted to {} so a caller that hasn't
+  // been updated yet still compiles — it just renders no company block.
+  company?: CompanyInfo;
   meta: {
     opdrachtgever?: string | null;
     // J2a — the client billing block: address + VAT, not just the name.
@@ -33,16 +38,8 @@ interface DocumentHeaderProps {
   };
 }
 
-export function DocumentHeader({ meta }: DocumentHeaderProps) {
-  const [company, setCompany] = useState<CompanyInfo>({});
+export function DocumentHeader({ meta, company = {} }: DocumentHeaderProps) {
   const [logoError, setLogoError] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then(setCompany)
-      .catch(() => {});
-  }, []);
 
   return (
     <div className="flex justify-between items-start mb-6 gap-4">

@@ -5,13 +5,19 @@ import { Button } from "@/components/ui/button";
 
 interface PrintLayoutProps {
   children: React.ReactNode;
+  /** B1 — gates the print button so it can't fire before the document's
+   * data (and the shared settings query) has actually resolved.
+   * Optional/defaulted so existing callers keep working unchanged. */
+  ready?: boolean;
 }
 
-export function PrintLayout({ children }: PrintLayoutProps) {
+export function PrintLayout({ children, ready = true }: PrintLayoutProps) {
   return (
     <div className="print-root">
       <div className="no-print flex gap-3 mb-6 p-4 border-b border-border">
-        <Button onClick={() => window.print()}>Afdrukken</Button>
+        <Button onClick={() => window.print()} disabled={!ready}>
+          Afdrukken
+        </Button>
         <Button variant="outline" onClick={() => window.history.back()}>
           ← Terug
         </Button>
