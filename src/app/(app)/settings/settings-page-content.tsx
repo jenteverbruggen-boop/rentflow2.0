@@ -16,11 +16,13 @@ export function SettingsPageContent() {
       <h2 className="text-2xl font-bold">Instellingen</h2>
       <SettingsForm />
       <LogoUpload />
-      {/* O1.4 — lives on the Settings page per the brief's own
-          "feat(settings)" framing; note this means it inherits the
-          same instellingen: lezen gate as the rest of this page,
-          even though feed management is conceptually self-service
-          for any planning-capable role, not settings-admin-only. */}
+      {/* O1.4/B2d — also kept here for convenience so an admin sees feed
+          management alongside the rest of Settings. This is no longer the
+          only way in: /agenda-feeds (src/app/(app)/agenda-feeds/page.tsx)
+          gates on `planning: lezen` directly, so a planning-capable role
+          with no `instellingen` access (this page's gate) can still reach
+          its own "Mijn diensten" feed there. Same component, no
+          duplicated logic. */}
       <CalendarFeedLinks />
       <RolesManager />
       <OpenPermissionsBanner />

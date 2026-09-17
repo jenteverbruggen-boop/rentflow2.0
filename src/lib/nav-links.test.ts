@@ -26,6 +26,15 @@ describe("visibleNavLinks (N4.2)", () => {
     expect(links).toHaveLength(NAV_LINKS.length);
   });
 
+  it("/agenda-feeds is gated on planning, not instellingen (B2d)", () => {
+    const planningOnly = visibleNavLinks({ planning: "lezen", instellingen: "geen" });
+    expect(planningOnly.some((l) => l.href === "/agenda-feeds")).toBe(true);
+    expect(planningOnly.some((l) => l.href === "/settings")).toBe(false);
+
+    const noPlanning = visibleNavLinks({ planning: "geen", instellingen: "wijzigen" });
+    expect(noPlanning.some((l) => l.href === "/agenda-feeds")).toBe(false);
+  });
+
   it("includes /clients and /locations — the content gap mobile-sidebar.tsx had before both sidebars shared this list", () => {
     const full: Record<string, string> = {};
     for (const l of NAV_LINKS) if (l.module) full[l.module] = "lezen";
