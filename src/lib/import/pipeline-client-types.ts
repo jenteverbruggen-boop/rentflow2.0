@@ -18,6 +18,8 @@ export interface ImportRowPreview {
   summary: string;
   changes?: ImportRowChange[];
   reason?: string;
+  /** B4 (round 3 PO feedback) — see pipeline-types.ts's own doc comment. */
+  matchField?: string;
 }
 
 export interface BlockingReference {

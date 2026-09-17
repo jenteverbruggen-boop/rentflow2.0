@@ -25,6 +25,13 @@ export interface ImportRowPreview {
   summary: string;
   changes?: ImportRowChange[];
   reason?: string;
+  /** B4 (round 3 PO feedback) — which field this row actually matched
+   * an existing record on (e.g. "vatNumber", "email", "name" for
+   * clients' fallback chain), so the user can see *why* a row is an
+   * "updated" rather than a "new" without opening the file. Adapters
+   * that only ever match on one field (materials' code, etc.) leave
+   * this undefined — it exists for the fallback-chain case. */
+  matchField?: string;
 }
 
 export interface BlockingReference {
@@ -81,7 +88,7 @@ export interface EntityAdapter<T> {
   matchKey(row: T): string | number | null;
   summarize(row: T): string;
   /** `null` classification input for a brand-new match key. */
-  diffAgainstExisting(row: T, existing: T | null): { classification: ImportRowClassification; changes?: ImportRowChange[] };
+  diffAgainstExisting(row: T, existing: T | null): { classification: ImportRowClassification; changes?: ImportRowChange[]; matchField?: string };
   applyRow(tx: PrismaClient, row: T, ctx: Record<string, unknown>): Promise<"created" | "updated" | "unchanged">;
   /** A fresh mutable context object handed to every `applyRow` call in
    * one import — materials use it for a category-id cache and the

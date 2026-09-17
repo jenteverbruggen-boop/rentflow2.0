@@ -25,17 +25,38 @@ const CLASSIFICATION_VARIANT: Record<ImportRowPreview["classification"], "defaul
   errored: "destructive",
 };
 
+// B4 (round 3 PO feedback) — labels for ImportRowPreview.matchField, so
+// a client row matched via the id-less fallback chain (VAT/email/name)
+// tells the user *why* it's "Gewijzigd"/"Ongewijzigd" rather than
+// "Nieuw", instead of that only being visible by diffing the file
+// against the database by hand.
+const MATCH_FIELD_LABEL: Record<string, string> = {
+  id: "id",
+  vatNumber: "btw-nummer",
+  email: "e-mailadres",
+  name: "naam",
+};
+
 function RowDetail({ row }: { row: ImportRowPreview }) {
   if (row.reason) return <span className="text-sm text-muted-foreground">{row.reason}</span>;
-  if (!row.changes?.length) return null;
+  const matchNote =
+    row.matchField && row.matchField !== "id" ? (
+      <p className="text-xs text-muted-foreground">
+        Gekoppeld via {MATCH_FIELD_LABEL[row.matchField] ?? row.matchField}
+      </p>
+    ) : null;
+  if (!row.changes?.length) return matchNote;
   return (
-    <ul className="text-sm text-muted-foreground space-y-0.5">
-      {row.changes.map((c) => (
-        <li key={c.field}>
-          {c.field}: {String(c.from ?? "—")} → {String(c.to ?? "—")}
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-1">
+      {matchNote}
+      <ul className="text-sm text-muted-foreground space-y-0.5">
+        {row.changes.map((c) => (
+          <li key={c.field}>
+            {c.field}: {String(c.from ?? "—")} → {String(c.to ?? "—")}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

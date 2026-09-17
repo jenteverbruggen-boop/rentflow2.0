@@ -36,13 +36,14 @@ export async function buildImportPreview<T>(
   for (const row of parsed) {
     const key = adapter.matchKey(row);
     const existing = key != null ? existingByKey.get(key) ?? null : null;
-    const { classification, changes } = adapter.diffAgainstExisting(row, existing);
+    const { classification, changes, matchField } = adapter.diffAgainstExisting(row, existing);
     previewRows.push({
       line: (row as { line?: number }).line ?? 0,
       classification,
       matchKey: key,
       summary: adapter.summarize(row),
       changes,
+      matchField,
     });
   }
   for (const error of errors) {
