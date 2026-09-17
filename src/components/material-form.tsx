@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { type Resolver, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -12,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { EntityCombobox } from "@/components/entity-combobox";
-import type { Category, Material } from "@/types";
+import { useCategories } from "@/hooks/use-categories";
+import type { Material } from "@/types";
 
 const schema = z.object({
   name: z.string().min(1, "Naam is verplicht"),
@@ -40,12 +40,7 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
     defaultValues: { name: "", categoryId: null, dayPrice: 0, setupCost: 0, initialStock: 1, notes: "" },
   });
   const [catId, setCatId] = useState<number | null>(null);
-  const queryClient = useQueryClient();
-
-  const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ["categories"],
-    queryFn: () => fetch("/api/categories").then((r) => r.json()),
-  });
+  const { categories, createCategory } = useCategories();
 
   useEffect(() => {
     if (defaultValues) {
@@ -56,13 +51,6 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
       form.reset({ name: "", categoryId: null, dayPrice: 0, setupCost: 0, initialStock: 1, notes: "" });
     }
   }, [defaultValues, form]);
-
-  async function createCategory(name: string) {
-    const res = await fetch("/api/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, prefix: "9999" }) });
-    const created = (await res.json()) as { id: number };
-    await queryClient.invalidateQueries({ queryKey: ["categories"] });
-    return created;
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
