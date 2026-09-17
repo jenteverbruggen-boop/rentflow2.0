@@ -5,6 +5,7 @@ export type EditableMaterialField =
   | "dayPrice"
   | "setupCost"
   | "category"
+  | "categoryId"
   | "code"
   | "notes"
   | "isBundle"
@@ -19,6 +20,7 @@ const NULLABLE_NUMBER_FIELDS = new Set<EditableMaterialField>([
   "costPrice",
   "listPrice",
   "revenueBefore",
+  "categoryId",
 ]);
 
 function coerce(field: EditableMaterialField, rawValue: string) {

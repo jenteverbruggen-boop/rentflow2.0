@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { InlineEditField } from "@/components/inline-edit-field";
+import { MaterialCategoryField } from "@/components/material-category-field";
 import { MaterialStockList } from "@/components/material-stock-list";
 import { MaterialCodes } from "@/components/material-codes";
 import { BundleComponentEditor } from "@/components/bundle-component-editor";
@@ -64,10 +65,9 @@ export function MaterialDetailPane({
           onSave={(v) => saveField("code", v)}
         />
 
-        <InlineEditField
-          label="Categorie"
-          value={material.category}
-          onSave={(v) => saveField("category", v)}
+        <MaterialCategoryField
+          material={material}
+          onSave={(id) => saveField("categoryId", id == null ? "" : String(id))}
         />
 
         <InlineEditField
