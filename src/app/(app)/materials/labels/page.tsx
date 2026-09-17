@@ -4,6 +4,10 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { MaterialLabel } from "@/components/print/material-label";
+import type { MaterialSort, MaterialTypeFilter } from "@/components/materials-filter-bar";
+import { useMaterialFilters } from "@/hooks/use-material-filters";
+import { resolveLabelMaterials } from "@/lib/label-selection";
+import { LabelMaterialPicker } from "./label-material-picker";
 import type { Material } from "@/types";
 
 // J3 — visibility is handled by the shared .print-root rules in
@@ -22,6 +26,10 @@ const PAGE_SIZE = COLS * ROWS;
 
 export default function LabelsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [sort, setSort] = useState<MaterialSort>("name-asc");
+  const [typeFilter, setTypeFilter] = useState<MaterialTypeFilter>("all");
   const origin = typeof window === "undefined" ? "" : window.location.origin;
 
   const { data: materials = [] } = useQuery<Material[]>({
@@ -29,10 +37,21 @@ export default function LabelsPage() {
     queryFn: () => fetch("/api/materials").then((r) => r.json()),
   });
 
-  const labelMaterials = useMemo(() => {
-    if (selectedIds.size === 0) return materials;
-    return materials.filter((m) => selectedIds.has(m.id));
-  }, [materials, selectedIds]);
+  const { categories, filtered } = useMaterialFilters({
+    materials,
+    search,
+    category,
+    sort,
+    typeFilter,
+  });
+
+  // Nothing ticked = print every filtered/visible material. Otherwise
+  // selectedIds is the source of truth, even for ids the current filter
+  // hides — see src/lib/label-selection.ts.
+  const labelMaterials = useMemo(
+    () => resolveLabelMaterials(materials, filtered, selectedIds),
+    [materials, filtered, selectedIds],
+  );
 
   const pages = useMemo(() => {
     const result: Material[][] = [];
@@ -42,18 +61,6 @@ export default function LabelsPage() {
     return result;
   }, [labelMaterials]);
 
-  function toggleAll() {
-    if (selectedIds.size === materials.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(materials.map((m) => m.id)));
-  }
-
-  function toggleMaterial(id: number) {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  }
-
   return (
     <>
       <style>{PRINT_CSS}</style>
@@ -62,11 +69,6 @@ export default function LabelsPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Materiaallabels — A4 (3×8)</h2>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={toggleAll}>
-              {selectedIds.size === materials.length
-                ? "Alles deselecteren"
-                : "Alles selecteren"}
-            </Button>
             <Button onClick={() => window.print()}>Afdrukken</Button>
             <Button variant="ghost" onClick={() => window.history.back()}>
               ← Terug
@@ -74,27 +76,26 @@ export default function LabelsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-64 overflow-y-auto border rounded-lg p-3">
-          {materials.map((m) => (
-            <label
-              key={m.id}
-              className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-accent rounded px-1 py-0.5"
-            >
-              <input
-                type="checkbox"
-                checked={selectedIds.has(m.id)}
-                onChange={() => toggleMaterial(m.id)}
-              />
-              <span className="truncate">{m.name}</span>
-            </label>
-          ))}
-        </div>
+        <LabelMaterialPicker
+          materials={filtered}
+          categories={categories}
+          search={search}
+          onSearchChange={setSearch}
+          category={category}
+          onCategoryChange={setCategory}
+          sort={sort}
+          onSortChange={setSort}
+          typeFilter={typeFilter}
+          onTypeFilterChange={setTypeFilter}
+          selectedIds={selectedIds}
+          onSelectedIdsChange={setSelectedIds}
+        />
 
         <p className="text-xs text-muted-foreground">
           {selectedIds.size === 0
-            ? `Alle ${materials.length}`
-            : selectedIds.size}{" "}
-          materialen · {pages.length} pagina{pages.length !== 1 ? "s" : ""}
+            ? `Niets geselecteerd — alle ${filtered.length} gefilterde materialen worden afgedrukt`
+            : `${selectedIds.size} van ${filtered.length} geselecteerd`}{" "}
+          · {pages.length} pagina{pages.length !== 1 ? "s" : ""}
         </p>
       </div>
 
