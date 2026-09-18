@@ -42,6 +42,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v7
+        # The action uploads a `.dockerbuild` build record as a GitHub Actions
+        # artifact on every run. It is diagnostic output only — nothing in this
+        # workflow consumes it — but it defaults to the repo retention policy
+        # (90 days), so the records pile up against the Actions storage quota.
+        env:
+          DOCKER_BUILD_RECORD_RETENTION_DAYS: 7
         with:
           context: .
           push: true
