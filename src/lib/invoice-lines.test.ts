@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { generateDraftInvoiceLines } from "@/lib/invoice-lines";
-import { personLineCost, lineCost, periodDays } from "@/lib/pricing";
-import type { Period, PeriodStockItem, PeriodPerson, PeriodBundleBooking } from "@/types";
+import { personLineCost, lineCost, periodDays, projectCostSummary } from "@/lib/pricing";
+import type { Period, PeriodStockItem, PeriodPerson, PeriodBundleBooking, PeriodMaterialShortage } from "@/types";
 
 function makeStockItem(snapshot: number, setup = 0): PeriodStockItem {
   return {
@@ -35,12 +35,22 @@ function makeBundleBooking(dayPriceSnapshot: number, quantity = 1): PeriodBundle
   return { id: 1, periodId: 1, materialId: 1, quantity, dayPriceSnapshot, material: { id: 1, name: "Set" } as never };
 }
 
+function makeShortage(quantity: number, snapshot: number, setup = 0): PeriodMaterialShortage {
+  const material = makeStockItem(snapshot).stockItem.material;
+  return {
+    id: 1, periodId: 1, materialId: 1, quantity, bundleBookingId: null, dayPriceSnapshot: snapshot,
+    setupCostSnapshot: setup, discountPct: null, discountAmount: null, material,
+  } as PeriodMaterialShortage;
+}
+
 function makePeriod(name: string, start: string, end: string, opts?: {
   materials?: PeriodStockItem[]; people?: PeriodPerson[]; bundleBookings?: PeriodBundleBooking[];
+  shortages?: PeriodMaterialShortage[];
 }): Period {
   return {
     id: 1, projectId: 1, name, startDate: start, endDate: end, updatedAt: start,
     materials: opts?.materials ?? [], people: opts?.people ?? [], bundleBookings: opts?.bundleBookings ?? [],
+    shortages: opts?.shortages ?? [],
   };
 }
 
@@ -144,5 +154,57 @@ describe("generateDraftInvoiceLines — final role deduction lines (design doc �
       ],
     });
     expect(lines.filter((l) => l.kind === "deduction")).toHaveLength(2);
+  });
+});
+
+describe("generateDraftInvoiceLines — overbooked units and set components (G1)", () => {
+  const gen = (period: Period) =>
+    generateDraftInvoiceLines([period], { invoiceRole: "standalone", vatRate: 21, projectLabel: "Test" });
+
+  it("bills overbooked units like owned ones: 2 owned + 3 overbooked of one material is one line of 5", () => {
+    const period = makePeriod("Event", "2026-05-01", "2026-05-01", {
+      materials: [makeStockItem(100), makeStockItem(100)],
+      shortages: [makeShortage(3, 100)],
+    });
+    const lines = gen(period).filter((l) => l.kind === "material");
+    expect(lines).toHaveLength(1);
+    expect(lines[0].quantity).toBe(5);
+    expect(lines[0].lineTotalExcl).toBe(5 * lineCost(100, periodDays(period), {}));
+  });
+
+  it("an overbooked material with no stock at all still gets a line", () => {
+    const period = makePeriod("Event", "2026-05-01", "2026-05-01", { shortages: [makeShortage(4, 25)] });
+    expect(gen(period).find((l) => l.kind === "material")).toMatchObject({ quantity: 4, description: "Tent" });
+  });
+
+  it("the setup line includes the overbooked units' setup cost", () => {
+    const period = makePeriod("Event", "2026-05-01", "2026-05-01", {
+      materials: [makeStockItem(100, 10), makeStockItem(100, 10)],
+      shortages: [makeShortage(3, 100, 10)],
+    });
+    const setup = gen(period).find((l) => l.description.startsWith("Op-/afbouw"))!;
+    expect(setup.lineTotalExcl).toBe(50);
+  });
+
+  it("units that belong to a booked set are not listed on their own (they're €0, the set prices them)", () => {
+    const component = { ...makeStockItem(0), bundleBookingId: 1 };
+    const period = makePeriod("Event", "2026-05-01", "2026-05-01", {
+      materials: [component, component],
+      bundleBookings: [makeBundleBooking(80, 1)],
+    });
+    const lines = gen(period);
+    expect(lines.filter((l) => l.kind === "material")).toHaveLength(0);
+    expect(lines.filter((l) => l.kind === "bundle")).toHaveLength(1);
+  });
+
+  it("an invoice's total matches the project's cost summary for a period with shortages", () => {
+    const period = makePeriod("Event", "2026-05-01", "2026-05-02", {
+      materials: [makeStockItem(100, 5)],
+      shortages: [makeShortage(2, 100, 5)],
+      bundleBookings: [makeBundleBooking(40, 1)],
+    });
+    const lines = gen(period);
+    const sum = Math.round(lines.reduce((s, l) => s + l.lineTotalExcl, 0) * 100) / 100;
+    expect(sum).toBe(projectCostSummary([period]).total);
   });
 });

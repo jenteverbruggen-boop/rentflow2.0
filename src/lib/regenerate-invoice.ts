@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { assertDraftMutable } from "@/lib/invoices";
+import { assertInvoiceable } from "@/lib/invoice-guards";
 import { buildInvoiceDraft } from "@/lib/build-invoice-draft";
 import { invoiceDraftArgs } from "@/lib/invoice-draft-args";
 import { hashDraftLines } from "@/lib/invoice-hash";
@@ -46,6 +47,7 @@ export async function regenerateInvoice(invoiceId: number, client: PrismaClient 
       throw new Error("Factuur heeft geen gekoppeld project om opnieuw te genereren");
     }
 
+    await assertInvoiceable(invoice.projectId, txClient);
     const draft = await buildInvoiceDraft(invoiceDraftArgs({ ...invoice, projectId: invoice.projectId }), txClient);
     if (!draft) throw new InvoiceNotFoundError();
 

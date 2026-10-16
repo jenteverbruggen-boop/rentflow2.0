@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireModule, forbidden, notFound, conflict, serverError } from "@/lib/api-auth";
 import { finalizeInvoice, FinalizeInvoiceError } from "@/lib/finalize-invoice";
 import { serializeInvoice } from "@/lib/serialize-invoice";
+import { InvoiceBlockedError } from "@/lib/invoice-guards";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -20,6 +21,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     if (err instanceof FinalizeInvoiceError) {
       return err.code === "NOT_FOUND" ? notFound() : conflict(err.message);
     }
+    if (err instanceof InvoiceBlockedError) return conflict(err.message);
     return serverError((err as Error).message);
   }
 }

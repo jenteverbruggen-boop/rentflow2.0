@@ -101,7 +101,11 @@ function groupedLines(periods: Period[], vatRate: number): DraftInvoiceLine[] {
     const days = periodDays(period);
     personAndTravelLines(period, days, vatRate, push);
 
-    for (const g of groupMaterialAssignments(period.materials)) {
+    // Component units of a booked set are snapshotted at €0 and priced by the
+    // set's own line below — listing them here would print "… × n à €0,00".
+    // Overbooked units (shortages) are billed like owned ones.
+    const flat = period.materials.filter((m) => !m.bundleBookingId);
+    for (const g of groupMaterialAssignments(flat, period.shortages ?? [])) {
       const unitPrice = lineCost(g.dayPriceSnapshot, days, g);
       push({
         section: period.name, kind: "material", description: g.material.name,
@@ -109,7 +113,8 @@ function groupedLines(periods: Period[], vatRate: number): DraftInvoiceLine[] {
         lineTotalExcl: Math.round(unitPrice * g.units * 100) / 100,
         sourceKind: "stockItem", sourceId: null,
       });
-      const setup = g.assignments.reduce((s, a) => s + toNumber(a.setupCostSnapshot), 0);
+      const setup =
+        Math.round((g.assignments.reduce((s, a) => s + toNumber(a.setupCostSnapshot), 0) + g.overbookedSetup) * 100) / 100;
       if (setup > 0) {
         push({
           section: period.name, kind: "material", description: `Op-/afbouw — ${g.material.name}`,

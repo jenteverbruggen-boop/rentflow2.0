@@ -4,6 +4,7 @@ import { nextInvoiceSequence, formatInvoiceNumber, brusselsYear } from "@/lib/in
 import { invoiceInclude } from "@/lib/serialize-invoice";
 import { structuredReference } from "@/lib/invoice-reference";
 import { syncStatus } from "@/lib/invoice-payments";
+import { assertInvoiceable } from "@/lib/invoice-guards";
 
 type FinalizeErrorCode = "NOT_FOUND" | "ALREADY_FINALIZED" | "CORRECTION_INCOMPLETE";
 
@@ -30,6 +31,12 @@ async function finalizeInTx(txClient: PrismaClient, id: number) {
   if (!invoice) throw new FinalizeInvoiceError("NOT_FOUND", "Factuur niet gevonden");
   if (invoice.status !== "concept") {
     throw new FinalizeInvoiceError("ALREADY_FINALIZED", "Factuur is al verzonden — niet meer te wijzigen");
+  }
+
+  // A correction's replacement only copies lines that were already billed, so
+  // overbooking added to the project since then is no reason to block it.
+  if (invoice.kind === "invoice" && invoice.projectId != null && invoice.correctionOfId == null) {
+    await assertInvoiceable(invoice.projectId, txClient);
   }
 
   const settingRows = await txClient.setting.findMany({

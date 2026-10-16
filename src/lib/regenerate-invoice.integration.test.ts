@@ -18,6 +18,8 @@ import { addManualLine } from "@/lib/invoice-lines-crud";
 import { isInvoiceStale } from "@/lib/invoice-stale";
 import { refreshInvoiceClient } from "@/lib/refresh-invoice-client";
 import { isValidStructuredReference } from "@/lib/invoice-reference";
+import { InvoiceBlockedError } from "@/lib/invoice-guards";
+import { correctInvoice } from "@/lib/correct-invoice";
 import { serializeInvoice, invoiceInclude } from "@/lib/serialize-invoice";
 import { toNumber } from "@/lib/serialize";
 
@@ -165,5 +167,46 @@ describe("C1a — finalize: payment term, OGM, refresh client", () => {
     const sent = await finalizeInvoice(draft.id, client);
     await client.client.update({ where: { id: clientId }, data: { address: "Andere straat 9" } });
     await expect(refreshInvoiceClient(sent.id, client)).rejects.toThrow();
+  });
+});
+
+describe("G1 — open shortages block regenerate and finalize", () => {
+  async function overbook() {
+    const material = await client.material.create({ data: { name: `Overboekt ${Math.random()}`, dayPrice: 10 } });
+    return client.periodMaterialShortage.create({
+      data: { periodId, materialId: material.id, quantity: 2, dayPriceSnapshot: 10 },
+    });
+  }
+
+  it("a draft can't be regenerated or sent while the project has an open shortage", async () => {
+    const draft = await createDraftInvoice({ projectId, invoiceRole: "standalone" }, client);
+    const shortage = await overbook();
+
+    await expect(regenerateInvoice(draft.id, client)).rejects.toBeInstanceOf(InvoiceBlockedError);
+    await expect(finalizeInvoice(draft.id, client)).rejects.toBeInstanceOf(InvoiceBlockedError);
+    expect((await client.invoice.findUniqueOrThrow({ where: { id: draft.id } })).status).toBe("concept");
+
+    await client.periodMaterialShortage.delete({ where: { id: shortage.id } });
+    await expect(finalizeInvoice(draft.id, client)).resolves.toMatchObject({ status: "verzonden" });
+  });
+
+  it("a correction (credit note + replacement) still goes out when overbooking appeared afterwards", async () => {
+    const draft = await createDraftInvoice({ projectId, invoiceRole: "standalone" }, client);
+    const sent = await finalizeInvoice(draft.id, client);
+    const { replacement } = await correctInvoice(sent.id, client);
+    const shortage = await overbook();
+
+    // The replacement only re-sends lines that were already billed.
+    await expect(finalizeInvoice(replacement.id, client)).resolves.toMatchObject({ status: "verzonden" });
+    await client.periodMaterialShortage.delete({ where: { id: shortage.id } });
+  });
+
+  it("a plain credit note is never blocked", async () => {
+    const draft = await createDraftInvoice({ projectId, invoiceRole: "standalone" }, client);
+    const sent = await finalizeInvoice(draft.id, client);
+    const cn = await createCreditNote(sent.id, undefined, client);
+    const shortage = await overbook();
+    await expect(finalizeInvoice(cn.id, client)).resolves.toMatchObject({ status: "verzonden" });
+    await client.periodMaterialShortage.delete({ where: { id: shortage.id } });
   });
 });

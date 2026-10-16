@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireModule, forbidden, notFound, conflict, badRequest, serverError } from "@/lib/api-auth";
 import { regenerateInvoice, InvoiceNotFoundError, RegenerateNotAllowedError } from "@/lib/regenerate-invoice";
 import { DraftNotMutableError } from "@/lib/invoices";
+import { InvoiceBlockedError } from "@/lib/invoice-guards";
 import { serializeInvoice } from "@/lib/serialize-invoice";
 
 type Params = { params: Promise<{ id: string }> };
@@ -21,7 +22,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     return NextResponse.json(serializeInvoice(invoice));
   } catch (err) {
     if (err instanceof InvoiceNotFoundError) return notFound();
-    if (err instanceof DraftNotMutableError || err instanceof RegenerateNotAllowedError) return conflict(err.message);
+    if (err instanceof DraftNotMutableError || err instanceof RegenerateNotAllowedError || err instanceof InvoiceBlockedError) return conflict(err.message);
     if (err instanceof Error && err.message.includes("gekoppeld project")) return badRequest(err.message);
     return serverError((err as Error).message);
   }
