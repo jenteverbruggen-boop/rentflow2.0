@@ -414,6 +414,9 @@ model Invoice {
   projectId         Int?
   clientId          Int
   creditNoteOfId    Int?
+  // C1b — a replacement invoice created by "Corrigeren" points at the sent
+  // invoice it replaces (which was credited in full in the same step).
+  correctionOfId    Int?
   clientName        String
   clientAddress     String?
   clientPostalCode  String?
@@ -446,6 +449,8 @@ model Invoice {
   project      Project?      @relation(fields: [projectId], references: [id])
   creditNoteOf Invoice?      @relation("CreditNoteOf", fields: [creditNoteOfId], references: [id])
   creditNotes  Invoice[]     @relation("CreditNoteOf")
+  correctionOf Invoice?      @relation("CorrectionOf", fields: [correctionOfId], references: [id])
+  corrections  Invoice[]     @relation("CorrectionOf")
   lines        InvoiceLine[]
   payments     Payment[]
 
@@ -453,6 +458,7 @@ model Invoice {
   @@index([clientId])
   @@index([status])
   @@index([creditNoteOfId])
+  @@index([correctionOfId])
 }
 
 model InvoiceLine {

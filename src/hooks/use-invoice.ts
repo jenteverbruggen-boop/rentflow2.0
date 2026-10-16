@@ -108,6 +108,14 @@ export function useInvoice(id: number) {
     onSuccess: invalidate,
   });
 
+  const correct = useMutation({
+    mutationFn: async () =>
+      parseJson<{ creditNote: Invoice; replacement: Invoice }>(
+        await fetch(`/api/invoices/${id}/correct`, { method: "POST" }),
+      ),
+    onSuccess: invalidate,
+  });
+
   const finalize = useMutation({
     mutationFn: async () => parseJson<Invoice>(await fetch(`/api/invoices/${id}/finalize`, { method: "POST" })),
     onSuccess: invalidate,
@@ -125,5 +133,5 @@ export function useInvoice(id: number) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoices"] }),
   });
 
-  return { query, patch, remove, addLine, updateLine, deleteLine, regenerate, refreshClient, finalize, creditNote };
+  return { query, patch, remove, addLine, updateLine, deleteLine, regenerate, refreshClient, correct, finalize, creditNote };
 }

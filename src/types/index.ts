@@ -518,6 +518,13 @@ export interface Invoice {
   creditNoteOfId: number | null;
   /** On a credit note: number and date of the invoice it corrects. */
   creditNoteOfNumber?: string | null;
+  /** On a replacement: number of the invoice it replaces. */
+  correctionOfId?: number | null;
+  correctionOfNumber?: string | null;
+  /** On a corrected invoice: its replacement. */
+  correctedBy?: { id: number; number: string | null; status: InvoiceStatus } | null;
+  /** On a credit note created by a correction: the replacement sent with it. */
+  correctionReplacement?: { id: number; number: string | null; status: InvoiceStatus } | null;
   creditNoteOfDate?: string | null;
   clientName: string;
   clientAddress: string | null;

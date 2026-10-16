@@ -15,6 +15,7 @@ export function InvoicePrintHeader({ invoice, company }: { invoice: Invoice; com
     [isCredit ? "Creditnotadatum" : "Factuurdatum", invoice.invoiceDate ? fmtDate(invoice.invoiceDate) : null],
     ...(isCredit ? [] : ([["Vervaldatum", invoice.dueDate ? fmtDate(invoice.dueDate) : null]] as [string, string | null][])),
     ...(isCredit ? [] : ([["Mededeling", invoice.paymentReference]] as [string, string | null][])),
+    ...(invoice.correctionOfNumber ? ([["Vervangt factuur", invoice.correctionOfNumber]] as [string, string][]) : []),
   ];
 
   return (

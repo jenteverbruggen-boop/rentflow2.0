@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireModule, forbidden, badRequest, notFound, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, badRequest, notFound, conflict, serverError } from "@/lib/api-auth";
 import { createCreditNote, CreditNoteError } from "@/lib/create-credit-note";
 import { serializeInvoice } from "@/lib/serialize-invoice";
 
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   } catch (err) {
     if (err instanceof CreditNoteError) {
       if (err.code === "NOT_FOUND" || err.code === "LINE_NOT_FOUND") return notFound();
+      if (err.code === "ALREADY_CREDITED") return conflict(err.message);
       if (err.code === "NOT_SENT" || err.code === "ALREADY_CREDIT_NOTE" || err.code === "INVALID_QUANTITY") {
         return badRequest(err.message);
       }

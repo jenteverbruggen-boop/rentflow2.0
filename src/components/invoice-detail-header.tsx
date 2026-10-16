@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { InvoiceStatusBadge } from "@/components/invoice-status-badge";
+import { CorrectInvoiceDialog } from "@/components/correct-invoice-dialog";
 import { useInvoice } from "@/hooks/use-invoice";
 import type { Invoice } from "@/types";
 
@@ -18,10 +20,11 @@ interface Props {
  * once it is sent. */
 export function InvoiceDetailHeader({ invoice, onRegenerate, onCredit }: Props) {
   const router = useRouter();
-  const { finalize, remove, regenerate, refreshClient } = useInvoice(invoice.id);
+  const { finalize, remove, regenerate, refreshClient, correct } = useInvoice(invoice.id);
+  const [correctOpen, setCorrectOpen] = useState(false);
   const isConcept = invoice.status === "concept";
   const isCreditNote = invoice.kind === "creditnota";
-  const error = [finalize, regenerate, refreshClient].find((m) => m.isError)?.error?.message;
+  const error = [finalize, regenerate, refreshClient, correct].find((m) => m.isError)?.error?.message;
 
   return (
     <>
@@ -34,6 +37,24 @@ export function InvoiceDetailHeader({ invoice, onRegenerate, onCredit }: Props) 
           <p className="text-sm text-muted-foreground truncate">{invoice.clientName}</p>
           {isCreditNote && invoice.creditNoteOfNumber && (
             <p className="text-xs text-muted-foreground">Creditnota bij factuur {invoice.creditNoteOfNumber}</p>
+          )}
+          {invoice.correctionOfNumber && (
+            <p className="text-xs text-muted-foreground">Vervangt factuur {invoice.correctionOfNumber} — wordt samen met de creditnota verstuurd</p>
+          )}
+          {isCreditNote && isConcept && invoice.correctionReplacement && (
+            <p className="text-xs text-muted-foreground">
+              Wordt samen met de vervangende{" "}
+              <Link className="underline underline-offset-2" href={`/facturen/${invoice.correctionReplacement.id}`}>factuur</Link>{" "}
+              verstuurd
+            </p>
+          )}
+          {invoice.correctedBy && (
+            <p className="text-xs text-muted-foreground">
+              Gecorrigeerd door{" "}
+              <Link className="underline underline-offset-2" href={`/facturen/${invoice.correctedBy.id}`}>
+                {invoice.correctedBy.number ?? "concept"}
+              </Link>
+            </p>
           )}
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -51,7 +72,14 @@ export function InvoiceDetailHeader({ invoice, onRegenerate, onCredit }: Props) 
             </>
           )}
           {isConcept && <Button onClick={() => finalize.mutate()} disabled={finalize.isPending}>Finaliseren</Button>}
-          {!isConcept && !isCreditNote && <Button variant="outline" onClick={onCredit}>Creditnota</Button>}
+          {!isConcept && !isCreditNote && (
+            <>
+              <Button variant="outline" onClick={onCredit}>Creditnota</Button>
+              {!invoice.correctedBy && (
+                <Button variant="outline" onClick={() => setCorrectOpen(true)} disabled={correct.isPending}>Corrigeren</Button>
+              )}
+            </>
+          )}
           {isConcept && (
             <Button variant="outline" onClick={() => remove.mutate(undefined, { onSuccess: () => router.push("/facturen") })}>
               Verwijderen
@@ -60,6 +88,12 @@ export function InvoiceDetailHeader({ invoice, onRegenerate, onCredit }: Props) 
         </div>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
+      <CorrectInvoiceDialog
+        open={correctOpen}
+        onOpenChange={setCorrectOpen}
+        invoiceNumber={invoice.number}
+        onConfirm={() => correct.mutate(undefined, { onSuccess: (r) => router.push(`/facturen/${r.replacement.id}`) })}
+      />
     </>
   );
 }

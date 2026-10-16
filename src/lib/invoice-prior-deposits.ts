@@ -21,6 +21,7 @@ export async function loadPriorDeposits(
     include: { lines: true, creditNotes: true },
   });
   return deposits.map((inv) => ({
+    id: inv.id,
     number: inv.number ?? "",
     invoiceDate: inv.invoiceDate ? format(inv.invoiceDate, "dd/MM/yyyy") : "",
     netExcl: netInvoicedExcl({

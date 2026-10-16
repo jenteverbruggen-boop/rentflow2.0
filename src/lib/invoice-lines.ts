@@ -25,6 +25,9 @@ export interface DraftInvoiceLine {
 }
 
 export interface PriorDeposit {
+  /** The deposit invoice's id — lets a later correction of that deposit see
+   * it was already deducted. Optional for hand-built fixtures. */
+  id?: number;
   number: string;
   invoiceDate: string;
   netExcl: number;
@@ -82,7 +85,7 @@ function deductionLines(priorDeposits: PriorDeposit[], startOrder: number): Draf
     description: `Reeds gefactureerd: voorschotfactuur ${entry.number} (${entry.invoiceDate})`,
     quantity: 1, unit: "stuk", unitPrice: -entry.netExcl, vatRate: entry.vatRate,
     lineTotalExcl: -entry.netExcl, sortOrder: startOrder + i,
-    sourceKind: null, sourceId: null,
+    sourceKind: entry.id == null ? null : "priorDeposit", sourceId: entry.id ?? null,
   }));
 }
 

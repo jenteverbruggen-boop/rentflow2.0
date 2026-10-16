@@ -11,7 +11,7 @@ export interface CreditNoteLineInput {
 }
 
 export class CreditNoteError extends Error {
-  code: "NOT_FOUND" | "NOT_SENT" | "ALREADY_CREDIT_NOTE" | "INVALID_QUANTITY" | "LINE_NOT_FOUND";
+  code: "NOT_FOUND" | "NOT_SENT" | "ALREADY_CREDIT_NOTE" | "INVALID_QUANTITY" | "LINE_NOT_FOUND" | "ALREADY_CREDITED";
   constructor(code: CreditNoteError["code"], message: string) {
     super(message);
     this.code = code;
@@ -42,7 +42,7 @@ export async function createCreditNote(
 ) {
   const original = await client.invoice.findUnique({
     where: { id: invoiceId },
-    include: { lines: true },
+    include: { lines: true, creditNotes: { include: { lines: true } } },
   });
   if (!original) throw new CreditNoteError("NOT_FOUND", "Factuur niet gevonden");
   if (original.kind === "creditnota") {
@@ -63,12 +63,22 @@ export async function createCreditNote(
     if (source.kind === "text") {
       throw new CreditNoteError("INVALID_QUANTITY", "Een tekstregel heeft geen bedrag en kan niet gecrediteerd worden");
     }
+    // Credit notes already made for this line — drafts included, so clicking
+    // twice can't credit the same line twice — come off what is left to credit.
+    const alreadyCredited = original.creditNotes
+      .flatMap((cn) => cn.lines)
+      .filter((cl) => cl.sourceKind === "creditedLine" && cl.sourceId === source.id)
+      .reduce((sum, cl) => sum - toNumber(cl.quantity), 0);
     const sourceQuantity = toNumber(source.quantity);
-    const quantity = entry.quantity ?? sourceQuantity;
-    if (quantity <= 0 || quantity > sourceQuantity) {
+    const creditable = Math.round((sourceQuantity - alreadyCredited) * 100) / 100;
+    if (creditable <= 0) {
+      throw new CreditNoteError("ALREADY_CREDITED", `Regel ${entry.lineId} is al volledig gecrediteerd (ook door een concept-creditnota)`);
+    }
+    const quantity = entry.quantity ?? creditable;
+    if (quantity <= 0 || quantity > creditable) {
       throw new CreditNoteError(
         "INVALID_QUANTITY",
-        `Aantal voor regel ${entry.lineId} moet tussen 0 en ${sourceQuantity} liggen`,
+        `Aantal voor regel ${entry.lineId} moet tussen 0 en ${creditable} liggen`,
       );
     }
     const unitPrice = toNumber(source.unitPrice);

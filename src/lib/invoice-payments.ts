@@ -25,7 +25,7 @@ export interface PaymentInput {
  * §6.2: `betaald` the moment `remainingBalance <= 0`, back to
  * `verzonden` the moment it's positive again (a corrected mis-entered
  * payment must not leave a "betaald" invoice with money still owed). */
-async function syncStatus(tx: PrismaClient, invoiceId: number): Promise<void> {
+export async function syncStatus(tx: PrismaClient, invoiceId: number): Promise<void> {
   const invoice = await tx.invoice.findUniqueOrThrow({
     where: { id: invoiceId },
     include: { payments: true, creditNotes: true },
