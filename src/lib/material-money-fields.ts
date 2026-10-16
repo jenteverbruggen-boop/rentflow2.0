@@ -24,6 +24,7 @@ export function materialMoneyData(body: Record<string, unknown>, ignore: Set<str
     ...(ignore.has("costPrice") ? {} : { costPrice: num("costPrice") }),
     ...(ignore.has("listPrice") ? {} : { listPrice: num("listPrice") }),
     ...(ignore.has("revenueBefore") ? {} : { revenueBefore: num("revenueBefore") }),
+    ...(ignore.has("subhireUnitCost") ? {} : { subhireUnitCost: num("subhireUnitCost") }),
   };
 }
 
@@ -42,6 +43,7 @@ export function serializeMaterialMoney(material: {
   costPrice: unknown;
   listPrice: unknown;
   revenueBefore: unknown;
+  subhireUnitCost?: unknown;
 }) {
   return {
     dayPrice: toNumber(material.dayPrice),
@@ -50,5 +52,6 @@ export function serializeMaterialMoney(material: {
     costPrice: toNumberOrNull(material.costPrice),
     listPrice: toNumberOrNull(material.listPrice),
     revenueBefore: toNumberOrNull(material.revenueBefore),
+    subhireUnitCost: toNumberOrNull(material.subhireUnitCost),
   };
 }

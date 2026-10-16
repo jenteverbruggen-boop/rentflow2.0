@@ -164,6 +164,11 @@ export interface Material {
   costPrice: number | null;
   listPrice: number | null;
   revenueBefore: number | null;
+  /** C3 — hiring in. `subhireUnitCost` is purchase price (money). */
+  defaultSupplierId?: number | null;
+  subhireUnitCost?: number | null;
+  subhireCostBasis?: SubhireCostBasis;
+  subhireOnly?: boolean;
   components?: MaterialComponent[];
   stockItems?: StockItem[];
   totalStock?: number;
@@ -239,6 +244,22 @@ export interface StockItemAssignment {
 /** Overboeken — a period wants N units of a material that don't exist as
  * a PeriodStockItem (flat shortfall), or N components missing inside a
  * set booking (`bundleBookingId` set). See src/lib/material-shortage.ts. */
+export type SubhireCostBasis = "per_huur" | "per_dag";
+
+export interface Supplier {
+  id: number;
+  name: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  postalCode: string | null;
+  city: string | null;
+  vatNumber: string | null;
+  notes: string | null;
+  archived: boolean;
+}
+
 export interface PeriodMaterialShortage {
   id: number;
   periodId: number;
@@ -249,6 +270,14 @@ export interface PeriodMaterialShortage {
   setupCostSnapshot: number;
   discountPct: number | null;
   discountAmount: number | null;
+  /** C3 — set once the missing units are hired in; the row is then resolved
+   * (no longer open) but stays billed to the client. */
+  supplierId?: number | null;
+  supplier?: { id: number; name: string } | null;
+  subhireCostBasis?: SubhireCostBasis | null;
+  subhireUnitCost?: number | null;
+  subhireCostOverride?: number | null;
+  subhiredAt?: string | null;
   material: Material;
 }
 

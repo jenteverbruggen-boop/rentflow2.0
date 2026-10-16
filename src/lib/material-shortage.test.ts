@@ -51,6 +51,7 @@ function makeGroup(
     discountAmount: opts?.discountAmount ?? null,
     assignments: [],
     overbookedUnits: 0,
+    subhiredUnits: 0,
     overbookedSetup: 0,
     shortageIds: [],
   };

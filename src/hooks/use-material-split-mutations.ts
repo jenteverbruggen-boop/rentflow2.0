@@ -77,13 +77,14 @@ export function useMaterialSplitMutations({
     onSuccess: invalidate,
   });
 
-  /** Overboeken — `quantity: 0` deletes the row server-side. */
+  /** Overboeken — `quantity: 0` (or `decrement` down to 0) deletes the row
+   * server-side. */
   const setShortageQuantity = useMutation({
-    mutationFn: (args: { shortageId: number; quantity: number }) =>
+    mutationFn: (args: { shortageId: number } & ({ quantity: number } | { decrement: number })) =>
       fetch(`/api/periods/${periodId}/shortages/${args.shortageId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quantity: args.quantity }),
+        body: JSON.stringify("decrement" in args ? { decrement: args.decrement } : { quantity: args.quantity }),
       }),
     onSuccess: invalidate,
   });
@@ -92,9 +93,10 @@ export function useMaterialSplitMutations({
    * assignment — the phantom units are the ones blocking confirmation. */
   const removeOneFromGroup = (group: MaterialGroup) => {
     if (group.overbookedUnits > 0 && group.shortageIds.length > 0) {
+      // One unit, not the row: a row can hold several overbooked units.
       setShortageQuantity.mutate({
         shortageId: group.shortageIds[group.shortageIds.length - 1],
-        quantity: 0,
+        decrement: 1,
       });
       return;
     }

@@ -11,6 +11,7 @@ import { redactMoney } from "@/lib/redact";
 import { findRejectedMoneyWrite, moneyFieldsToIgnore } from "@/lib/money-write-guard";
 import { serializeMaterialsList } from "@/lib/materials-list";
 import { materialMoneyData, serializeMaterialMoney } from "@/lib/material-money-fields";
+import { subhireFieldsData, subhireFieldsError } from "@/lib/material-subhire-fields";
 
 const MATERIAL_MONEY_FIELDS = [
   "dayPrice",
@@ -19,6 +20,7 @@ const MATERIAL_MONEY_FIELDS = [
   "costPrice",
   "listPrice",
   "revenueBefore",
+  "subhireUnitCost",
 ] as const;
 
 export async function GET(req: NextRequest) {
@@ -81,6 +83,8 @@ export async function POST(req: NextRequest) {
     if (findRejectedMoneyWrite(body, access)) return forbidden();
     const { name, category, categoryId, code: manualCode, notes, initialStock } = body;
     if (!name) return badRequest("naam is verplicht");
+    const subhireError = subhireFieldsError(body);
+    if (subhireError) return badRequest(subhireError);
 
     let code: string | null = manualCode ?? null;
     if (!code && categoryId) {
@@ -117,6 +121,7 @@ export async function POST(req: NextRequest) {
         code,
         notes,
         ...materialMoneyData(body, ignore),
+        ...subhireFieldsData(body),
       },
       include: { categoryRel: true },
     });

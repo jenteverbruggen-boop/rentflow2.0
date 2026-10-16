@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireModule, forbidden, badRequest, notFound, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, badRequest, notFound, conflict, serverError } from "@/lib/api-auth";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
-type Params = { params: Promise<{ shortageId: string }> };
+type Params = { params: Promise<{ id: string; shortageId: string }> };
 
-const schema = z.object({ quantity: z.coerce.number().int().min(0) });
+// Either set the row's quantity, or take `decrement` units off it (the
+// min-button takes ONE unit; it must not delete the whole row).
+const schema = z
+  .object({
+    quantity: z.coerce.number().int().min(0).optional(),
+    decrement: z.coerce.number().int().min(1).optional(),
+  })
+  .refine((v) => (v.quantity === undefined) !== (v.decrement === undefined), {
+    message: "Geef quantity of decrement op",
+  });
 
 /** Overboeken — lets the min-button on a material-group row take an
  * overbooked unit away before it touches a real assignment. `quantity: 0`
@@ -16,26 +25,33 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (!access) return forbidden();
 
   try {
-    const { shortageId } = await params;
+    const { id, shortageId } = await params;
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Ongeldige invoer");
 
     const existing = await prisma.periodMaterialShortage.findUnique({
       where: { id: parseInt(shortageId) },
     });
-    if (!existing) return notFound();
+    // The row must belong to the period in the URL.
+    if (!existing || existing.periodId !== parseInt(id)) return notFound();
+    // A hired-in row is a supplier booking: it is changed or undone through
+    // its own subhire endpoint, never by the overbook min-button.
+    if (existing.supplierId != null) return conflict("Dit materiaal is ingehuurd — pas de inhuur aan");
 
-    if (parsed.data.quantity === 0) {
+    const quantity = parsed.data.quantity ?? existing.quantity - (parsed.data.decrement ?? 0);
+    if (quantity <= 0) {
       await prisma.periodMaterialShortage.delete({ where: { id: existing.id } });
       return NextResponse.json({ success: true, deleted: true });
     }
 
     const updated = await prisma.periodMaterialShortage.update({
       where: { id: existing.id },
-      data: { quantity: parsed.data.quantity },
+      data: { quantity },
     });
     return NextResponse.json({
       ...updated,
+      subhireUnitCost: undefined,
+      subhireCostOverride: undefined,
       dayPriceSnapshot: toNumber(updated.dayPriceSnapshot),
       setupCostSnapshot: toNumber(updated.setupCostSnapshot),
       discountPct: toNumberOrNull(updated.discountPct),
@@ -51,8 +67,11 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   if (!access) return forbidden();
 
   try {
-    const { shortageId } = await params;
-    await prisma.periodMaterialShortage.delete({ where: { id: parseInt(shortageId) } });
+    const { id, shortageId } = await params;
+    const existing = await prisma.periodMaterialShortage.findUnique({ where: { id: parseInt(shortageId) } });
+    if (!existing || existing.periodId !== parseInt(id)) return notFound();
+    if (existing.supplierId != null) return conflict("Dit materiaal is ingehuurd — maak de inhuur eerst ongedaan");
+    await prisma.periodMaterialShortage.delete({ where: { id: existing.id } });
     return NextResponse.json({ success: true });
   } catch (err) {
     return serverError((err as Error).message);

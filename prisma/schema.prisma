@@ -212,6 +212,25 @@ model Person {
   documents       PersonDocument[]
 }
 
+// C3 — a company you rent material from when you don't have it in stock
+// (Funrent, Rent-men…). Separate from Client: a supplier is someone you pay.
+model Supplier {
+  id          Int     @id @default(autoincrement())
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  postalCode  String?
+  city        String?
+  vatNumber   String?
+  notes       String?
+  archived    Boolean @default(false)
+
+  materials Material[]
+  shortages PeriodMaterialShortage[]
+}
+
 model Material {
   id                   Int                            @id @default(autoincrement())
   name                 String
@@ -227,6 +246,14 @@ model Material {
   costPrice            Decimal?                       @db.Decimal(10, 2)
   listPrice            Decimal?                       @db.Decimal(10, 2)
   revenueBefore        Decimal?                       @db.Decimal(10, 2)
+  // C3 — hiring in. `subhireUnitCost` is the supplier's default price per unit
+  // (per rental or per day, see `subhireCostBasis`); `subhireOnly` marks
+  // catalogue items you never stock (they are always rented in).
+  defaultSupplierId    Int?
+  subhireUnitCost      Decimal?                       @db.Decimal(10, 2)
+  subhireCostBasis     String                         @default("per_huur")
+  subhireOnly          Boolean                        @default(false)
+  defaultSupplier      Supplier?                      @relation(fields: [defaultSupplierId], references: [id], onDelete: SetNull)
   categoryRel          Category?                      @relation(fields: [categoryId], references: [id])
   stockItems           StockItem[]
   projectPrices        ProjectMaterialPrice[]
@@ -334,20 +361,32 @@ model PeriodBundleBookingComponent {
 // frees up or grows; blocks a project leaving concept/geannuleerd while
 // any row remains (see assertNoShortages).
 model PeriodMaterialShortage {
-  id                Int                  @id @default(autoincrement())
-  periodId          Int
-  materialId        Int
-  quantity          Int
-  bundleBookingId   Int?
-  dayPriceSnapshot  Decimal              @default(0) @db.Decimal(10, 2)
-  setupCostSnapshot Decimal              @default(0) @db.Decimal(10, 2)
-  discountPct       Decimal?             @db.Decimal(5, 2)
-  discountAmount    Decimal?             @db.Decimal(10, 2)
-  period            Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  material          Material             @relation(fields: [materialId], references: [id], onDelete: Cascade)
-  bundleBooking     PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
+  id                  Int                  @id @default(autoincrement())
+  periodId            Int
+  materialId          Int
+  quantity            Int
+  bundleBookingId     Int?
+  dayPriceSnapshot    Decimal              @default(0) @db.Decimal(10, 2)
+  setupCostSnapshot   Decimal              @default(0) @db.Decimal(10, 2)
+  discountPct         Decimal?             @db.Decimal(5, 2)
+  discountAmount      Decimal?             @db.Decimal(10, 2)
+  // C3 — a shortage resolved by hiring the units in (`supplierId` set) is no
+  // longer open: it stops blocking confirmation/invoicing and stays billed to
+  // the client as normal material. Purchase cost: `subhireUnitCost` per unit
+  // per rental, or per unit per day (`per_dag`), unless `subhireCostOverride`
+  // fixes the row's total (supplier discount, transport).
+  supplierId          Int?
+  subhireCostBasis    String?
+  subhireUnitCost     Decimal?             @db.Decimal(10, 2)
+  subhireCostOverride Decimal?             @db.Decimal(10, 2)
+  subhiredAt          DateTime?
+  supplier            Supplier?            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  period              Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  material            Material             @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  bundleBooking       PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
 
   @@index([periodId])
+  @@index([supplierId])
 }
 
 model PeriodPerson {

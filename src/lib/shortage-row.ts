@@ -36,6 +36,9 @@ export async function createOrIncrementShortage(
       dayPriceSnapshot: args.dayPriceSnapshot,
       discountPct,
       discountAmount,
+      // Never fold new open units into a hired-in row: they would silently
+      // inherit its supplier and cost.
+      supplierId: null,
     },
   });
 

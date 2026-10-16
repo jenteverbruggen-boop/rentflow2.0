@@ -19,7 +19,8 @@ export interface ProjectShortageLine {
  */
 export function projectShortageLines(project: Project): ProjectShortageLine[] {
   return project.periods.flatMap((period) =>
-    (period.shortages ?? []).map((s) => ({
+    // Hired-in rows are resolved: they aren't an open shortage any more.
+    (period.shortages ?? []).filter((s) => s.supplierId == null).map((s) => ({
       id: s.id,
       periodId: period.id,
       periodName: period.name,

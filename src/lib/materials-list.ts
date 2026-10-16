@@ -14,6 +14,10 @@ interface MaterialRow {
   costPrice: unknown;
   listPrice: unknown;
   revenueBefore: unknown;
+  subhireUnitCost: unknown;
+  defaultSupplierId: number | null;
+  subhireCostBasis: string;
+  subhireOnly: boolean;
   _count: { stockItems: number };
   components: {
     childId: number;
@@ -65,6 +69,10 @@ export function serializeMaterialsList<T extends MaterialRow>(
       costPrice: toNumberOrNull(m.costPrice),
       listPrice: toNumberOrNull(m.listPrice),
       revenueBefore: toNumberOrNull(m.revenueBefore),
+      subhireUnitCost: toNumberOrNull(m.subhireUnitCost),
+      defaultSupplierId: m.defaultSupplierId,
+      subhireCostBasis: m.subhireCostBasis,
+      subhireOnly: m.subhireOnly,
       totalStock: m._count.stockItems,
       usedInSets,
     };

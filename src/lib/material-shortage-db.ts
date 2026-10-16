@@ -24,7 +24,9 @@ export async function listProjectShortages(
   client: PrismaClient = defaultPrisma,
 ): Promise<ProjectShortage[]> {
   const rows = await client.periodMaterialShortage.findMany({
-    where: { period: { projectId } },
+    // Open shortages only: a row that was hired in (supplierId set) is
+    // resolved and must not block confirming or invoicing the project.
+    where: { period: { projectId }, supplierId: null },
     include: { period: true, material: true },
     orderBy: { id: "asc" },
   });
@@ -52,8 +54,10 @@ export async function fillShortages(
   projectId: number,
   client: PrismaClient = defaultPrisma,
 ): Promise<{ filled: number; remaining: ProjectShortage[] }> {
+  // Hired-in rows are left alone: filling one from stock would silently turn
+  // a supplier booking into owned units and drop its cost record.
   const rows = await client.periodMaterialShortage.findMany({
-    where: { period: { projectId } },
+    where: { period: { projectId }, supplierId: null },
     include: { period: true },
   });
 

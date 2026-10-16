@@ -16,8 +16,12 @@ export interface MaterialGroup {
   discountPct: number | null;
   discountAmount: number | null;
   assignments: PeriodStockItem[];
-  /** Overboeken — units wanted but not backed by a real assignment. */
+  /** Overboeken — units wanted but not backed by a real assignment, and
+   * still open (not hired in). */
   overbookedUnits: number;
+  /** Inhuur — units that were short but are hired in from a supplier. They
+   * count in `units` (billed like any other) but are no longer "overboekt". */
+  subhiredUnits: number;
   /** Overboeken — summed setupCostSnapshot × quantity of the merged
    * shortage rows (real assignments' setup is already summed separately
    * in materialGroupCost). 0 for a group built without shortages. */
@@ -66,6 +70,7 @@ export function groupMaterialAssignments(
         discountAmount: a.discountAmount,
         assignments: [a],
         overbookedUnits: 0,
+        subhiredUnits: 0,
         overbookedSetup: 0,
         shortageIds: [],
       });

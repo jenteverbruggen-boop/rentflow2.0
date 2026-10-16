@@ -78,6 +78,11 @@ const SCALAR_DENYLIST = new Set([
   // forward entry so a future embed doesn't need a second pass, same
   // reasoning as costPrice/listPrice/revenueBefore above.
   "dayPriceAtBooking",
+  // C3 (hiring in): what the supplier charges — purchase cost, never for a
+  // caller without Kosten/Facturen.
+  "subhireUnitCost",
+  "subhireCostOverride",
+  "subhireTotal",
 ]);
 
 // hasOverride is a boolean, not a price — but "an override exists" is

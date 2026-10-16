@@ -31,7 +31,7 @@ export const projectInclude = {
         orderBy: { id: "asc" },
       },
       shortages: {
-        include: { material: { include: { categoryRel: true } } },
+        include: { material: { include: { categoryRel: true } }, supplier: { select: { id: true, name: true } } },
         orderBy: { id: "asc" },
       },
     },

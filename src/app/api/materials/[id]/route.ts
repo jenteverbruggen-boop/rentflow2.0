@@ -11,6 +11,7 @@ import {
 import { redactMoney } from "@/lib/redact";
 import { findRejectedMoneyWrite, moneyFieldsToIgnore } from "@/lib/money-write-guard";
 import { materialMoneyData, serializeMaterialMoney } from "@/lib/material-money-fields";
+import { subhireFieldsData, subhireFieldsError } from "@/lib/material-subhire-fields";
 import { resolveLegacyCategoryName } from "@/lib/material-category";
 
 const MATERIAL_MONEY_FIELDS = [
@@ -20,6 +21,7 @@ const MATERIAL_MONEY_FIELDS = [
   "costPrice",
   "listPrice",
   "revenueBefore",
+  "subhireUnitCost",
 ] as const;
 
 type Params = { params: Promise<{ id: string }> };
@@ -75,8 +77,13 @@ export async function PUT(req: NextRequest, { params }: Params) {
         costPrice: true,
         listPrice: true,
         revenueBefore: true,
+        subhireUnitCost: true,
+        defaultSupplierId: true,
+        subhireOnly: true,
       },
     });
+    const subhireError = subhireFieldsError(body, currentMaterial);
+    if (subhireError) return badRequest(subhireError);
     if (findRejectedMoneyWrite(body, access, currentMaterial)) return forbidden();
 
     // Money-blind caller: useMaterialUpdate's redacted-to-0/null echo
@@ -106,6 +113,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
           notes,
           isBundle: Boolean(isBundle),
           ...materialMoneyData(body, ignore),
+          ...subhireFieldsData(body),
           ...(archived !== undefined ? { archived: Boolean(archived) } : {}),
         },
         include: { categoryRel: true },
