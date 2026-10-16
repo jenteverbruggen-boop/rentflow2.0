@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  requireAuth,
   requireModule,
+  unauthorized,
   forbidden,
   badRequest,
   serverError,
@@ -10,11 +12,13 @@ import { getLogo, setLogo, deleteLogo } from "@/lib/settings";
 const MAX_SIZE = 1 * 1024 * 1024;
 
 // Excluded from the proxy.ts matcher (print views fetch it without going
-// through the page-level auth redirect) but NOT exempt from module gating
-// here — this route does its own requireModule() call (subtlety 3).
+// through the page-level auth redirect), so this route checks the session
+// itself. Reading needs only a signed-in user — every print document shows
+// the logo, including for roles without `instellingen` access; changing it
+// (PUT/DELETE) stays module-gated.
 export async function GET() {
-  const user = await requireModule("instellingen", "lezen").catch(() => null);
-  if (!user) return forbidden();
+  const user = await requireAuth().catch(() => null);
+  if (!user) return unauthorized();
   try {
     const logo = await getLogo();
     if (!logo) return new NextResponse(null, { status: 404 });

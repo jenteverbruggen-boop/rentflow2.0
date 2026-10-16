@@ -18,9 +18,28 @@ const SETTING_KEYS = [
 ] as const;
 export type SettingKey = (typeof SETTING_KEYS)[number];
 
-export async function getSettings(): Promise<Record<string, string>> {
+/** The subset printed on documents (header, payment block, footer). Safe
+ * to expose to every signed-in user — unlike the full settings form, which
+ * needs the `instellingen` module. */
+export const PRINT_SETTING_KEYS = [
+  "companyName",
+  "companyAddress",
+  "companyPostalCode",
+  "companyCity",
+  "companyPhone",
+  "companyVat",
+  "companyIban",
+  "invoicePaymentTermDays",
+  "invoiceBankAccountHolder",
+  "invoiceFooter",
+  "btwRate",
+] as const satisfies readonly SettingKey[];
+
+export async function getSettings(
+  keys: readonly SettingKey[] = SETTING_KEYS,
+): Promise<Record<string, string>> {
   const rows = await prisma.setting.findMany({
-    where: { key: { in: [...SETTING_KEYS] } },
+    where: { key: { in: [...keys] } },
     select: { key: true, value: true },
   });
   const out: Record<string, string> = {};

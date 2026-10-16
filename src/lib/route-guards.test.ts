@@ -21,6 +21,20 @@ const EXEMPT = [
     reason: "forward (N4.1) — the discovery endpoint a client calls before knowing its permissions; gating it is circular",
   },
 ];
+/** A single handler of an otherwise module-gated file that is deliberately
+ * open to any signed-in user. The file's other handlers are still checked. */
+const EXEMPT_HANDLERS = [
+  {
+    file: "settings/company/route.ts",
+    method: "GET",
+    reason: "print headers must render for roles without instellingen access; only whitelisted company/payment keys",
+  },
+  {
+    file: "settings/logo/route.ts",
+    method: "GET",
+    reason: "every print document shows the logo; writing it stays gated on instellingen",
+  },
+];
 const EXEMPT_CALENDAR_PREFIX = "calendar/"; // forward (O1, phase 4)
 
 function findRouteFiles(dir: string, out: string[] = []): string[] {
@@ -99,6 +113,15 @@ describe("every route handler declares a module guard (N2.5)", () => {
     });
 
     for (const handler of handlers) {
+      const handlerExemption = EXEMPT_HANDLERS.find(
+        (e) => e.file === relPath && e.method === handler.method,
+      );
+      if (handlerExemption) {
+        it(`${relPath}: ${handler.method} exempt (${handlerExemption.reason})`, () => {
+          expect(handler.body.includes("requireAuth(")).toBe(true);
+        });
+        continue;
+      }
       it(`${relPath}: ${handler.method} calls requireModule`, () => {
         expect(
           handler.body.includes("requireModule("),
