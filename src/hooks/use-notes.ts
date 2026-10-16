@@ -4,8 +4,13 @@ import type { Note } from "@/types";
 export interface NoteListFilter {
   projectId?: number;
   clientId?: number;
+  /** Not linked to any project or client ("Niet gekoppeld"). */
   unassigned?: boolean;
   q?: string;
+  /** Assigned to me; with `open`, only those I haven't ticked off yet. */
+  assignedToMe?: boolean;
+  open?: boolean;
+  assigneeId?: number;
 }
 
 export interface NoteFormValues {
@@ -14,6 +19,8 @@ export interface NoteFormValues {
   noteDate?: string;
   projectId?: number | null;
   clientId?: number | null;
+  /** Person ids; omitted = leave unchanged, [] = clear. */
+  assigneeIds?: number[];
 }
 
 function filterToQuery(filter: NoteListFilter): string {
@@ -22,6 +29,9 @@ function filterToQuery(filter: NoteListFilter): string {
   if (filter.clientId != null) params.set("clientId", String(filter.clientId));
   if (filter.unassigned) params.set("unassigned", "1");
   if (filter.q) params.set("q", filter.q);
+  if (filter.assignedToMe) params.set("assignedToMe", "1");
+  if (filter.open) params.set("open", "1");
+  if (filter.assigneeId != null) params.set("assigneeId", String(filter.assigneeId));
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
@@ -32,9 +42,10 @@ async function jsonOrThrow<T>(res: Response): Promise<T> {
   return data;
 }
 
-export function useNotes(filter: NoteListFilter = {}) {
+export function useNotes(filter: NoteListFilter = {}, enabled = true) {
   return useQuery({
     queryKey: ["notes", filter],
+    enabled,
     queryFn: () => fetch(`/api/notes${filterToQuery(filter)}`).then((r) => jsonOrThrow<Note[]>(r)),
   });
 }

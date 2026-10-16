@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { NoteThumbnailStrip } from "@/components/note-thumbnail-strip";
 import { NoteAuditLine } from "@/components/note-audit-line";
 import { NoteAssignPopover } from "@/components/note-assign-popover";
+import { NoteAssignees } from "@/components/note-assignees";
 import { useAuthMe } from "@/hooks/use-auth-me";
 import type { Note } from "@/types";
 
@@ -70,6 +71,8 @@ export function NoteCard({ note, onEdit, onDelete, hideLinkBadge }: Props) {
 
         <NoteThumbnailStrip images={note.images} />
 
+        <NoteAssignees note={note} />
+
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           {!hideLinkBadge ? (
             <div className="flex flex-wrap items-center gap-2">
@@ -81,7 +84,7 @@ export function NoteCard({ note, onEdit, onDelete, hideLinkBadge }: Props) {
               {note.client && <Badge variant="secondary"><InlineIcon icon={Building2} /> {note.client.name}</Badge>}
               {unassigned && (
                 <>
-                  <Badge className="bg-amber-600 text-white">Niet toegewezen</Badge>
+                  <Badge className="bg-amber-600 text-white">Niet gekoppeld</Badge>
                   <NoteAssignPopover note={note} />
                 </>
               )}

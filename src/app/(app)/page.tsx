@@ -6,6 +6,7 @@ import { satisfies } from "@/lib/modules";
 import { useAuthMe } from "@/hooks/use-auth-me";
 import { DashboardStatTile } from "@/components/dashboard-stat-tile";
 import { UpcomingProjectsCard } from "@/components/upcoming-projects-card";
+import { AssignedNotesCard } from "@/components/assigned-notes-card";
 import type { Project, Person, Material } from "@/types";
 import { CalendarDays, FolderKanban, Package, Receipt, Users, Wallet } from "lucide-react";
 
@@ -111,6 +112,8 @@ export default function DashboardPage() {
           </div>
         ),
       )}
+
+      <AssignedNotesCard />
 
       <UpcomingProjectsCard projects={upcoming} />
     </div>

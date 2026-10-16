@@ -403,6 +403,13 @@ export interface NoteImage {
   createdAt: string;
 }
 
+/** One person a note is for, and whether they have ticked it off. */
+export interface NoteAssignee {
+  personId: number;
+  personName: string;
+  doneAt: string | null;
+}
+
 export interface Note {
   id: number;
   title: string;
@@ -419,6 +426,7 @@ export interface Note {
   project?: { id: number; name: string } | null;
   client?: { id: number; name: string } | null;
   images: NoteImage[];
+  assignees: NoteAssignee[];
 }
 
 export interface PersonAvailability {

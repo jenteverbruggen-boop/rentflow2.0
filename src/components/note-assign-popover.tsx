@@ -7,9 +7,9 @@ import { NoteLinkPicker } from "@/components/note-link-picker";
 import { useNoteMutations } from "@/hooks/use-notes";
 import type { Note } from "@/types";
 
-/** One-click "→ Toewijzen" for a note that has no project/client yet —
+/** One-click "→ Koppelen" for a note that has no project/client yet —
  * the general notes view's shortcut so filing a note doesn't need the
- * full edit dialog. */
+ * full edit dialog. (Not to be confused with assigning a note to persons.) */
 export function NoteAssignPopover({ note }: { note: Note }) {
   const [open, setOpen] = useState(false);
   const [projectId, setProjectId] = useState<number | null>(null);
@@ -26,7 +26,7 @@ export function NoteAssignPopover({ note }: { note: Note }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button size="sm" variant="outline">→ Toewijzen</Button>
+        <Button size="sm" variant="outline">→ Koppelen</Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 space-y-3" align="start">
         <NoteLinkPicker
@@ -35,7 +35,7 @@ export function NoteAssignPopover({ note }: { note: Note }) {
           onChange={({ projectId: p, clientId: c }) => { setProjectId(p); setClientId(c); }}
         />
         <Button size="sm" className="w-full" onClick={save} disabled={update.isPending || (!projectId && !clientId)}>
-          {update.isPending ? "Bezig..." : "Toewijzen"}
+          {update.isPending ? "Bezig..." : "Koppelen"}
         </Button>
       </PopoverContent>
     </Popover>

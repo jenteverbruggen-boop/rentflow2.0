@@ -69,7 +69,7 @@ export function NoteLinkPicker({ projectId, clientId, onChange }: Props) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {!isOwnScope && <SelectItem value="none">Niet toegewezen</SelectItem>}
+          {!isOwnScope && <SelectItem value="none">Niet gekoppeld</SelectItem>}
           <SelectItem value="project">Project</SelectItem>
           {!isOwnScope && <SelectItem value="client">Klant</SelectItem>}
         </SelectContent>

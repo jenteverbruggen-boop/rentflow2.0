@@ -5,12 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/date-input";
 import { NoteLinkPicker } from "@/components/note-link-picker";
 import { NoteImages } from "@/components/note-images";
+import { NoteAssigneePicker } from "@/components/note-assignee-picker";
+import { useCanAssignNotes } from "@/hooks/use-note-assignees";
 import type { Note } from "@/types";
 import type { NoteFormValues } from "@/hooks/use-notes";
 
@@ -42,6 +39,8 @@ interface Props {
 export function NoteFormDialog({ open, onOpenChange, defaultValues, initialProjectId, onSubmit, isPending }: Props) {
   const [projectId, setProjectId] = useState<number | null>(null);
   const [clientId, setClientId] = useState<number | null>(null);
+  const [assigneeIds, setAssigneeIds] = useState<number[]>([]);
+  const canAssign = useCanAssignNotes();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -58,15 +57,17 @@ export function NoteFormDialog({ open, onOpenChange, defaultValues, initialProje
       });
       setProjectId(defaultValues.projectId);
       setClientId(defaultValues.clientId);
+      setAssigneeIds(defaultValues.assignees.map((a) => a.personId));
     } else {
       form.reset({ title: "", body: "", noteDate: format(new Date(), "yyyy-MM-dd") });
       setProjectId(initialProjectId ?? null);
       setClientId(null);
+      setAssigneeIds([]);
     }
   }, [defaultValues, initialProjectId, open, form]);
 
   function submit(values: FormValues) {
-    onSubmit({ ...values, projectId, clientId });
+    onSubmit({ ...values, projectId, clientId, ...(canAssign ? { assigneeIds } : {}) });
   }
 
   return (
@@ -118,6 +119,12 @@ export function NoteFormDialog({ open, onOpenChange, defaultValues, initialProje
                 onChange={({ projectId: p, clientId: c }) => { setProjectId(p); setClientId(c); }}
               />
             </div>
+            {canAssign && (
+              <div className="space-y-2">
+                <Label>Toewijzen aan</Label>
+                <NoteAssigneePicker value={assigneeIds} onChange={setAssigneeIds} />
+              </div>
+            )}
             {defaultValues && (
               <div className="space-y-2">
                 <Label>Foto&apos;s</Label>

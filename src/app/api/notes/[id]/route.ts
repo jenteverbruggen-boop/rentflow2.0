@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireModule, forbidden, badRequest, notFound, serverError } from "@/lib/api-auth";
 import { getNote, updateNote, deleteNote } from "@/lib/notes";
+import { findMissingPersonIds } from "@/lib/note-assignees";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,6 +13,8 @@ const updateSchema = z.object({
   noteDate: z.string().optional(),
   projectId: z.number().int().positive().optional().nullable(),
   clientId: z.number().int().positive().optional().nullable(),
+  // Absent = leave the assignees alone; [] = clear them.
+  assigneeIds: z.array(z.number().int().positive()).max(50).optional(),
 });
 
 export async function GET(_req: NextRequest, { params }: Params) {
@@ -38,9 +41,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const noteId = parseInt(id, 10);
     const parsed = updateSchema.safeParse(await req.json());
     if (!parsed.success) return badRequest(parsed.error.issues[0].message);
-    const { projectId: rawProjectId, clientId: rawClientId, noteDate, ...rest } = parsed.data;
+    const { projectId: rawProjectId, clientId: rawClientId, noteDate, assigneeIds: rawAssigneeIds, ...rest } = parsed.data;
     let projectId = rawProjectId;
     let clientId = rawClientId;
+    let assigneeIds = rawAssigneeIds && [...new Set(rawAssigneeIds)];
     if (projectId != null && clientId != null) {
       return badRequest("Een notitie kan niet aan zowel een project als een klant gekoppeld zijn");
     }
@@ -58,6 +62,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
       // the redacted-money-field "ignore, don't reject" convention.
       projectId = undefined;
       clientId = undefined;
+      assigneeIds = undefined;
+    }
+    if (assigneeIds && (await findMissingPersonIds(assigneeIds)).length > 0) {
+      return badRequest("Onbekende persoon geselecteerd");
     }
 
     const user = await prisma.user.findUnique({ where: { id: access.id }, select: { name: true } });
@@ -66,6 +74,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       ...(noteDate !== undefined ? { noteDate: new Date(noteDate) } : {}),
       ...(projectId !== undefined ? { projectId } : {}),
       ...(clientId !== undefined ? { clientId } : {}),
+      ...(assigneeIds !== undefined ? { assigneeIds } : {}),
       updatedById: access.id,
       updatedByName: user?.name ?? "Onbekend",
     });

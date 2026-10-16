@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EntityCombobox } from "@/components/entity-combobox";
 import { useAuthMe } from "@/hooks/use-auth-me";
+import { useAssignablePeople, useCanAssignNotes } from "@/hooks/use-note-assignees";
 import type { NoteListFilter } from "@/hooks/use-notes";
 import type { Project, Client } from "@/types";
 
@@ -13,7 +14,7 @@ interface Props {
   onChange: (next: NoteListFilter) => void;
 }
 
-/** Alle / Niet toegewezen / filter op project of klant, plus zoeken —
+/** Alle / Aan mij / Niet gekoppeld / filter op project, klant of persoon, plus zoeken —
  * the general notes view's filter row. Project and client filters are
  * mutually exclusive (picking one clears the other). */
 export function NoteFilterBar({ filter, onChange }: Props) {
@@ -34,22 +35,52 @@ export function NoteFilterBar({ filter, onChange }: Props) {
     enabled: !isOwnScope,
   });
 
-  const mode: "all" | "unassigned" | "linked" =
-    filter.unassigned ? "unassigned" : filter.projectId != null || filter.clientId != null ? "linked" : "all";
+  const canAssign = useCanAssignNotes();
+  const { data: people = [] } = useAssignablePeople(canAssign);
+
+  const mode: "all" | "unassigned" | "linked" | "mine" =
+    filter.assignedToMe ? "mine"
+    : filter.unassigned ? "unassigned"
+    : filter.projectId != null || filter.clientId != null || filter.assigneeId != null ? "linked"
+    : "all";
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button size="sm" variant={mode === "all" ? "default" : "outline"} onClick={() => onChange({ q: filter.q })}>
         Alle
       </Button>
+      {me?.personId != null && (
+        <Button
+          size="sm"
+          variant={mode === "mine" ? "default" : "outline"}
+          onClick={() => onChange({ q: filter.q, assignedToMe: true, open: filter.open })}
+        >
+          Aan mij
+        </Button>
+      )}
+      {mode === "mine" && (
+        <Button size="sm" variant={filter.open ? "secondary" : "ghost"} onClick={() => onChange({ ...filter, open: !filter.open })}>
+          Alleen open
+        </Button>
+      )}
       {!isOwnScope && (
         <Button
           size="sm"
           variant={mode === "unassigned" ? "default" : "outline"}
           onClick={() => onChange({ q: filter.q, unassigned: true })}
         >
-          Niet toegewezen
+          Niet gekoppeld
         </Button>
+      )}
+      {canAssign && (
+        <div className="w-48">
+          <EntityCombobox
+            items={people.map((p) => ({ id: p.id, name: p.name }))}
+            value={filter.assigneeId ?? null}
+            onChange={(id) => onChange({ q: filter.q, assigneeId: id ?? undefined })}
+            placeholder="Toegewezen aan..."
+          />
+        </div>
       )}
       <div className="w-48">
         <EntityCombobox
