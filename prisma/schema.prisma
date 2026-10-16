@@ -433,6 +433,12 @@ model Invoice {
   depositBasisExcl  Decimal?  @db.Decimal(10, 2)
   notes             String?
   footer            String?
+  // C1 — draft-only inputs. `paymentTermDays` overrides the BTW/payment-term
+  // setting for this one invoice (finalize derives dueDate from it);
+  // `generatedHash` fingerprints the line generator's output at the moment
+  // the draft was generated, so a later project change can be detected.
+  paymentTermDays   Int?
+  generatedHash     String?
   createdAt         DateTime  @default(now())
   finalizedAt       DateTime?
 

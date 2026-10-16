@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 
-interface CompanyInfo {
+export interface CompanyInfo {
   companyName?: string;
   companyAddress?: string;
   companyPostalCode?: string;
@@ -38,45 +38,53 @@ interface DocumentHeaderProps {
   };
 }
 
-export function DocumentHeader({ meta, company = {} }: DocumentHeaderProps) {
+/** Logo (or the company name when there is no logo) and the company's
+ * address/contact lines — the left half of every printed document's header. */
+export function CompanyBlock({ company = {}, showIban = true }: { company?: CompanyInfo; showIban?: boolean }) {
   const [logoError, setLogoError] = useState(false);
 
   return (
+    <div className="space-y-0.5">
+      {!logoError ? (
+        <Image
+          src="/api/settings/logo"
+          alt="Logo"
+          width={224}
+          height={56}
+          unoptimized
+          className="h-14 w-auto max-w-56 object-contain object-left mb-2"
+          onError={() => setLogoError(true)}
+        />
+      ) : company.companyName ? (
+        <p className="text-xl font-bold">{company.companyName}</p>
+      ) : null}
+      {company.companyAddress && (
+        <p className="text-sm">{company.companyAddress}</p>
+      )}
+      {(company.companyPostalCode || company.companyCity) && (
+        <p className="text-sm">
+          {[company.companyPostalCode, company.companyCity]
+            .filter(Boolean)
+            .join(" ")}
+        </p>
+      )}
+      {company.companyPhone && (
+        <p className="text-sm">{company.companyPhone}</p>
+      )}
+      {company.companyVat && (
+        <p className="text-sm">BTW: {company.companyVat}</p>
+      )}
+      {showIban && company.companyIban && (
+        <p className="text-sm">IBAN: {company.companyIban}</p>
+      )}
+    </div>
+  );
+}
+
+export function DocumentHeader({ meta, company = {} }: DocumentHeaderProps) {
+  return (
     <div className="flex justify-between items-start mb-6 gap-4">
-      <div className="space-y-0.5">
-        {!logoError ? (
-          <Image
-            src="/api/settings/logo"
-            alt="Logo"
-            width={224}
-            height={56}
-            unoptimized
-            className="h-14 object-contain mb-2"
-            onError={() => setLogoError(true)}
-          />
-        ) : company.companyName ? (
-          <p className="text-xl font-bold">{company.companyName}</p>
-        ) : null}
-        {company.companyAddress && (
-          <p className="text-sm">{company.companyAddress}</p>
-        )}
-        {(company.companyPostalCode || company.companyCity) && (
-          <p className="text-sm">
-            {[company.companyPostalCode, company.companyCity]
-              .filter(Boolean)
-              .join(" ")}
-          </p>
-        )}
-        {company.companyPhone && (
-          <p className="text-sm">{company.companyPhone}</p>
-        )}
-        {company.companyVat && (
-          <p className="text-sm">BTW: {company.companyVat}</p>
-        )}
-        {company.companyIban && (
-          <p className="text-sm">IBAN: {company.companyIban}</p>
-        )}
-      </div>
+      <CompanyBlock company={company} />
       <div className="text-right space-y-1 text-sm">
         {meta.opdrachtgever && (
           <p>

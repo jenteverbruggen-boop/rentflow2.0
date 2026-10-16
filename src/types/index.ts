@@ -516,6 +516,9 @@ export interface Invoice {
   projectId: number | null;
   clientId: number;
   creditNoteOfId: number | null;
+  /** On a credit note: number and date of the invoice it corrects. */
+  creditNoteOfNumber?: string | null;
+  creditNoteOfDate?: string | null;
   clientName: string;
   clientAddress: string | null;
   clientPostalCode: string | null;
@@ -535,6 +538,8 @@ export interface Invoice {
   depositBasisExcl: number | null;
   notes: string | null;
   footer: string | null;
+  /** Concept only: payment term (days) for this invoice, overriding the setting. */
+  paymentTermDays: number | null;
   createdAt: string;
   finalizedAt: string | null;
   lines: InvoiceLine[];
@@ -543,4 +548,7 @@ export interface Invoice {
   // computed, added by the API, never persisted (design doc §6):
   displayStatus: InvoiceDisplayStatus;
   remainingBalance: number;
+  /** Only on the detail GET of a concept: the project changed since the
+   * lines were generated. */
+  isStale?: boolean;
 }

@@ -261,6 +261,30 @@ label {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  /* Invoice/quote lines: header rule + row separators only, no grid; the
+     header repeats on every page and rows never split across pages. */
+  .doc-table th,
+  .doc-table td {
+    border: none !important;
+    border-bottom: 1px solid #ddd !important;
+    padding: 5px 6px;
+  }
+  .doc-table thead {
+    background: transparent !important;
+  }
+  .doc-table thead th {
+    border-bottom: 2px solid #000 !important;
+    font-size: 8pt;
+    color: #4b5563;
+  }
+  .doc-table tbody th {
+    background: #f4f4f5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .doc-table tr {
+    break-inside: avoid;
+  }
   /* Kosten tab's own inline print table keeps its row-separator-only look —
      scoped under .cost-table so it doesn't override the default grid above
      for every other document. */

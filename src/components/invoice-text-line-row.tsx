@@ -26,7 +26,7 @@ export function InvoiceTextLineRow({ line, editable, onUpdate, onDelete }: Props
 
   return (
     <tr className="border-b last:border-0">
-      <td colSpan={4} className="py-2 pl-3 pr-4 text-sm align-top">
+      <td colSpan={5} className="py-2 pl-3 pr-4 text-sm align-top">
         {editing ? (
           <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
         ) : (

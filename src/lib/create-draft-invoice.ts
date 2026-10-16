@@ -3,6 +3,7 @@ import { prisma as defaultPrisma } from "@/lib/prisma";
 import { buildInvoiceDraft, type BuildInvoiceDraftArgs } from "@/lib/build-invoice-draft";
 import { invoiceInclude } from "@/lib/serialize-invoice";
 import { assertNoShortages } from "@/lib/material-shortage-db";
+import { hashDraftLines } from "@/lib/invoice-hash";
 
 export type CreateDraftInvoiceArgs = BuildInvoiceDraftArgs;
 
@@ -65,6 +66,7 @@ export async function createDraftInvoice(
           ? args.depositValue
           : null,
       depositBasisExcl,
+      generatedHash: hashDraftLines(lines),
       ...totals,
       lines: { create: lines },
     },

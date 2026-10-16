@@ -751,3 +751,26 @@ The existing 8-commit sequence (`.plans/tasks-round2/04-phase3.md:60-86`) does n
 3. **Manual line edits during `concept` and a later `regenerate` are mutually destructive** (§7's `POST .../regenerate` explicitly discards manual additions) — acceptable for v1, but worth a confirmation dialog in the UI (§8.1's `create-invoice-dialog.tsx`/detail page) so a PO doesn't lose hand-added lines by accident.
 4. **`GET /api/invoices` returning every matching invoice unpaginated** (§7) is fine at current/expected volumes (tens to low hundreds per year) but will need pagination if invoice volume grows substantially — not built now, flagged for whoever revisits the overview page.
 5. **The credit-note "partial lines" selection** (`POST /api/invoices/[id]/credit-note` with a `lines` array, §7) needs UI care to avoid crediting more than a line's original quantity — validate `quantity <= originalLine.quantity` server-side, not just in the dialog.
+
+---
+
+## Amendments (round 4, 2026-10-16)
+
+Behaviour changes made after this design was approved; see
+`2026-10-po-feedback-round4.md` (C1a, C8) for the reasoning.
+
+- **Regenerate keeps the PO's own lines** (`manual` and the new `text` kind).
+  §7 / §12 risk 3 said regenerate discards manual lines; it now recomputes only
+  the generated ones, and the UI confirms first.
+- **Due date:** still computed at finalisation (§3), but from
+  `Invoice.paymentTermDays` when the draft sets one, else the company setting.
+  PATCH no longer accepts `dueDate`.
+- **Payment reference:** finalising an *invoice* (not a credit note) writes a
+  Belgian structured communication (OGM, mod 97) built from year + sequence.
+- **`Invoice.generatedHash`:** fingerprint of the generator output, stored when a
+  draft is created/regenerated; a concept whose fresh generator run no longer
+  matches is flagged "project changed".
+- **New line kind `text`:** free-text paragraph, zero amounts, ignored by the
+  totals; credit notes skip it.
+- **VAT per rate** is rounded per rate and `vatAmount` is the sum of those, so
+  printed VAT rows always add up.

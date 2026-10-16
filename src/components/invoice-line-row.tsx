@@ -54,15 +54,12 @@ export function InvoiceLineRow({ line, editable, onUpdate, onDelete }: Props) {
         {editing ? (
           <Input value={description} onChange={(e) => setDescription(e.target.value)} className="h-8" />
         ) : (
-          <>
-            <div className="font-medium leading-tight">{line.description}</div>
-            {line.section && <div className="text-muted-foreground text-[11px] leading-tight">{line.section}</div>}
-          </>
+          <div className="font-medium leading-tight">{line.description}</div>
         )}
       </td>
-      <td className="py-2 pr-4 text-xs text-muted-foreground tabular-nums whitespace-nowrap align-middle">
+      <td className="py-2 pr-4 text-right text-sm tabular-nums whitespace-nowrap align-middle">
         {editing ? (
-          <div className="flex gap-1">
+          <div className="flex justify-end gap-1">
             <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="h-8 w-16" />
             {isOwn && (
               <Select value={unit} onValueChange={(v) => setUnit(v as InvoiceLineUnit)}>
@@ -74,16 +71,22 @@ export function InvoiceLineRow({ line, editable, onUpdate, onDelete }: Props) {
                 </SelectContent>
               </Select>
             )}
-            <Input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className="h-8 w-24" />
           </div>
         ) : (
-          `${line.quantity} ${line.unit} × ${formatEUR(line.unitPrice)}`
+          `${line.quantity} ${line.unit}`
         )}
       </td>
-      <td className="py-2 pr-3 text-xs text-muted-foreground tabular-nums align-middle">
+      <td className="py-2 pr-4 text-right text-sm tabular-nums whitespace-nowrap align-middle">
+        {editing ? (
+          <Input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className="ml-auto h-8 w-24" />
+        ) : (
+          formatEUR(line.unitPrice)
+        )}
+      </td>
+      <td className="py-2 pr-3 text-right text-xs text-muted-foreground tabular-nums align-middle">
         {editing && isOwn ? (
           <Select value={vatRate} onValueChange={setVatRate}>
-            <SelectTrigger className="h-8 w-20"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="ml-auto h-8 w-20"><SelectValue /></SelectTrigger>
             <SelectContent>
               {vatOptions(line.vatRate).map((r) => <SelectItem key={r} value={String(r)}>{r}%</SelectItem>)}
             </SelectContent>

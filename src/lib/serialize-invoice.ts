@@ -6,6 +6,8 @@ export const invoiceInclude = {
   lines: true,
   payments: true,
   creditNotes: true,
+  // A credit note must name the invoice it corrects (number + date).
+  creditNoteOf: { select: { number: true, invoiceDate: true } },
 } satisfies Prisma.InvoiceInclude;
 type InvoiceWithLines = Prisma.InvoiceGetPayload<{ include: typeof invoiceInclude }>;
 type InvoiceLine = Prisma.InvoiceLineGetPayload<Record<string, never>>;
@@ -67,6 +69,8 @@ export function serializeInvoice(invoice: InvoiceWithLines) {
     deductionExcl,
     vatAmount,
     totalIncl,
+    creditNoteOfNumber: invoice.creditNoteOf?.number ?? null,
+    creditNoteOfDate: invoice.creditNoteOf?.invoiceDate?.toISOString() ?? null,
     depositPercentage: toNumberOrNull(invoice.depositPercentage),
     depositBasisExcl: toNumberOrNull(invoice.depositBasisExcl),
     lines: invoice.lines

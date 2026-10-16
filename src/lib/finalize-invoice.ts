@@ -2,6 +2,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { nextInvoiceSequence, formatInvoiceNumber, brusselsYear } from "@/lib/invoice-numbering";
 import { invoiceInclude } from "@/lib/serialize-invoice";
+import { structuredReference } from "@/lib/invoice-reference";
 
 export class FinalizeInvoiceError extends Error {
   code: "NOT_FOUND" | "ALREADY_FINALIZED";
@@ -38,7 +39,9 @@ export async function finalizeInvoice(id: number, client: PrismaClient = default
     });
     const settings = new Map(settingRows.map((r) => [r.key, r.value ?? ""]));
     const format = settings.get("invoiceNumberFormat") || DEFAULT_FORMAT;
-    const termDays = Number(settings.get("invoicePaymentTermDays")) || DEFAULT_TERM_DAYS;
+    // A per-invoice term (set on the draft) wins over the company setting.
+    const termDays =
+      invoice.paymentTermDays ?? (Number(settings.get("invoicePaymentTermDays")) || DEFAULT_TERM_DAYS);
 
     const series = invoice.kind === "creditnota" ? "credit" : "invoice";
     const now = new Date();
@@ -47,9 +50,16 @@ export async function finalizeInvoice(id: number, client: PrismaClient = default
     const number = formatInvoiceNumber(format, series, year, seq);
     const dueDate = new Date(now.getTime() + termDays * 86_400_000);
 
+    // Credit notes take no payments, so only invoices get an OGM — and the
+    // credit series' own year+seq would collide with the invoice series'.
+    const paymentReference = series === "invoice" ? structuredReference(year, seq) : undefined;
+
     return txClient.invoice.update({
       where: { id },
-      data: { number, year, series, status: "verzonden", invoiceDate: now, dueDate, finalizedAt: now },
+      data: {
+        number, year, series, status: "verzonden", invoiceDate: now, dueDate, finalizedAt: now,
+        ...(paymentReference ? { paymentReference } : {}),
+      },
       include: invoiceInclude,
     });
   });

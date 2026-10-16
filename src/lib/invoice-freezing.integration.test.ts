@@ -102,13 +102,15 @@ describe("invoice freezing (J2b.4, mandatory regression test)", () => {
     expect(Number(updated.subtotalExcl)).toBe(Number(before) + 100);
   });
 
-  it("regenerate on a still-concept draft discards a manual line and re-derives from the live project", async () => {
+  it("regenerate on a still-concept draft re-derives generated lines from the live project and keeps the manual one", async () => {
     const draft = await createDraftInvoice({ projectId, invoiceRole: "standalone" }, client);
     await addManualLine(draft.id, { description: "Manual extra", quantity: 1, unit: "stuk", unitPrice: 1000 }, client);
 
     const regenerated = await regenerateInvoice(draft.id, client);
-    expect(regenerated.lines.some((l) => l.description === "Manual extra")).toBe(false);
-    expect(Number(regenerated.subtotalExcl)).toBe(Number(draft.subtotalExcl));
+    // C1a (supersedes design §12 risk 3's "discards manual lines"): the PO's own
+    // lines survive; only the generated ones are recomputed.
+    expect(regenerated.lines.some((l) => l.description === "Manual extra")).toBe(true);
+    expect(Number(regenerated.subtotalExcl)).toBe(Number(draft.subtotalExcl) + 1000);
   });
 
   it("regenerate throws NOT_FOUND for a nonexistent invoice", async () => {

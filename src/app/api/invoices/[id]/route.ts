@@ -4,13 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { requireModule, forbidden, badRequest, notFound, conflict, serverError } from "@/lib/api-auth";
 import { serializeInvoice, invoiceInclude } from "@/lib/serialize-invoice";
 import { assertDraftMutable, DraftNotMutableError } from "@/lib/invoices";
+import { isInvoiceStale } from "@/lib/invoice-stale";
 
 type Params = { params: Promise<{ id: string }> };
 
 const patchSchema = z.object({
-  notes: z.string().nullable().optional(),
-  footer: z.string().nullable().optional(),
-  dueDate: z.string().nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+  footer: z.string().max(2000).nullable().optional(),
+  // The due date itself is computed when the invoice is finalised
+  // (design §3); what a draft can set is the term it is computed from.
+  paymentTermDays: z.number().int().min(1).max(365).nullable().optional(),
 });
 
 export async function GET(_req: NextRequest, { params }: Params) {
@@ -25,13 +28,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
       include: invoiceInclude,
     });
     if (!invoice) return notFound();
-    return NextResponse.json(serializeInvoice(invoice));
+    return NextResponse.json({ ...serializeInvoice(invoice), isStale: await isInvoiceStale(invoice, prisma) });
   } catch (err) {
     return serverError((err as Error).message);
   }
 }
 
-/** J2b.4 — notes/footer/dueDate are the only fields a draft invoice's
+/** J2b.4 — notes/footer/payment term are the only fields a draft invoice's
  * own metadata exposes for direct editing; every generated line/total
  * comes from the project via regenerate, never a manual PATCH here. */
 export async function PATCH(req: NextRequest, { params }: Params) {
@@ -49,10 +52,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (!invoice) return notFound();
     assertDraftMutable(invoice);
 
-    const { notes, footer, dueDate } = parsed.data;
+    const { notes, footer, paymentTermDays } = parsed.data;
     const updated = await prisma.invoice.update({
       where: { id: invoiceId },
-      data: { notes, footer, dueDate: dueDate === undefined ? undefined : dueDate ? new Date(dueDate) : null },
+      data: { notes, footer, paymentTermDays },
       include: invoiceInclude,
     });
     return NextResponse.json(serializeInvoice(updated));
