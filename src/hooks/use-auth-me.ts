@@ -3,6 +3,8 @@ import type { AccessLevel, ModuleKey } from "@/types";
 
 export interface AuthMe {
   user: { id: number; email: string; name: string; roleId: number | null };
+  /** The account's saved light/dark preference. */
+  theme: "light" | "dark";
   permissions: Record<ModuleKey, AccessLevel>;
   scope: "all" | "own";
   personId: number | null;
