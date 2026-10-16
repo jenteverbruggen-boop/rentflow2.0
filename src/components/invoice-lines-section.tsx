@@ -29,21 +29,21 @@ export function InvoiceLinesSection({ lines, editable, onUpdateLine, onDeleteLin
 
   return (
     <div className="border rounded-lg overflow-x-auto bg-card print:border-0 print:rounded-none print:overflow-visible">
-      <table className="doc-table w-full min-w-[640px] text-sm">
+      <table className="doc-table w-full text-sm sm:min-w-[640px]">
         <colgroup>
           <col />
-          <col className="w-28" />
-          <col className="w-28" />
-          <col className="w-16" />
-          <col className="w-28" />
+          <col className="w-24 sm:w-28" />
+          <col className="hidden w-28 sm:table-column" />
+          <col className="hidden w-16 sm:table-column" />
+          <col className="w-24 sm:w-28" />
           {editable && <col className="w-28" />}
         </colgroup>
         <thead>
           <tr className="border-b text-xs uppercase tracking-wide text-muted-foreground">
             <th className="py-2 pl-3 pr-4 text-left font-medium">Omschrijving</th>
             <th className="py-2 pr-4 text-right font-medium">Aantal</th>
-            <th className="py-2 pr-4 text-right font-medium">Prijs</th>
-            <th className="py-2 pr-3 text-right font-medium">BTW</th>
+            <th className="hidden py-2 pr-4 text-right font-medium sm:table-cell">Prijs</th>
+            <th className="hidden py-2 pr-3 text-right font-medium sm:table-cell">BTW</th>
             <th className="py-2 pr-3 text-right font-medium">Bedrag</th>
             {editable && <th aria-label="Acties" />}
           </tr>

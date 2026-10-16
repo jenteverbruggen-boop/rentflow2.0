@@ -31,7 +31,7 @@ export function QuoteDetailHeader({ quote, onRegenerate }: Props) {
       <div className="flex justify-between items-start flex-wrap gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold truncate">{quote.number ?? `Offerte (concept #${quote.id})`}</h2>
+            <h2 className="text-2xl font-bold truncate">{quote.number ?? "Concept-offerte"}</h2>
             <InvoiceStatusBadge status={quote.displayStatus} />
           </div>
           <p className="text-sm text-muted-foreground truncate">{quote.clientName}</p>

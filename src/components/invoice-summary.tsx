@@ -12,7 +12,7 @@ export function InvoiceSummary({ invoice }: { invoice: Invoice }) {
   const vatRows = vatByRate(invoice.lines);
 
   return (
-    <div className="flex justify-end">
+    <div className="flex justify-end break-inside-avoid">
       <div className="text-right space-y-1 min-w-56">
         <Separator className="mb-2" />
         <div className="flex justify-between gap-6 text-sm">

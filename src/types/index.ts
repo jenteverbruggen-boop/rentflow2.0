@@ -588,6 +588,11 @@ export interface Invoice {
   /** On an invoice made from a quote: which one. */
   sourceQuoteId: number | null;
   sourceQuoteNumber?: string | null;
+  /** The project the document is about ("Betreft"). */
+  projectName?: string | null;
+  projectStartDate?: string | null;
+  projectEndDate?: string | null;
+  projectLocation?: string | null;
   createdAt: string;
   finalizedAt: string | null;
   lines: InvoiceLine[];

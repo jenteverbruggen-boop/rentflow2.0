@@ -11,6 +11,8 @@ export const invoiceInclude = {
   // C1b — the invoice a replacement replaces, and the replacement of a corrected one.
   correctionOf: { select: { number: true } },
   sourceQuote: { select: { number: true } },
+  // "Betreft": what the document is about, printed under the billing address.
+  project: { select: { name: true, startDate: true, endDate: true, location: true, locationRel: { select: { name: true } } } },
   corrections: { select: { id: true, number: true, status: true } },
 } satisfies Prisma.InvoiceInclude;
 type InvoiceWithLines = Prisma.InvoiceGetPayload<{ include: typeof invoiceInclude }>;
@@ -76,6 +78,10 @@ export function serializeInvoice(invoice: InvoiceWithLines) {
     totalIncl,
     correctionOfNumber: invoice.correctionOf?.number ?? null,
     sourceQuoteNumber: invoice.sourceQuote?.number ?? null,
+    projectName: invoice.project?.name ?? null,
+    projectStartDate: invoice.project?.startDate.toISOString() ?? null,
+    projectEndDate: invoice.project?.endDate.toISOString() ?? null,
+    projectLocation: invoice.project?.locationRel?.name ?? invoice.project?.location ?? null,
     correctedBy: invoice.corrections[0] ?? null,
     // On a credit note: the replacement it is sent together with (if any).
     correctionReplacement: invoice.creditNoteOf?.corrections[0] ?? null,

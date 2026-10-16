@@ -30,7 +30,7 @@ export function InvoiceTextLineRow({ line, editable, onUpdate, onDelete }: Props
         {editing ? (
           <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
         ) : (
-          <p className="whitespace-pre-line italic text-muted-foreground">{line.description}</p>
+          <p className="whitespace-pre-line text-foreground">{line.description}</p>
         )}
       </td>
       {editable && (

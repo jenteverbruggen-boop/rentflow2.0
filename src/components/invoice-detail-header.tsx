@@ -31,7 +31,7 @@ export function InvoiceDetailHeader({ invoice, onRegenerate, onCredit }: Props) 
       <div className="flex justify-between items-start flex-wrap gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold truncate">{invoice.number ?? `Concept #${invoice.id}`}</h2>
+            <h2 className="text-2xl font-bold truncate">{invoice.number ?? (invoice.kind === "creditnota" ? "Concept-creditnota" : "Concept-factuur")}</h2>
             <InvoiceStatusBadge status={invoice.displayStatus} />
           </div>
           <p className="text-sm text-muted-foreground truncate">{invoice.clientName}</p>

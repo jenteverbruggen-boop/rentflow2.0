@@ -76,14 +76,14 @@ export function InvoiceLineRow({ line, editable, onUpdate, onDelete }: Props) {
           `${line.quantity} ${line.unit}`
         )}
       </td>
-      <td className="py-2 pr-4 text-right text-sm tabular-nums whitespace-nowrap align-middle">
+      <td className="hidden py-2 pr-4 text-right text-sm tabular-nums whitespace-nowrap align-middle sm:table-cell">
         {editing ? (
           <Input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className="ml-auto h-8 w-24" />
         ) : (
           formatEUR(line.unitPrice)
         )}
       </td>
-      <td className="py-2 pr-3 text-right text-xs text-muted-foreground tabular-nums align-middle">
+      <td className="hidden py-2 pr-3 text-right text-xs text-muted-foreground tabular-nums align-middle sm:table-cell">
         {editing && isOwn ? (
           <Select value={vatRate} onValueChange={setVatRate}>
             <SelectTrigger className="ml-auto h-8 w-20"><SelectValue /></SelectTrigger>

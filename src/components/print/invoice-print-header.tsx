@@ -12,6 +12,14 @@ export function InvoicePrintHeader({ invoice, company }: { invoice: Invoice; com
   const isCredit = invoice.kind === "creditnota";
   const isQuote = invoice.kind === "offerte";
   const address = [invoice.clientAddress, [invoice.clientPostalCode, invoice.clientCity].filter(Boolean).join(" ")].filter(Boolean);
+  const isDraft = invoice.status === "concept";
+  const kindLabel = isCredit ? "Creditnota" : isQuote ? "Offerte" : "Factuur";
+  const period =
+    invoice.projectStartDate && invoice.projectEndDate
+      ? invoice.projectStartDate.slice(0, 10) === invoice.projectEndDate.slice(0, 10)
+        ? fmtDate(invoice.projectStartDate)
+        : `${fmtDate(invoice.projectStartDate)} – ${fmtDate(invoice.projectEndDate)}`
+      : null;
   const dateLabel = isCredit ? "Creditnotadatum" : isQuote ? "Offertedatum" : "Factuurdatum";
   const meta: [string, string | null | undefined][] = [
     [dateLabel, invoice.invoiceDate ? fmtDate(invoice.invoiceDate) : null],
@@ -27,8 +35,13 @@ export function InvoicePrintHeader({ invoice, company }: { invoice: Invoice; com
       <div className="flex items-start justify-between gap-6">
         <CompanyBlock company={company} showIban={false} />
         <div className="text-right">
-          <h1 className="text-3xl font-bold tracking-tight">{isCredit ? "Creditnota" : isQuote ? "Offerte" : "Factuur"}</h1>
-          <p className="text-lg tabular-nums">{invoice.number ?? `Concept #${invoice.id}`}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{kindLabel}</h1>
+          {/* A draft has no legal number yet: say so instead of printing an id. */}
+          {invoice.number ? (
+            <p className="text-lg tabular-nums">{invoice.number}</p>
+          ) : (
+            <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground">Concept</p>
+          )}
         </div>
       </div>
 
@@ -38,6 +51,7 @@ export function InvoicePrintHeader({ invoice, company }: { invoice: Invoice; com
           <p className="font-medium">{invoice.clientName}</p>
           {address.map((line) => <p key={line} className="text-sm">{line}</p>)}
           {invoice.clientVatNumber && <p className="text-sm">BTW: {invoice.clientVatNumber}</p>}
+          {isDraft && <p className="pt-1 text-xs text-muted-foreground">Nog niet verzonden</p>}
         </div>
         <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1 text-sm">
           {meta.filter(([, v]) => v).map(([label, value]) => (
@@ -57,6 +71,15 @@ export function InvoicePrintHeader({ invoice, company }: { invoice: Invoice; com
           )}
         </dl>
       </div>
+      {invoice.projectName && (
+        <div className="space-y-0.5 border-l-2 border-foreground/30 pl-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Betreft</p>
+          <p className="font-medium">{invoice.projectName}</p>
+          {(period || invoice.projectLocation) && (
+            <p className="text-sm text-muted-foreground">{[period, invoice.projectLocation].filter(Boolean).join(" · ")}</p>
+          )}
+        </div>
+      )}
     </header>
   );
 }

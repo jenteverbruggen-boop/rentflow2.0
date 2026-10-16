@@ -16,14 +16,17 @@ export function QuoteAcceptanceBlock({ invoice }: { invoice: Invoice }) {
       )}
       <div className="rounded-md border p-4 text-sm print:rounded-none">
         <p className="font-semibold">
-          Voor akkoord
+          Gelezen en goedgekeurd — voor akkoord
           {invoice.validUntil && (
             <span className="font-normal text-muted-foreground">
               {" "}— deze offerte is geldig tot {format(new Date(invoice.validUntil), "dd-MM-yyyy", { locale: nl })}
             </span>
           )}
         </p>
-        <div className="mt-6 grid grid-cols-3 gap-6 text-xs text-muted-foreground">
+        <p className="mt-1 text-xs text-muted-foreground">
+          Door te ondertekenen gaat u akkoord met deze offerte en de vermelde afspraken.
+        </p>
+        <div className="mt-8 grid grid-cols-3 gap-6 text-xs text-muted-foreground">
           {["Naam", "Datum", "Handtekening"].map((label) => (
             <div key={label} className="border-t border-foreground/40 pt-1">{label}</div>
           ))}
