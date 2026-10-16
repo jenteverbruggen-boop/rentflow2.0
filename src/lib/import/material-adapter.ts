@@ -15,6 +15,9 @@ export interface ParsedMaterialRow {
   archived: boolean;
   notes: string | null;
   stockItems: { identifier: string | null; notes: string | null }[];
+  /** Rentman "Inhuur <leverancier>" folders: the item is hired in from this
+   * supplier (named after the folder) and never stocked. */
+  subhireSupplierName?: string | null;
 }
 
 export interface MaterialParseError {

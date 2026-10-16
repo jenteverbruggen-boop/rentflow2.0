@@ -16,7 +16,8 @@ export interface TopMaterialEntry {
  * `PeriodStockItem` row is snapshotted at `dayPriceSnapshot: 0`
  * (booking.ts), so it contributes nothing here regardless, without
  * needing the `!bundleBookingId` filter K4 requires for its own
- * flat-vs-bundle split. Archived materials are excluded (M1.3's rule,
+ * flat-vs-bundle split. Overbooked and hired-in units count too — they are
+ * billed like owned ones. Archived materials are excluded (M1.3's rule,
  * applied consistently to every stats ranking). Returns the top 10,
  * highest revenue first.
  */
@@ -25,7 +26,7 @@ export function computeTopMaterials(periods: Period[]): TopMaterialEntry[] {
 
   for (const period of periods) {
     const days = periodDays(period);
-    for (const group of groupMaterialAssignments(period.materials)) {
+    for (const group of groupMaterialAssignments(period.materials, period.shortages ?? [])) {
       if (group.material.archived) continue;
       const revenue = materialGroupCost(group, days);
       const existing = revenueByMaterial.get(group.material.id);

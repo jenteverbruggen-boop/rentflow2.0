@@ -10,6 +10,8 @@ export interface PaybackMaterial {
   archived: boolean;
   costPrice: number | null;
   revenueBefore: number | null;
+  /** Inhuur-only: always rented in, never bought — nothing to pay back. */
+  subhireOnly?: boolean;
 }
 
 export interface PaybackStockItem {
@@ -52,6 +54,9 @@ export function computeMaterialPayback(
   componentWeights: BundleComponentWeight[],
 ): PaybackResult | null {
   if (material.archived) return null;
+  // Never owned, so never "paid off": a stray cost price on an inhuur-only
+  // item must not surface as a 0% entry in the worst ranking.
+  if (material.subhireOnly) return null;
 
   const ownStockItems = stockItems.filter((s) => s.materialId === material.id);
   const perUnitCosts = ownStockItems.map((s) => s.costPrice ?? material.costPrice);

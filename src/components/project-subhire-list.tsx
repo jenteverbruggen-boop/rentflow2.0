@@ -9,6 +9,7 @@ import { useAuthMe } from "@/hooks/use-auth-me";
 import { useSubhire } from "@/hooks/use-subhire";
 import { canSeeMoney } from "@/lib/me-access";
 import { formatEUR, periodDays } from "@/lib/pricing";
+import { shortageCost } from "@/lib/material-shortage";
 import { subhireTotal } from "@/lib/subhire-cost";
 import type { Project } from "@/types";
 
@@ -25,11 +26,12 @@ export function ProjectSubhireList({ project }: { project: Project }) {
   const rows = project.periods.flatMap((period) =>
     (period.shortages ?? [])
       .filter((s) => s.supplierId != null)
-      .map((s) => ({ period, s, total: subhireTotal(s, periodDays(period)) })),
+      .map((s) => ({ period, s, total: subhireTotal(s, periodDays(period)), sold: shortageCost([s], periodDays(period)) })),
   );
   if (rows.length === 0) return null;
   const totalCost = rows.reduce((sum, r) => sum + (r.total ?? 0), 0);
   const incomplete = rows.some((r) => r.total == null);
+  const totalSold = rows.reduce((sum, r) => sum + r.sold, 0);
 
   return (
     <Card>
@@ -62,7 +64,12 @@ export function ProjectSubhireList({ project }: { project: Project }) {
             </div>
           </div>
         ))}
-        {money && <p className="px-2 pt-1 text-xs text-muted-foreground">Totale inkoop inhuur: <b>{formatEUR(totalCost)}</b>{incomplete && " (nog niet alle prijzen ingevuld)"}</p>}
+        {money && (
+          <p className="px-2 pt-1 text-xs text-muted-foreground">
+            Aangerekend <b>{formatEUR(totalSold)}</b> · inkoop <b>{formatEUR(totalCost)}</b> · marge <b>{formatEUR(totalSold - totalCost)}</b>
+            {incomplete && " (nog niet alle prijzen ingevuld)"}
+          </p>
+        )}
         {undo.isError && <p className="px-2 text-xs text-destructive">{undo.error.message}</p>}
       </CardContent>
       <SubhireDialog projectId={project.id} target={editing} onClose={() => setEditing(null)} />

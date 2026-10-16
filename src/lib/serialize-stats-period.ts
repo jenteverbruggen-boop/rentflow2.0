@@ -9,6 +9,10 @@ export const statsPeriodInclude = {
     include: { person: true, travelCosts: true },
   },
   bundleBookings: true,
+  // Overbooked and hired-in units are billed like owned ones, so booked
+  // revenue, the top-materials ranking and the inhuur figures all need them.
+  // (Payback groups only `materials`, so owned-unit payback is unaffected.)
+  shortages: { include: { material: true } },
 } satisfies Prisma.PeriodInclude;
 
 type StatsPeriod = Prisma.PeriodGetPayload<{ include: typeof statsPeriodInclude }>;
@@ -52,6 +56,22 @@ export function serializeStatsPeriod(period: StatsPeriod) {
     bundleBookings: period.bundleBookings.map((b) => ({
       ...b,
       dayPriceSnapshot: toNumber(b.dayPriceSnapshot),
+    })),
+    shortages: period.shortages.map((s) => ({
+      ...s,
+      dayPriceSnapshot: toNumber(s.dayPriceSnapshot),
+      setupCostSnapshot: toNumber(s.setupCostSnapshot),
+      discountPct: toNumberOrNull(s.discountPct) ?? null,
+      discountAmount: toNumberOrNull(s.discountAmount) ?? null,
+      subhireUnitCost: toNumberOrNull(s.subhireUnitCost) ?? null,
+      subhireCostOverride: toNumberOrNull(s.subhireCostOverride) ?? null,
+      material: {
+        ...s.material,
+        dayPrice: toNumber(s.material.dayPrice),
+        setupCost: toNumberOrNull(s.material.setupCost) ?? null,
+        bundlePriceOverride: toNumberOrNull(s.material.bundlePriceOverride) ?? null,
+        subhireUnitCost: toNumberOrNull(s.material.subhireUnitCost) ?? null,
+      },
     })),
   };
 }

@@ -78,6 +78,10 @@ export function parseRentmanRows(rows: Record<string, string>[]): {
     const categoryPrefix = folderMatch ? folderMatch[1] : null;
     const categoryName = folderMatch ? folderMatch[2] : null;
 
+    // Rentman files hired-in catalogue items under folders like
+    // "9998-Inhuur Funrent": the part after "Inhuur" is the supplier.
+    const subhireSupplierName = /^inhuur\s+(.+)$/i.exec(categoryName ?? "")?.[1]?.trim() ?? null;
+
     const type = (first["Type of equipment"] ?? "").trim();
     // §2.4 — Virtual combination is a real recipe-based bundle (empty,
     // since Combination structure is never populated in either export);
@@ -113,6 +117,7 @@ export function parseRentmanRows(rows: Record<string, string>[]): {
       archived,
       notes: (first["Internal remark"] ?? "").trim() || null,
       stockItems,
+      subhireSupplierName,
     });
   }
 

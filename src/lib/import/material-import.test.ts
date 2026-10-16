@@ -71,3 +71,18 @@ describe("M1.1 — parsing the real Rentman equipment exports", () => {
     expect(prefixes.has("9999")).toBe(true);
   });
 });
+
+describe("C3 — Inhuur folders in the real Rentman export", () => {
+  it("the 9998/9997 'Inhuur <leverancier>' folders map to their supplier, nothing else does", () => {
+    const { materials } = parseMaterialRows(loadRows("Export_Equipment_normal.csv"), "rentman-equipment");
+    const bySupplier = new Map<string, number>();
+    for (const m of materials) {
+      if (m.subhireSupplierName) bySupplier.set(m.subhireSupplierName, (bySupplier.get(m.subhireSupplierName) ?? 0) + 1);
+    }
+    expect([...bySupplier.keys()].sort()).toEqual(["Funrent", "Rent-men"]);
+    expect(bySupplier.get("Funrent")).toBeGreaterThan(15);
+    // Everything that maps to a supplier is a zero-stock catalogue item.
+    expect(materials.filter((m) => m.subhireSupplierName).every((m) => m.stockItems.length === 0)).toBe(true);
+    expect(materials.filter((m) => m.categoryName && !/^inhuur/i.test(m.categoryName)).every((m) => !m.subhireSupplierName)).toBe(true);
+  });
+});

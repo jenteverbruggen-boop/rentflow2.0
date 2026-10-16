@@ -13,7 +13,7 @@ import type { Period } from "@/types";
  */
 export async function computePaybackStats(client: PrismaClient = defaultPrisma) {
   const materialRows = await client.material.findMany({
-    select: { id: true, name: true, code: true, archived: true, costPrice: true, revenueBefore: true },
+    select: { id: true, name: true, code: true, archived: true, costPrice: true, revenueBefore: true, subhireOnly: true },
   });
   const materials = materialRows.map((m) => ({
     ...m,

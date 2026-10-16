@@ -122,4 +122,39 @@ describe("applyMaterialImport (M1.4)", () => {
     const result = await applyMaterialImport([], parseErrors, client);
     expect(result.errors).toEqual(parseErrors);
   });
+
+  it("an 'Inhuur <leverancier>' folder makes the item inhuur-only, linked to a supplier created on first sight", async () => {
+    const hired = row({
+      code: "9998-001", name: "Bord (inhuur)", categoryName: "Inhuur Funrent", categoryPrefix: "9998",
+      stockItems: [], subhireSupplierName: "Funrent",
+    });
+    const second = row({
+      code: "9998-002", name: "Glas (inhuur)", categoryName: "Inhuur Funrent", categoryPrefix: "9998",
+      stockItems: [], subhireSupplierName: "Funrent",
+    });
+    await applyMaterialImport([hired, second], [], client);
+
+    const suppliers = await client.supplier.findMany({ where: { name: "Funrent" } });
+    expect(suppliers).toHaveLength(1); // one supplier for both rows
+    const material = await client.material.findUnique({ where: { code: "9998-001" }, include: { stockItems: true } });
+    expect(material).toMatchObject({ subhireOnly: true, defaultSupplierId: suppliers[0].id });
+    expect(material!.stockItems).toHaveLength(0);
+
+    // Re-importing the same row changes nothing; an ordinary row is untouched.
+    expect(await applyMaterialImport([hired], [], client)).toMatchObject({ unchanged: 1, updated: 0 });
+    const ordinary = await client.material.findUnique({ where: { code: "0501-001" } });
+    expect(ordinary?.subhireOnly ?? false).toBe(false);
+  });
+
+  it("an existing material turns inhuur-only when its row now sits in an Inhuur folder", async () => {
+    await applyMaterialImport([row({ code: "0777-001", name: "Stoel", categoryName: "Meubilair", categoryPrefix: "0777" })], [], client);
+    const result = await applyMaterialImport(
+      [row({ code: "0777-001", name: "Stoel", categoryName: "Meubilair", categoryPrefix: "0777", subhireSupplierName: "Rent-men" })],
+      [],
+      client,
+    );
+    expect(result).toMatchObject({ updated: 1 });
+    const supplier = await client.supplier.findFirstOrThrow({ where: { name: "Rent-men" } });
+    expect(await client.material.findUnique({ where: { code: "0777-001" } })).toMatchObject({ subhireOnly: true, defaultSupplierId: supplier.id });
+  });
 });

@@ -39,12 +39,21 @@ export interface PaybackEntry {
   paybackPct: number;
 }
 
+export interface SubhireStatsEntry {
+  revenue: number;
+  cost: number;
+  margin: number;
+  rows: number;
+  unpricedRows: number;
+}
+
 export interface StatsResponse {
   range: { from: string; to: string };
   revenueByMonth: RevenueMonthEntry[];
   revenueByClient: RevenueClientEntry[];
   personUtilisation: PersonUtilisationEntry[];
   topMaterials: TopMaterialEntry[];
+  subhire: SubhireStatsEntry;
   payback: { best: PaybackEntry[]; worst: PaybackEntry[] };
 }
 

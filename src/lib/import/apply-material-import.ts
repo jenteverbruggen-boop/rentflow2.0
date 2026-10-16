@@ -68,6 +68,16 @@ export async function applyMaterialRow(
 
   const existing = code ? await tx.material.findUnique({ where: { code } }) : null;
 
+  // "Inhuur <leverancier>" folder → hired-in item from that supplier
+  // (created on first sight). Rows without one leave these columns alone.
+  let subhire: { subhireOnly: true; defaultSupplierId: number } | null = null;
+  if (row.subhireSupplierName) {
+    const supplier =
+      (await tx.supplier.findFirst({ where: { name: row.subhireSupplierName } })) ??
+      (await tx.supplier.create({ data: { name: row.subhireSupplierName } }));
+    subhire = { subhireOnly: true, defaultSupplierId: supplier.id };
+  }
+
   const data = {
     name: row.name,
     category: row.categoryName,
@@ -79,6 +89,7 @@ export async function applyMaterialRow(
     isBundle: row.isBundle,
     archived: row.archived,
     notes: row.notes,
+    ...(subhire ?? {}),
   };
 
   if (existing) {
@@ -94,7 +105,8 @@ export async function applyMaterialRow(
       toNumberOrNull(existing.listPrice) !== data.listPrice ||
       existing.isBundle !== data.isBundle ||
       existing.archived !== data.archived ||
-      existing.notes !== data.notes;
+      existing.notes !== data.notes ||
+      (subhire != null && (!existing.subhireOnly || existing.defaultSupplierId !== subhire.defaultSupplierId));
     if (!changed) return "unchanged";
     await tx.material.update({ where: { id: existing.id }, data });
     return "updated";

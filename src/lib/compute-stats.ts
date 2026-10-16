@@ -7,6 +7,7 @@ import { aggregateBookedByClient } from "@/lib/stats-by-client";
 import { aggregateInvoicedByMonth, aggregateInvoicedByClient } from "@/lib/stats-invoiced";
 import { aggregatePersonUtilisation } from "@/lib/stats-utilisation";
 import { computeTopMaterials } from "@/lib/stats-top-materials";
+import { computeSubhireStats } from "@/lib/stats-subhire";
 import { toNumber } from "@/lib/serialize";
 import type { Period } from "@/types";
 
@@ -108,5 +109,6 @@ export async function computeStats(range: DateRange, client: PrismaClient = defa
     revenueByClient,
     personUtilisation: aggregatePersonUtilisation(periods),
     topMaterials: computeTopMaterials(periods),
+    subhire: computeSubhireStats(periods),
   };
 }

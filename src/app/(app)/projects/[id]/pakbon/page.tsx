@@ -7,6 +7,7 @@ import { nl } from "date-fns/locale";
 import { PrintLayout } from "@/components/print/print-layout";
 import { DocumentHeader } from "@/components/print/document-header";
 import { PakbonMaterials } from "../pakbon-materials";
+import { PakbonSubhire } from "../pakbon-subhire";
 import { useSettings } from "@/hooks/use-settings";
 import type { Project } from "@/types";
 
@@ -89,6 +90,7 @@ export default function PakbonPage() {
         </div>
 
         <PakbonMaterials periods={sorted} />
+        <PakbonSubhire periods={sorted} />
 
         <div className="grid grid-cols-2 gap-8 mt-8 pt-6 border-t">
           <div>

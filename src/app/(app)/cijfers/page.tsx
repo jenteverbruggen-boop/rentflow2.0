@@ -7,6 +7,7 @@ import { RevenueByClientSection } from "@/components/revenue-by-client-section";
 import { PersonUtilisationSection } from "@/components/person-utilisation-section";
 import { TopMaterialsSection } from "@/components/top-materials-section";
 import { PaybackSection } from "@/components/payback-section";
+import { SubhireStatsSection } from "@/components/subhire-stats-section";
 import { useStats } from "@/hooks/use-stats";
 
 function defaultRange() {
@@ -42,6 +43,7 @@ export default function CijfersPage() {
         <>
           <RevenueByMonthSection data={data.revenueByMonth} />
           <RevenueByClientSection data={data.revenueByClient} />
+          <SubhireStatsSection data={data.subhire} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <PersonUtilisationSection data={data.personUtilisation} />
             <TopMaterialsSection data={data.topMaterials} />

@@ -58,6 +58,11 @@ describe("computeMaterialPayback (K4.1)", () => {
     expect(computeMaterialPayback(material, [], [period], [])).toBeNull();
   });
 
+  it("an inhuur-only material is never ranked, even with a cost price on it", () => {
+    const material = makeMaterial(1, { costPrice: 300, subhireOnly: true });
+    expect(computeMaterialPayback(material, [{ materialId: 1, costPrice: 300 }], [], [])).toBeNull();
+  });
+
   it("archived materials are always excluded", () => {
     const material = makeMaterial(1, { costPrice: 300, archived: true });
     expect(computeMaterialPayback(material, [], [], [])).toBeNull();

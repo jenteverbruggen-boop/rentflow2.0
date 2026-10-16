@@ -19,6 +19,9 @@ import { createDraftInvoice } from "@/lib/create-draft-invoice";
 import { deleteSupplier, SupplierInUseError } from "@/lib/suppliers";
 import { bookFlatMaterial } from "@/lib/booking";
 import { bookBundleMaterial } from "@/lib/bundle-booking";
+import { computeStats } from "@/lib/compute-stats";
+import { computePaybackStats } from "@/lib/compute-payback";
+import { periodDays } from "@/lib/pricing";
 import { toNumber } from "@/lib/serialize";
 import type { PeriodMaterialShortage } from "@/types";
 
@@ -247,5 +250,36 @@ describe("hiring in while booking (C3)", () => {
     expect(rows[0]).toMatchObject({ quantity: 4, supplierId, materialId: part.id });
     expect(rows[0].bundleBookingId).not.toBeNull();
     await expect(assertNoShortages(projectId, client)).resolves.toBeUndefined();
+  });
+});
+
+describe("inhuur in the figures (C3)", () => {
+  it("hired-in units count as booked revenue and top-material revenue, and get their own margin figures", async () => {
+    const mat = await client.material.create({ data: { name: "Statistiek-tent", dayPrice: 50 } });
+    const clientRow = await client.client.create({ data: { name: "Stats Klant" } });
+    const project = await client.project.create({
+      data: {
+        name: "Stats project", clientId: clientRow.id, status: "bevestigd",
+        startDate: new Date("2027-03-01T00:00:00Z"), endDate: new Date("2027-03-02T23:59:59Z"),
+        periods: { create: [{ name: "P", startDate: new Date("2027-03-01T00:00:00Z"), endDate: new Date("2027-03-02T23:59:59Z") }] },
+      },
+      include: { periods: true },
+    });
+    const periodId = project.periods[0].id;
+    await client.periodMaterialShortage.create({
+      data: {
+        periodId, materialId: mat.id, quantity: 3, dayPriceSnapshot: 50,
+        supplierId, subhireCostBasis: "per_huur", subhireUnitCost: 20, subhiredAt: new Date(),
+      },
+    });
+    const stats = await computeStats({ from: new Date("2027-03-01"), to: new Date("2027-03-31") }, client);
+    const days = periodDays({ startDate: "2027-03-01T00:00:00Z", endDate: "2027-03-02T23:59:59Z" });
+    const sold = 3 * 50 * days;
+    expect(stats.revenueByMonth.find((m) => m.month === "2027-03")!.bookedMaterials).toBe(sold);
+    expect(stats.topMaterials.find((m) => m.materialId === mat.id)!.revenue).toBe(sold);
+    expect(stats.subhire).toEqual({ revenue: sold, cost: 60, margin: sold - 60, rows: 1, unpricedRows: 0 });
+    // Payback is about owned stock: a hired-in material (no units) never appears.
+    const payback = await computePaybackStats(client);
+    expect([...payback.best, ...payback.worst].some((p) => p.materialId === mat.id)).toBe(false);
   });
 });
