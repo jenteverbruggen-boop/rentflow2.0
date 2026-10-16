@@ -149,6 +149,7 @@ Project-specific Claude Code skills live in `.claude/skills/`:
 | `design` | Any UI/visual change (shadcn/ui token rules, WCAG contrast) |
 | `cicd` | Changes to workflows, Dockerfile, or docker-compose.yml |
 | `expand` | Planning a new feature before writing any code |
+| `grill-me` | Interrogating a vague PM bullet / feature ask until every implementation-changing decision is made |
 
 ## Docker
 
