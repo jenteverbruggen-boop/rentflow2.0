@@ -8,6 +8,15 @@ import type { InvoiceRole, DepositType } from "@/types";
 
 export class InvoiceNotFoundError extends Error {}
 
+/** Only generated documents can be regenerated from the project: a
+ * credit note's lines are negated copies of another invoice, and
+ * regenerating them would turn them into positive project lines. */
+export class RegenerateNotAllowedError extends Error {
+  constructor() {
+    super("Een creditnota kan niet opnieuw gegenereerd worden");
+  }
+}
+
 /**
  * J2b.4 — re-runs §5's generator against the live project, discarding
  * every current line (manual lines included — the UI must warn before
@@ -26,6 +35,7 @@ export async function regenerateInvoice(invoiceId: number, client: PrismaClient 
     });
     if (!invoice) throw new InvoiceNotFoundError();
     assertDraftMutable(invoice);
+    if (invoice.kind === "creditnota") throw new RegenerateNotAllowedError();
     if (!invoice.projectId) {
       throw new Error("Factuur heeft geen gekoppeld project om opnieuw te genereren");
     }

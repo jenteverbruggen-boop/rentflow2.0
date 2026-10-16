@@ -45,9 +45,11 @@ export default function InvoiceDetailPage() {
           </Link>
           {isConcept && (
             <>
-              <Button variant="outline" onClick={() => regenerate.mutate()} disabled={regenerate.isPending}>
-                Opnieuw genereren
-              </Button>
+              {!isCreditNote && (
+                <Button variant="outline" onClick={() => regenerate.mutate()} disabled={regenerate.isPending}>
+                  Opnieuw genereren
+                </Button>
+              )}
               <Button onClick={() => finalize.mutate()} disabled={finalize.isPending}>Finaliseren</Button>
             </>
           )}
