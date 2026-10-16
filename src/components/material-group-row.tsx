@@ -46,6 +46,9 @@ export function MaterialGroupRow({ group: g, days, onRemoveOne, onRemoveAll }: P
           {g.overbookedUnits > 0 && (
             <OverbookBadge units={g.overbookedUnits} materialName={g.material.name} />
           )}
+          {g.subhiredUnits > 0 && (
+            <span className="shrink-0 rounded border px-1 text-[9px] text-muted-foreground">{g.subhiredUnits} ingehuurd</span>
+          )}
         </div>
         <p className="text-[10px] text-muted-foreground">
           {g.units} × {formatEUR(perUnit)} = {formatEUR(perUnit * g.units)}

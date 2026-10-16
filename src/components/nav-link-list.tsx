@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Building2, CalendarDays, FolderKanban, LayoutDashboard, Link2, MapPin, NotebookPen,
-  FileText, Package, Receipt, Settings, Upload, User, Users, BarChart3, type LucideIcon,
+  FileText, Package, Truck, Receipt, Settings, Upload, User, Users, BarChart3, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavSuggestionBadge } from "@/components/nav-suggestion-badge";
@@ -12,7 +12,7 @@ import type { NavIconName, NavLink } from "@/lib/nav-links";
 
 const ICONS: Record<NavIconName, LucideIcon> = {
   home: LayoutDashboard, folder: FolderKanban, calendar: CalendarDays, link: Link2,
-  notes: NotebookPen, people: Users, package: Package, building: Building2, pin: MapPin,
+  notes: NotebookPen, people: Users, package: Package, building: Building2, truck: Truck, pin: MapPin,
   upload: Upload, receipt: Receipt, quote: FileText, chart: BarChart3, user: User, settings: Settings,
 };
 

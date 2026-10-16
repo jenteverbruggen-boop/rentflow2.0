@@ -7,6 +7,8 @@ import { projectShortageLines } from "@/lib/project-shortages";
 import type { Project } from "@/types";
 import { TriangleAlert } from "lucide-react";
 import { InlineIcon } from "@/components/inline-icon";
+import { SubhireDialog, type SubhireTarget } from "@/components/subhire-dialog";
+import { useState } from "react";
 
 interface Props {
   project: Project;
@@ -28,6 +30,7 @@ export function ProjectOverbookAlert({ project }: Props) {
   const queryClient = useQueryClient();
   const lines = projectShortageLines(project);
   const anyPeriodId = lines[0]?.periodId;
+  const [hiring, setHiring] = useState<SubhireTarget | null>(null);
 
   const fill = useMutation({
     mutationFn: async () => {
@@ -72,14 +75,27 @@ export function ProjectOverbookAlert({ project }: Props) {
               <InlineIcon icon={TriangleAlert} /> {total} unit(s) overboekt — niet in voorraad
             </p>
             {lines.map((l) => (
-              <p key={l.id} className="text-xs">
-                {l.periodName} · {l.materialName} · {l.quantity} overboekt
-                {l.isBundleComponent && " (onderdeel van een set)"}
+              <p key={l.id} className="flex flex-wrap items-center gap-2 text-xs">
+                <span>
+                  {l.periodName} · {l.materialName} · {l.quantity} overboekt
+                  {l.isBundleComponent && " (onderdeel van een set)"}
+                </span>
+                <Button
+                  size="sm" variant="outline" className="h-6 px-2 text-xs"
+                  onClick={() => setHiring({
+                    mode: "hire", periodId: l.periodId, shortageId: l.id, materialName: l.materialName,
+                    quantity: l.quantity, supplierId: l.defaultSupplierId, basis: l.subhireCostBasis,
+                    unitCost: l.subhireUnitCost, costOverride: null,
+                  })}
+                >
+                  Inhuren
+                </Button>
               </p>
             ))}
             <p className="text-xs">
               Het project kan pas naar bevestigd/actief/afgerond als dit is
-              opgelost — koop voorraad bij en wijs toe, of verlaag het aantal.
+              opgelost — koop voorraad bij en wijs toe, huur het in bij een
+              leverancier, of verlaag het aantal.
             </p>
             {fill.isSuccess && (
               <p className="text-xs">
@@ -102,6 +118,7 @@ export function ProjectOverbookAlert({ project }: Props) {
           </Button>
         </div>
       </AlertDescription>
+      <SubhireDialog projectId={project.id} target={hiring} onClose={() => setHiring(null)} />
     </Alert>
   );
 }

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PeriodTimelinePicker } from "@/components/period-timeline-picker";
 import { MaterialSplitEditor } from "@/components/material-split-editor";
 import { ProjectOverbookAlert } from "@/components/project-overbook-alert";
+import { ProjectSubhireList } from "@/components/project-subhire-list";
 import type { Project } from "@/types";
 import { TriangleAlert } from "lucide-react";
 import { InlineIcon } from "@/components/inline-icon";
@@ -24,6 +25,7 @@ export function ProjectMaterialsTab({ project, selectedPeriodId, onSelectPeriod 
   return (
     <div className="space-y-4">
       <ProjectOverbookAlert project={project} />
+      <ProjectSubhireList project={project} />
       {error && (
         <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>
       )}

@@ -57,7 +57,8 @@ export function OverbookBlockDialog({ shortages, message, onClose }: Props) {
               </ul>
               <p>
                 Koop de voorraad bij en gebruik <b>Toewijzen</b> op de
-                Materialen-tab, of verlaag het geboekte aantal.
+                Materialen-tab, huur het in bij een leverancier
+                (<b>Inhuren</b>), of verlaag het geboekte aantal.
               </p>
             </div>
             )}

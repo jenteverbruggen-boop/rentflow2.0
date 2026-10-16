@@ -3,7 +3,7 @@ import type { AccessLevel, ModuleKey } from "@/types";
 
 export type NavIconName =
   | "home" | "folder" | "calendar" | "link" | "notes" | "people" | "package"
-  | "building" | "pin" | "upload" | "receipt" | "quote" | "chart" | "user" | "settings";
+  | "building" | "truck" | "pin" | "upload" | "receipt" | "quote" | "chart" | "user" | "settings";
 
 export type NavGroup = "Werk" | "Gegevens" | "Financieel" | "Beheer";
 
@@ -38,6 +38,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/materials", group: "Gegevens", label: "Materialen", icon: "package", module: "materialen" },
   { href: "/clients", group: "Gegevens", label: "Klanten", icon: "building", module: "klanten" },
   { href: "/locations", group: "Gegevens", label: "Locaties", icon: "pin", module: "locaties" },
+  { href: "/leveranciers", group: "Gegevens", label: "Leveranciers", icon: "truck", module: "materialen" },
   // P3.4 — gated on materialen as a representative anchor (every entity
   // route re-checks its own module server-side regardless); this only
   // affects whether the shortcut is shown, not who can actually import.

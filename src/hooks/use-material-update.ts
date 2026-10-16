@@ -12,7 +12,11 @@ export type EditableMaterialField =
   | "bundlePriceOverride"
   | "costPrice"
   | "listPrice"
-  | "revenueBefore";
+  | "revenueBefore"
+  | "subhireUnitCost"
+  | "subhireCostBasis"
+  | "subhireOnly"
+  | "defaultSupplierId";
 
 const NULLABLE_NUMBER_FIELDS = new Set<EditableMaterialField>([
   "bundlePriceOverride",
@@ -21,11 +25,13 @@ const NULLABLE_NUMBER_FIELDS = new Set<EditableMaterialField>([
   "listPrice",
   "revenueBefore",
   "categoryId",
+  "subhireUnitCost",
+  "defaultSupplierId",
 ]);
 
 function coerce(field: EditableMaterialField, rawValue: string) {
   if (field === "dayPrice") return Number(rawValue);
-  if (field === "isBundle") return rawValue === "true";
+  if (field === "isBundle" || field === "subhireOnly") return rawValue === "true";
   if (NULLABLE_NUMBER_FIELDS.has(field))
     return rawValue.trim() === "" ? null : Number(rawValue);
   return rawValue || null;
@@ -55,10 +61,19 @@ export function useMaterialUpdate(material: Material | null) {
         costPrice: material.costPrice,
         listPrice: material.listPrice,
         revenueBefore: material.revenueBefore,
+        // The PUT replaces the subhire columns it is sent (and nulls an unsent
+        // unit cost), so every save echoes the current values back.
+        subhireUnitCost: material.subhireUnitCost,
+        defaultSupplierId: material.defaultSupplierId,
+        subhireCostBasis: material.subhireCostBasis,
+        subhireOnly: material.subhireOnly,
         [field]: coerce(field, rawValue),
       }),
     });
-    if (!res.ok) throw new Error("Opslaan mislukt");
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error ?? "Opslaan mislukt");
+    }
     const updated = await res.json();
     queryClient.setQueryData<Material[]>(["materials"], (old) =>
       old?.map((m) => (m.id === material.id ? { ...m, ...updated } : m)),

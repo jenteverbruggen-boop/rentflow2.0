@@ -10,6 +10,7 @@ import { MaterialCodes } from "@/components/material-codes";
 import { BundleComponentEditor } from "@/components/bundle-component-editor";
 import { BundleStockSummary } from "@/components/bundle-stock-summary";
 import { MaterialSummaryGrid } from "@/components/material-summary-grid";
+import { MaterialSubhireSection } from "@/components/material-subhire-section";
 import { MaterialDetailHeader } from "@/components/material-detail-header";
 import { useMaterialUpdate } from "@/hooks/use-material-update";
 import type { Material, StockItem } from "@/types";
@@ -59,6 +60,8 @@ export function MaterialDetailPane({
 
       <CardContent className="space-y-4">
         <MaterialSummaryGrid material={material} onSave={saveField} />
+
+        {!material.isBundle && <MaterialSubhireSection material={material} onSave={saveField} />}
 
         <InlineEditField
           label="Artikelcode"

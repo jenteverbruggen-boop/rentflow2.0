@@ -9,6 +9,10 @@ export interface ProjectShortageLine {
   /** A set's component shortfall reads differently from a flat material's:
    * the set itself is booked, only its parts are missing. */
   isBundleComponent: boolean;
+  /** The material's inhuur defaults, to prefill the "Inhuren" dialog. */
+  defaultSupplierId: number | null;
+  subhireUnitCost: number | null;
+  subhireCostBasis: "per_huur" | "per_dag";
 }
 
 /**
@@ -27,6 +31,9 @@ export function projectShortageLines(project: Project): ProjectShortageLine[] {
       materialName: s.material.name,
       quantity: s.quantity,
       isBundleComponent: s.bundleBookingId != null,
+      defaultSupplierId: s.material.defaultSupplierId ?? null,
+      subhireUnitCost: s.material.subhireUnitCost ?? null,
+      subhireCostBasis: s.material.subhireCostBasis ?? "per_huur",
     })),
   );
 }
