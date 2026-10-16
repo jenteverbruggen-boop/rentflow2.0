@@ -5,8 +5,10 @@ import {
   forbidden,
   badRequest,
   notFound,
+  conflict,
   serverError,
 } from "@/lib/api-auth";
+import { deleteProject, ProjectInUseError } from "@/lib/delete-project";
 import { projectInclude } from "@/lib/project-include";
 import { serializeProject } from "@/lib/serialize-project";
 import { redactMoney } from "@/lib/redact";
@@ -111,9 +113,10 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   try {
     const { id } = await params;
-    await prisma.project.delete({ where: { id: parseInt(id) } });
+    await deleteProject(parseInt(id));
     return NextResponse.json({ success: true });
   } catch (err) {
+    if (err instanceof ProjectInUseError) return conflict(err.message);
     return serverError((err as Error).message);
   }
 }

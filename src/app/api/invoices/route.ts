@@ -60,7 +60,9 @@ export async function GET(req: NextRequest) {
         ...(status ? { status } : {}),
         ...(clientId ? { clientId: parseInt(clientId) } : {}),
         ...(projectId ? { projectId: parseInt(projectId) } : {}),
-        ...(kind ? { kind } : {}),
+        // Quotes live under /api/quotes; this list is invoices and credit notes
+        // unless a kind is asked for explicitly.
+        kind: kind ? kind : { in: ["invoice", "creditnota"] },
       },
       include: invoiceInclude,
       orderBy: { createdAt: "desc" },

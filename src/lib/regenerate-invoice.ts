@@ -16,8 +16,8 @@ export class InvoiceNotFoundError extends Error {}
  * credit note's lines are negated copies of another invoice, and
  * regenerating them would turn them into positive project lines. */
 export class RegenerateNotAllowedError extends Error {
-  constructor() {
-    super("Een creditnota kan niet opnieuw gegenereerd worden");
+  constructor(message = "Een creditnota kan niet opnieuw gegenereerd worden") {
+    super(message);
   }
 }
 
@@ -43,11 +43,15 @@ export async function regenerateInvoice(invoiceId: number, client: PrismaClient 
     if (!invoice) throw new InvoiceNotFoundError();
     assertDraftMutable(invoice);
     if (invoice.kind === "creditnota") throw new RegenerateNotAllowedError();
+    if (invoice.sourceQuoteId != null) {
+      throw new RegenerateNotAllowedError("Deze factuur komt uit een offerte — pas de offerte aan of wijzig de regels hier");
+    }
     if (!invoice.projectId) {
       throw new Error("Factuur heeft geen gekoppeld project om opnieuw te genereren");
     }
 
-    await assertInvoiceable(invoice.projectId, txClient);
+    // Quotes are exempt: they exist to price an overbooked concept project.
+    if (invoice.kind === "invoice") await assertInvoiceable(invoice.projectId, txClient);
     const draft = await buildInvoiceDraft(invoiceDraftArgs({ ...invoice, projectId: invoice.projectId }), txClient);
     if (!draft) throw new InvoiceNotFoundError();
 

@@ -15,6 +15,7 @@ export async function isInvoiceStale(
   invoice: {
     status: string;
     kind: string;
+    sourceQuoteId: number | null;
     projectId: number | null;
     generatedHash: string | null;
     invoiceRole: string;
@@ -24,7 +25,9 @@ export async function isInvoiceStale(
   },
   client: PrismaClient,
 ): Promise<boolean> {
-  if (invoice.status !== "concept" || invoice.kind !== "invoice") return false;
+  if (invoice.status !== "concept" || (invoice.kind !== "invoice" && invoice.kind !== "offerte")) return false;
+  // Lines copied from a quote were never generated from the project.
+  if (invoice.sourceQuoteId != null) return false;
   if (!invoice.projectId || !invoice.generatedHash) return false;
   if (invoice.depositType === "fixed") return false;
 

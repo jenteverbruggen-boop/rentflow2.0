@@ -45,6 +45,9 @@ export async function createCreditNote(
     include: { lines: true, creditNotes: { include: { lines: true } } },
   });
   if (!original) throw new CreditNoteError("NOT_FOUND", "Factuur niet gevonden");
+  if (original.kind === "offerte") {
+    throw new CreditNoteError("ALREADY_CREDIT_NOTE", "Een offerte kan niet gecrediteerd worden");
+  }
   if (original.kind === "creditnota") {
     throw new CreditNoteError("ALREADY_CREDIT_NOTE", "Een creditnota kan zelf niet gecrediteerd worden");
   }

@@ -17,7 +17,7 @@ export async function loadPriorDeposits(
   fallbackVatRate: number,
 ): Promise<PriorDeposit[]> {
   const deposits = await prisma.invoice.findMany({
-    where: { projectId, invoiceRole: "deposit", status: { not: "concept" } },
+    where: { projectId, kind: "invoice", invoiceRole: "deposit", status: { not: "concept" } },
     include: { lines: true, creditNotes: true },
   });
   return deposits.map((inv) => ({

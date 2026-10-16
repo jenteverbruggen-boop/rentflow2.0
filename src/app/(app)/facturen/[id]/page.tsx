@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -21,15 +21,21 @@ import { useSettings } from "@/hooks/use-settings";
  * credit note / verwijderen), link to print (J2b.8). */
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const id = Number(params.id);
   const { query, patch, regenerate, updateLine, deleteLine } = useInvoice(id);
   const { data: settings } = useSettings();
   const [creditOpen, setCreditOpen] = useState(false);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
 
-  if (query.isLoading) return <p className="text-muted-foreground">Laden...</p>;
   const invoice = query.data;
-  if (!invoice) return <p className="text-muted-foreground">Factuur niet gevonden.</p>;
+  // Quotes share the Invoice table but have their own pages.
+  useEffect(() => {
+    if (invoice?.kind === "offerte") router.replace(`/offertes/${invoice.id}`);
+  }, [invoice, router]);
+
+  if (query.isLoading) return <p className="text-muted-foreground">Laden...</p>;
+  if (!invoice || invoice.kind === "offerte") return <p className="text-muted-foreground">Factuur niet gevonden.</p>;
 
   const isConcept = invoice.status === "concept";
   const isCreditNote = invoice.kind === "creditnota";

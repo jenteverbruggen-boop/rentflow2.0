@@ -9,6 +9,9 @@ const LABELS: Record<InvoiceDisplayStatus, string> = {
   betaald: "Betaald",
   vervallen: "Vervallen",
   creditnota: "Creditnota",
+  aanvaard: "Aanvaard",
+  geweigerd: "Geweigerd",
+  verlopen: "Verlopen",
 };
 
 // Soft tinted pills instead of solid fills: a list with many overdue
@@ -21,6 +24,9 @@ const TONES: Record<InvoiceDisplayStatus, string> = {
   betaald: "border-green-600/30 bg-green-600/10 text-green-800 dark:text-green-300",
   vervallen: "border-red-600/30 bg-red-600/10 text-red-700 dark:text-red-300",
   creditnota: "text-muted-foreground",
+  aanvaard: "border-green-600/30 bg-green-600/10 text-green-800 dark:text-green-300",
+  geweigerd: "border-red-600/30 bg-red-600/10 text-red-700 dark:text-red-300",
+  verlopen: "border-amber-600/30 bg-amber-500/10 text-amber-800 dark:text-amber-300",
 };
 
 /** J2b.7 — renders the read-time-derived InvoiceDisplayStatus (design

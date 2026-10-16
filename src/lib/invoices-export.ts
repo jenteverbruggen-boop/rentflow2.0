@@ -34,6 +34,7 @@ export async function fetchInvoicesExportRows(
   client: PrismaClient = defaultPrisma,
 ): Promise<Record<string, unknown>[]> {
   const invoices = await client.invoice.findMany({
+    where: { kind: { in: ["invoice", "creditnota"] } }, // quotes are not invoices
     include: { project: { select: { name: true } }, creditNotes: true },
     orderBy: { createdAt: "desc" },
   });

@@ -33,6 +33,8 @@ export interface StatusInput {
   status: string;
   totalIncl: number;
   dueDate: string | Date | null;
+  /** Quotes only. */
+  validUntil?: string | Date | null;
   creditNotes?: { status: string; totalIncl: number }[];
   payments?: { amount: number }[];
 }
@@ -49,6 +51,7 @@ export function effectiveOwed(invoice: StatusInput): number {
 
 /** May go negative on overpayment — surfaced, never clamped to 0. */
 export function remainingBalance(invoice: StatusInput): number {
+  if (invoice.kind === "offerte") return 0; // a quote is never owed
   const paid = (invoice.payments ?? []).reduce((sum, p) => sum + p.amount, 0);
   return Math.round((effectiveOwed(invoice) - paid) * 100) / 100;
 }
@@ -63,6 +66,7 @@ export function resolveInvoiceDisplayStatus(
   now: Date = new Date(),
 ): InvoiceDisplayStatus {
   if (invoice.kind === "creditnota") return "creditnota";
+  if (invoice.kind === "offerte") return resolveQuoteStatus(invoice, now);
   if (invoice.status === "concept") return "concept";
   if (invoice.status === "betaald") return "betaald";
 
@@ -73,4 +77,14 @@ export function resolveInvoiceDisplayStatus(
   if (invoice.status === "verzonden" && isOverdue && balance > 0) return "vervallen";
   if (invoice.status === "verzonden" && balance > 0 && balance < owed) return "gedeeltelijk_betaald";
   return "verzonden";
+}
+
+/** A sent quote past its `validUntil` reads "verlopen" — derived, never stored
+ * (like `vervallen` for invoices). Accepted/refused quotes keep their status. */
+function resolveQuoteStatus(invoice: StatusInput, now: Date): InvoiceDisplayStatus {
+  if (invoice.status === "aanvaard" || invoice.status === "geweigerd" || invoice.status === "concept") {
+    return invoice.status;
+  }
+  const expired = invoice.validUntil != null && new Date(invoice.validUntil) < now;
+  return expired ? "verlopen" : "verzonden";
 }

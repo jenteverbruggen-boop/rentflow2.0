@@ -79,7 +79,7 @@ function depositLine(periods: Period[], opts: GenerateDraftLinesOpts): DraftInvo
   }];
 }
 
-function deductionLines(priorDeposits: PriorDeposit[], startOrder: number): DraftInvoiceLine[] {
+export function deductionLines(priorDeposits: PriorDeposit[], startOrder: number): DraftInvoiceLine[] {
   return priorDeposits.map((entry, i) => ({
     section: null, kind: "deduction",
     description: `Reeds gefactureerd: voorschotfactuur ${entry.number} (${entry.invoiceDate})`,

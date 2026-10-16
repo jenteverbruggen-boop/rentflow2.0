@@ -27,6 +27,9 @@ const schema = z.object({
   invoiceFooter: z.string().optional(),
   btwRate: z.string().optional(),
   defaultDepositPercentage: z.string().optional(),
+  // C2 — quotes
+  quoteNumberFormat: z.string().optional(),
+  quoteValidityDays: z.string().optional(),
 });
 
 export type SettingsFormValues = z.infer<typeof schema>;

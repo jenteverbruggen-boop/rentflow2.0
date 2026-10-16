@@ -12,7 +12,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
  */
 export async function nextInvoiceSequence(
   tx: PrismaClient,
-  series: "invoice" | "credit",
+  series: "invoice" | "credit" | "quote",
   year: number,
 ): Promise<number> {
   const rows = await tx.$queryRaw<{ lastSeq: number }[]>`
@@ -30,11 +30,12 @@ export async function nextInvoiceSequence(
  * credit note always gets `"CN-"` prepended to the same template's
  * output (§2.2 — Q25b names one format setting, not two, so the
  * credit-note prefix is hardcoded rather than independently
- * configurable).
+ * configurable). A quote uses its own template (`quoteNumberFormat`, default
+ * `OF-{year}-{seq:04d}`) and its own counter, and is never prefixed.
  */
 export function formatInvoiceNumber(
   template: string,
-  series: "invoice" | "credit",
+  series: "invoice" | "credit" | "quote",
   year: number,
   seq: number,
 ): string {

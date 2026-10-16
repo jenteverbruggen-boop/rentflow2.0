@@ -23,6 +23,8 @@ const toForm = (i: Invoice): Values => ({
 
 interface Props {
   invoice: Invoice;
+  /** A quote's "term" is how long it stays valid, not a payment term. */
+  isQuote?: boolean;
   defaultFooter: string;
   defaultTermDays: number;
   isPending: boolean;
@@ -32,7 +34,7 @@ interface Props {
 /** A draft's own text: remarks printed above the payment block, a footer that
  * replaces the company default for this invoice, and the payment term the due
  * date is computed from when the invoice is sent. */
-export function InvoiceMetaForm({ invoice, defaultFooter, defaultTermDays, isPending, onSave }: Props) {
+export function InvoiceMetaForm({ invoice, isQuote, defaultFooter, defaultTermDays, isPending, onSave }: Props) {
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: toForm(invoice) });
   useEffect(() => { form.reset(toForm(invoice)); }, [invoice, form]);
 
@@ -43,11 +45,11 @@ export function InvoiceMetaForm({ invoice, defaultFooter, defaultTermDays, isPen
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(submit)} className="space-y-3 rounded-lg border bg-card p-4">
-        <h3 className="text-sm font-semibold">Opmerkingen en betaling</h3>
+        <h3 className="text-sm font-semibold">{isQuote ? "Opmerkingen en geldigheid" : "Opmerkingen en betaling"}</h3>
         <FormField control={form.control} name="notes" render={({ field }) => (
           <FormItem>
             <FormLabel>Opmerkingen</FormLabel>
-            <FormControl><Textarea rows={3} placeholder="Verschijnt op de factuur, boven de betaalgegevens" {...field} /></FormControl>
+            <FormControl><Textarea rows={3} placeholder={isQuote ? "Verschijnt op de offerte, boven het akkoord-vak" : "Verschijnt op de factuur, boven de betaalgegevens"} {...field} /></FormControl>
             <FormMessage />
           </FormItem>
         )} />
@@ -61,7 +63,7 @@ export function InvoiceMetaForm({ invoice, defaultFooter, defaultTermDays, isPen
           )} />
           <FormField control={form.control} name="paymentTermDays" render={({ field }) => (
             <FormItem>
-              <FormLabel>Betalingstermijn (dagen)</FormLabel>
+              <FormLabel>{isQuote ? "Geldigheid (dagen)" : "Betalingstermijn (dagen)"}</FormLabel>
               <FormControl><Input type="number" min={1} max={365} placeholder={String(defaultTermDays)} {...field} /></FormControl>
               <FormDescription>Leeg = standaard.</FormDescription>
               <FormMessage />

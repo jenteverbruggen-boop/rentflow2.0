@@ -43,7 +43,7 @@ export function InvoiceSummary({ invoice }: { invoice: Invoice }) {
           <span className="text-xs text-muted-foreground">Totaal incl. BTW</span>
           <span className="text-2xl font-bold tabular-nums">{formatEUR(invoice.totalIncl)}</span>
         </div>
-        {invoice.remainingBalance !== invoice.totalIncl && (
+        {invoice.kind !== "offerte" && invoice.remainingBalance !== invoice.totalIncl && (
           <div className="flex justify-between gap-6 text-sm">
             <span className="text-muted-foreground">Openstaand</span>
             <span className="tabular-nums">{formatEUR(invoice.remainingBalance)}</span>

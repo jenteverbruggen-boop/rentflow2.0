@@ -15,6 +15,9 @@ const SETTING_KEYS = [
   "invoiceFooter",
   "btwRate",
   "defaultDepositPercentage",
+  // C2 — quotes.
+  "quoteNumberFormat",
+  "quoteValidityDays",
 ] as const;
 export type SettingKey = (typeof SETTING_KEYS)[number];
 
@@ -33,6 +36,7 @@ export const PRINT_SETTING_KEYS = [
   "invoiceBankAccountHolder",
   "invoiceFooter",
   "btwRate",
+  "quoteValidityDays",
 ] as const satisfies readonly SettingKey[];
 
 export async function getSettings(

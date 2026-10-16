@@ -9,6 +9,9 @@ import { CostSummary } from "@/components/cost-summary";
 import { CostPeriodSection } from "@/components/cost-period-section";
 import { CreateInvoiceDialog } from "@/components/create-invoice-dialog";
 import { ProjectInvoicesList } from "@/components/project-invoices-list";
+import { ProjectQuotesList } from "@/components/project-quotes-list";
+import { useQuotes } from "@/hooks/use-quotes";
+import { useRouter } from "next/navigation";
 import type { Project } from "@/types";
 
 interface Props {
@@ -21,6 +24,8 @@ function fmtDate(d: string) {
 
 export function ProjectCostsTab({ project }: Props) {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const router = useRouter();
+  const { create: createQuote } = useQuotes({ projectId: project.id });
   const sorted = [...project.periods].sort(
     (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
   );
@@ -34,6 +39,13 @@ export function ProjectCostsTab({ project }: Props) {
             kortingsveld voor korting per regel.
           </p>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              disabled={createQuote.isPending}
+              onClick={() => createQuote.mutate(project.id, { onSuccess: (q) => router.push(`/offertes/${q.id}`) })}
+            >
+              + Nieuwe offerte
+            </Button>
             <Button variant="outline" onClick={() => setInvoiceOpen(true)}>
               + Nieuwe factuur
             </Button>
@@ -43,6 +55,8 @@ export function ProjectCostsTab({ project }: Props) {
           </div>
         </div>
 
+        {createQuote.isError && <p className="text-sm text-destructive no-print">{createQuote.error.message}</p>}
+        <ProjectQuotesList projectId={project.id} />
         <ProjectInvoicesList projectId={project.id} />
 
         <header className="print-only space-y-1">

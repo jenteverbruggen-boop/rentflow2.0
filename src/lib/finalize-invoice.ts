@@ -6,7 +6,7 @@ import { structuredReference } from "@/lib/invoice-reference";
 import { syncStatus } from "@/lib/invoice-payments";
 import { assertInvoiceable } from "@/lib/invoice-guards";
 
-type FinalizeErrorCode = "NOT_FOUND" | "ALREADY_FINALIZED" | "CORRECTION_INCOMPLETE";
+type FinalizeErrorCode = "NOT_FOUND" | "ALREADY_FINALIZED" | "CORRECTION_INCOMPLETE" | "NOT_AN_INVOICE";
 
 export class FinalizeInvoiceError extends Error {
   code: FinalizeErrorCode;
@@ -26,9 +26,19 @@ const DEFAULT_TERM_DAYS = 30;
  * notes once J2b.5 creates them (`kind: "creditnota"` → `series:
  * "credit"`, its own independent counter row) — no rework needed then.
  */
+/** Only invoices and credit notes draw a legal number. A quote on the invoice
+ * series would punch a hole in the gapless sequence (design §0.10), so it has
+ * its own `sendQuote` and is refused here. */
+function assertNumberable(kind: string): void {
+  if (kind !== "invoice" && kind !== "creditnota") {
+    throw new FinalizeInvoiceError("NOT_AN_INVOICE", "Een offerte wordt verzonden, niet gefinaliseerd");
+  }
+}
+
 async function finalizeInTx(txClient: PrismaClient, id: number) {
   const invoice = await txClient.invoice.findUnique({ where: { id } });
   if (!invoice) throw new FinalizeInvoiceError("NOT_FOUND", "Factuur niet gevonden");
+  assertNumberable(invoice.kind);
   if (invoice.status !== "concept") {
     throw new FinalizeInvoiceError("ALREADY_FINALIZED", "Factuur is al verzonden — niet meer te wijzigen");
   }
@@ -120,6 +130,7 @@ export async function finalizeInvoice(id: number, client: PrismaClient = default
     const txClient = tx as unknown as PrismaClient;
     const invoice = await txClient.invoice.findUnique({ where: { id } });
     if (!invoice) throw new FinalizeInvoiceError("NOT_FOUND", "Factuur niet gevonden");
+    assertNumberable(invoice.kind);
     if (invoice.status !== "concept") {
       throw new FinalizeInvoiceError("ALREADY_FINALIZED", "Factuur is al verzonden — niet meer te wijzigen");
     }

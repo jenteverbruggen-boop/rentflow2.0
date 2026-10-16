@@ -63,6 +63,28 @@ export function InvoiceSettingsFields({ control }: { control: Control<SettingsFo
           )}
         />
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        <FormField
+          control={control}
+          name="quoteNumberFormat"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Offertenummerformaat</FormLabel>
+              <FormControl><Input placeholder="OF-{year}-{seq:04d}" {...field} /></FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name="quoteValidityDays"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Offerte geldig (dagen)</FormLabel>
+              <FormControl><Input type="number" min={1} placeholder="30" {...field} /></FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
       <FormField
         control={control}
         name="invoiceFooter"

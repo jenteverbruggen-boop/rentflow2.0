@@ -451,8 +451,10 @@ export interface BookingResponse<T> {
 // DDL-3 — hand-maintained mirror of the Invoice/InvoiceLine/Payment
 // models (.plans/invoice-design.md §1.3). Never generated; extend here
 // whenever the Prisma schema's invoice models change.
-export type InvoiceKind = "invoice" | "creditnota";
-export type InvoiceStatus = "concept" | "verzonden" | "betaald"; // persisted
+export type InvoiceKind = "invoice" | "creditnota" | "offerte";
+// Persisted. `aanvaard`/`geweigerd` only occur on a quote (kind "offerte");
+// `betaald` only on an invoice.
+export type InvoiceStatus = "concept" | "verzonden" | "betaald" | "aanvaard" | "geweigerd";
 export type InvoiceRole = "deposit" | "final" | "standalone";
 export type InvoiceLineKind =
   | "person"
@@ -476,7 +478,11 @@ export type InvoiceDisplayStatus =
   | "gedeeltelijk_betaald"
   | "betaald"
   | "vervallen"
-  | "creditnota";
+  | "creditnota"
+  // quotes
+  | "aanvaard"
+  | "geweigerd"
+  | "verlopen";
 
 export interface InvoiceLine {
   id: number;
@@ -508,7 +514,7 @@ export interface Payment {
 export interface Invoice {
   id: number;
   kind: InvoiceKind;
-  series: "invoice" | "credit";
+  series: "invoice" | "credit" | "quote";
   status: InvoiceStatus;
   invoiceRole: InvoiceRole;
   number: string | null;
@@ -547,6 +553,12 @@ export interface Invoice {
   footer: string | null;
   /** Concept only: payment term (days) for this invoice, overriding the setting. */
   paymentTermDays: number | null;
+  /** Quotes: last day the quote can be accepted (set when it is sent). */
+  validUntil: string | null;
+  acceptedAt: string | null;
+  /** On an invoice made from a quote: which one. */
+  sourceQuoteId: number | null;
+  sourceQuoteNumber?: string | null;
   createdAt: string;
   finalizedAt: string | null;
   lines: InvoiceLine[];

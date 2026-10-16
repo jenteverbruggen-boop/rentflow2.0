@@ -38,6 +38,12 @@ export function InvoiceDetailHeader({ invoice, onRegenerate, onCredit }: Props) 
           {isCreditNote && invoice.creditNoteOfNumber && (
             <p className="text-xs text-muted-foreground">Creditnota bij factuur {invoice.creditNoteOfNumber}</p>
           )}
+          {invoice.sourceQuoteNumber && invoice.sourceQuoteId && (
+            <p className="text-xs text-muted-foreground">
+              Volgens offerte{" "}
+              <Link className="underline underline-offset-2" href={`/offertes/${invoice.sourceQuoteId}`}>{invoice.sourceQuoteNumber}</Link>
+            </p>
+          )}
           {invoice.correctionOfNumber && (
             <p className="text-xs text-muted-foreground">Vervangt factuur {invoice.correctionOfNumber} — wordt samen met de creditnota verstuurd</p>
           )}
@@ -63,7 +69,9 @@ export function InvoiceDetailHeader({ invoice, onRegenerate, onCredit }: Props) 
           </Link>
           {isConcept && !isCreditNote && (
             <>
-              <Button variant="outline" onClick={onRegenerate} disabled={regenerate.isPending}>Opnieuw genereren</Button>
+              {!invoice.sourceQuoteId && (
+                <Button variant="outline" onClick={onRegenerate} disabled={regenerate.isPending}>Opnieuw genereren</Button>
+              )}
               {invoice.projectId && (
                 <Button variant="outline" onClick={() => refreshClient.mutate()} disabled={refreshClient.isPending}>
                   Klantgegevens verversen

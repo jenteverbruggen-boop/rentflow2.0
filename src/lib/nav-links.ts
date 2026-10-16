@@ -3,7 +3,7 @@ import type { AccessLevel, ModuleKey } from "@/types";
 
 export type NavIconName =
   | "home" | "folder" | "calendar" | "link" | "notes" | "people" | "package"
-  | "building" | "pin" | "upload" | "receipt" | "chart" | "user" | "settings";
+  | "building" | "pin" | "upload" | "receipt" | "quote" | "chart" | "user" | "settings";
 
 export type NavGroup = "Werk" | "Gegevens" | "Financieel" | "Beheer";
 
@@ -42,6 +42,7 @@ export const NAV_LINKS: NavLink[] = [
   // route re-checks its own module server-side regardless); this only
   // affects whether the shortcut is shown, not who can actually import.
   { href: "/import", group: "Gegevens", label: "Importeren", icon: "upload", module: "materialen" },
+  { href: "/offertes", group: "Financieel", label: "Offertes", icon: "quote", module: "kosten_facturen" },
   { href: "/facturen", group: "Financieel", label: "Facturen", icon: "receipt", module: "kosten_facturen" },
   { href: "/cijfers", group: "Financieel", label: "Cijfers", icon: "chart", module: "cijfers" },
   { href: "/users", group: "Beheer", label: "Gebruikers", icon: "user", module: "gebruikers", badge: "person-link" },

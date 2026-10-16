@@ -10,6 +10,7 @@ export const invoiceInclude = {
   creditNoteOf: { select: { number: true, invoiceDate: true, corrections: { select: { id: true, number: true, status: true } } } },
   // C1b — the invoice a replacement replaces, and the replacement of a corrected one.
   correctionOf: { select: { number: true } },
+  sourceQuote: { select: { number: true } },
   corrections: { select: { id: true, number: true, status: true } },
 } satisfies Prisma.InvoiceInclude;
 type InvoiceWithLines = Prisma.InvoiceGetPayload<{ include: typeof invoiceInclude }>;
@@ -61,6 +62,7 @@ export function serializeInvoice(invoice: InvoiceWithLines) {
     status: invoice.status,
     totalIncl,
     dueDate: invoice.dueDate,
+    validUntil: invoice.validUntil,
     creditNotes,
     payments,
   };
@@ -73,6 +75,7 @@ export function serializeInvoice(invoice: InvoiceWithLines) {
     vatAmount,
     totalIncl,
     correctionOfNumber: invoice.correctionOf?.number ?? null,
+    sourceQuoteNumber: invoice.sourceQuote?.number ?? null,
     correctedBy: invoice.corrections[0] ?? null,
     // On a credit note: the replacement it is sent together with (if any).
     correctionReplacement: invoice.creditNoteOf?.corrections[0] ?? null,

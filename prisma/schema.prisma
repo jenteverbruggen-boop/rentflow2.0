@@ -442,6 +442,12 @@ model Invoice {
   // the draft was generated, so a later project change can be detected.
   paymentTermDays   Int?
   generatedHash     String?
+  // C2 — quotes are Invoice rows with kind "offerte" (own number series).
+  // `validUntil` is set when the quote is sent, `acceptedAt` when it is
+  // accepted; an invoice made from a quote points back via `sourceQuoteId`.
+  validUntil        DateTime?
+  acceptedAt        DateTime?
+  sourceQuoteId     Int?
   createdAt         DateTime  @default(now())
   finalizedAt       DateTime?
 
@@ -451,6 +457,8 @@ model Invoice {
   creditNotes  Invoice[]     @relation("CreditNoteOf")
   correctionOf Invoice?      @relation("CorrectionOf", fields: [correctionOfId], references: [id])
   corrections  Invoice[]     @relation("CorrectionOf")
+  sourceQuote  Invoice?      @relation("QuoteSource", fields: [sourceQuoteId], references: [id])
+  fromQuote    Invoice[]     @relation("QuoteSource")
   lines        InvoiceLine[]
   payments     Payment[]
 
@@ -459,6 +467,7 @@ model Invoice {
   @@index([status])
   @@index([creditNoteOfId])
   @@index([correctionOfId])
+  @@index([sourceQuoteId])
 }
 
 model InvoiceLine {

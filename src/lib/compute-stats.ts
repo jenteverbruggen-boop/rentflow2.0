@@ -40,7 +40,9 @@ export async function computeStats(range: DateRange, client: PrismaClient = defa
     where: {
       invoiceDate: { gte: range.from, lte: range.to },
       status: { not: "concept" },
-      kind: { not: "creditnota" },
+      // An allowlist, not `not: "creditnota"`: a sent quote has an invoiceDate
+      // and a non-concept status and must never count as invoiced revenue.
+      kind: "invoice",
     },
     include: { creditNotes: true },
   });

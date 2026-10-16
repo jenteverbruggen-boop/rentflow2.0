@@ -50,8 +50,8 @@ async function assertPayable(tx: PrismaClient, invoiceId: number) {
   if (invoice.status === "concept") {
     throw new PaymentRejectedError("CONCEPT", "Factuur is nog concept — nog geen betalingen mogelijk");
   }
-  if (invoice.kind === "creditnota") {
-    throw new PaymentRejectedError("CREDIT_NOTE", "Een creditnota ontvangt geen betalingen");
+  if (invoice.kind !== "invoice") {
+    throw new PaymentRejectedError("CREDIT_NOTE", "Alleen een factuur ontvangt betalingen (geen creditnota of offerte)");
   }
   return invoice;
 }
