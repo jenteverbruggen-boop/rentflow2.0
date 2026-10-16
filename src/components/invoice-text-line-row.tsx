@@ -26,7 +26,15 @@ export function InvoiceTextLineRow({ line, editable, onUpdate, onDelete }: Props
 
   return (
     <tr className="border-b last:border-0">
-      <td colSpan={5} className="py-2 pl-3 pr-4 text-sm align-top">
+      {/* Desktop spans the 5 amount columns, a phone only the 2 it shows. */}
+      <td colSpan={5} className="hidden py-2 pl-3 pr-4 align-top text-sm sm:table-cell">
+        {editing ? (
+          <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+        ) : (
+          <p className="whitespace-pre-line text-foreground">{line.description}</p>
+        )}
+      </td>
+      <td colSpan={2} className="py-2 pl-3 pr-2 align-top text-sm sm:hidden">
         {editing ? (
           <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
         ) : (

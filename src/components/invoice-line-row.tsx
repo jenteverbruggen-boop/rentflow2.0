@@ -52,12 +52,27 @@ export function InvoiceLineRow({ line, editable, onUpdate, onDelete }: Props) {
     <tr className="border-b last:border-0">
       <td className="py-2 pl-3 pr-4 text-sm align-middle">
         {editing ? (
-          <Input value={description} onChange={(e) => setDescription(e.target.value)} className="h-8" />
+          <>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} className="h-8" />
+            {/* On a phone the quantity/price columns are hidden, so they are edited here. */}
+            <div className="mt-1 flex gap-1 sm:hidden">
+              <Input type="number" aria-label="Aantal" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="h-8 w-16" />
+              <Input type="number" step="0.01" aria-label="Prijs" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className="h-8 w-24" />
+            </div>
+          </>
         ) : (
-          <div className="font-medium leading-tight">{line.description}</div>
+          <>
+            <div className="font-medium leading-tight">{line.description}</div>
+            {/* Phone: the quantity and price sit under the description. */}
+            {line.kind !== "deduction" && (
+              <div className="text-xs text-muted-foreground tabular-nums sm:hidden">
+                {line.quantity} {line.unit} × {formatEUR(line.unitPrice)} · {line.vatRate}%
+              </div>
+            )}
+          </>
         )}
       </td>
-      <td className="py-2 pr-4 text-right text-sm tabular-nums whitespace-nowrap align-middle">
+      <td className="hidden py-2 pr-4 text-right text-sm tabular-nums whitespace-nowrap align-middle sm:table-cell">
         {editing ? (
           <div className="flex justify-end gap-1">
             <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="h-8 w-16" />

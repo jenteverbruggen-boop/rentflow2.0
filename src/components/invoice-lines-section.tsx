@@ -25,23 +25,23 @@ export function InvoiceLinesSection({ lines, editable, onUpdateLine, onDeleteLin
     if (!sections.has(key)) sections.set(key, []);
     sections.get(key)!.push(line);
   }
-  const cols = editable ? 6 : 5;
+  const cols = editable ? 6 : 5; // visible columns from sm up (phone: 2, or 3 when editable)
 
   return (
     <div className="border rounded-lg overflow-x-auto bg-card print:border-0 print:rounded-none print:overflow-visible">
       <table className="doc-table w-full text-sm sm:min-w-[640px]">
         <colgroup>
           <col />
-          <col className="w-24 sm:w-28" />
+          <col className="hidden w-28 sm:table-column" />
           <col className="hidden w-28 sm:table-column" />
           <col className="hidden w-16 sm:table-column" />
-          <col className="w-24 sm:w-28" />
-          {editable && <col className="w-28" />}
+          <col className="w-28" />
+          {editable && <col className="w-[84px] sm:w-28" />}
         </colgroup>
         <thead>
           <tr className="border-b text-xs uppercase tracking-wide text-muted-foreground">
             <th className="py-2 pl-3 pr-4 text-left font-medium">Omschrijving</th>
-            <th className="py-2 pr-4 text-right font-medium">Aantal</th>
+            <th className="hidden py-2 pr-4 text-right font-medium sm:table-cell">Aantal</th>
             <th className="hidden py-2 pr-4 text-right font-medium sm:table-cell">Prijs</th>
             <th className="hidden py-2 pr-3 text-right font-medium sm:table-cell">BTW</th>
             <th className="py-2 pr-3 text-right font-medium">Bedrag</th>
@@ -53,7 +53,13 @@ export function InvoiceLinesSection({ lines, editable, onUpdateLine, onDeleteLin
             <Fragment key={section || "—"}>
               {section && (
                 <tr className="bg-muted/40">
-                  <th colSpan={cols} className="py-1.5 pl-3 pr-3 text-left text-xs font-semibold uppercase tracking-wide">
+                  {/* A cell may not span more columns than are visible (phantom
+                      columns would widen the table), so desktop and phone each
+                      get a cell with their own span. */}
+                  <th colSpan={cols} className="hidden py-1.5 pl-3 pr-3 text-left text-xs font-semibold uppercase tracking-wide sm:table-cell">
+                    {section}
+                  </th>
+                  <th colSpan={editable ? 3 : 2} className="py-1.5 pl-3 pr-3 text-left text-xs font-semibold uppercase tracking-wide sm:hidden">
                     {section}
                   </th>
                 </tr>
