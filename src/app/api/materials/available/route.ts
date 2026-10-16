@@ -14,6 +14,7 @@ import { computeSharingMap } from "@/lib/bundle-sharing";
 import { toNumber } from "@/lib/serialize";
 import { parseDateRange } from "@/lib/parse-date-range";
 import { redactMoney } from "@/lib/redact";
+import { setDayPrice } from "@/lib/set-price";
 
 export async function GET(req: NextRequest) {
   const access = await requireModule("planning", "lezen").catch(() => null);
@@ -91,14 +92,7 @@ export async function GET(req: NextRequest) {
           availableStockItemIds = available.map((a) => a.id);
         }
 
-        const componentSum = m.components.reduce(
-          (sum, c) => sum + toNumber(c.child.dayPrice) * c.quantity,
-          0,
-        );
-        const bundlePrice =
-          m.bundlePriceOverride == null
-            ? componentSum
-            : toNumber(m.bundlePriceOverride);
+        const bundlePrice = setDayPrice(m.bundlePriceOverride, m.components);
         const basePrice = m.isBundle ? bundlePrice : toNumber(m.dayPrice);
         const effectivePrice = overrideMap.get(m.id) ?? basePrice;
         return redactMoney(

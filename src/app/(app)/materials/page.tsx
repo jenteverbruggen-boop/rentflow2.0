@@ -18,10 +18,13 @@ import { MaterialImportDialog } from "@/components/material-import-dialog";
 import { useMaterials } from "@/hooks/use-materials";
 import { useMaterialFilters } from "@/hooks/use-material-filters";
 import type { Material } from "@/types";
-import { Camera, Download, Tag, Upload } from "lucide-react";
+import { useAuthMe } from "@/hooks/use-auth-me";
+import { canSeeMoney } from "@/lib/me-access";
+import { Camera, Download, FileText, Tag, Upload } from "lucide-react";
 
 function MaterialsPageContent() {
   const { query, create } = useMaterials();
+  const { data: me } = useAuthMe();
   const materials = useMemo(() => query.data ?? [], [query.data]);
   const searchParams = useSearchParams();
 
@@ -73,7 +76,14 @@ function MaterialsPageContent() {
         <Button variant="outline" onClick={() => setScanOpen(true)}>
           <Camera className="h-4 w-4" /> Scan
         </Button>
-        <PageActionsMenu actions={[{ label: "Labels afdrukken", icon: Tag, href: "/materials/labels" }, { label: "Importeren", icon: Upload, onSelect: () => setImportOpen(true) }, { label: "Exporteren", icon: Download, href: "/api/materials/export" }]} />
+        <PageActionsMenu
+          actions={[
+            { label: "Labels afdrukken", icon: Tag, href: "/materials/labels" },
+            ...(canSeeMoney(me) ? [{ label: "Prijslijst", icon: FileText, href: "/materials/prijslijst" }] : []),
+            { label: "Importeren", icon: Upload, onSelect: () => setImportOpen(true) },
+            { label: "Exporteren", icon: Download, href: "/api/materials/export" },
+          ]}
+        />
         <Button onClick={() => setFormOpen(true)}>+ Nieuw materiaal</Button>
       </PageHeader>
 

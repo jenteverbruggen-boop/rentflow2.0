@@ -8,6 +8,7 @@ import { bundleAvailableCount } from "@/lib/availability";
 import { canOverbook } from "@/lib/material-shortage";
 import { toNumber } from "@/lib/serialize";
 import { redactMoney } from "@/lib/redact";
+import { setDayPrice } from "@/lib/set-price";
 import {
   serializeAssignment,
   type BookedAssignment,
@@ -57,11 +58,7 @@ export async function POST(req: NextRequest, { params }: Params) {
           );
         }
       }
-      const componentSum = material.components.reduce(
-        (acc, c) => acc + toNumber(c.child.dayPrice) * c.quantity, 0,
-      );
-      const dayPriceSnapshot = material.bundlePriceOverride != null
-        ? toNumber(material.bundlePriceOverride) : componentSum;
+      const dayPriceSnapshot = setDayPrice(material.bundlePriceOverride, material.components);
       try {
         const result = await bookBundleMaterial({
           periodId, materialId: material.id, quantity: qty,

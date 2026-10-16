@@ -3,6 +3,7 @@ import { computeBundleStock } from "@/lib/bundle-stock";
 import { computeSharingMap } from "@/lib/bundle-sharing";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
 import { redactMoney } from "@/lib/redact";
+import { setDayPrice } from "@/lib/set-price";
 
 interface MaterialRow {
   id: number;
@@ -80,10 +81,7 @@ export function serializeMaterialsList<T extends MaterialRow>(
         sharedWith: sharingMap.get(c.childId)?.filter((s) => s.id !== m.id) ?? [],
       })),
     );
-    const setPrice =
-      m.bundlePriceOverride != null
-        ? toNumber(m.bundlePriceOverride)
-        : bundleStock.componentSum;
+    const setPrice = setDayPrice(m.bundlePriceOverride, m.components);
     return redactMoney({ ...base, bundleStock, setPrice }, access);
   });
 }
