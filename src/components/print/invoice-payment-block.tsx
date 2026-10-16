@@ -18,6 +18,8 @@ export function InvoicePaymentBlock({ invoice, settings }: Props) {
   const iban = [settings.companyIban, settings.invoiceBankAccountHolder && `t.n.v. ${settings.invoiceBankAccountHolder}`]
     .filter(Boolean).join(" — ");
   const open = invoice.status !== "concept" ? invoice.remainingBalance : invoice.totalIncl;
+  // Zero owed because it was credited back is not "paid".
+  const credited = (invoice.creditNotes ?? []).some((cn) => cn.status !== "concept");
 
   return (
     <div className="space-y-4 break-inside-avoid">
@@ -38,7 +40,7 @@ export function InvoicePaymentBlock({ invoice, settings }: Props) {
               </p>
             ) : (
               <p className="font-semibold">
-                {open === 0 ? "Volledig betaald" : <>Tegoed: <span className="tabular-nums">{formatEUR(-open)}</span></>}
+                {open === 0 ? (credited ? "Gecrediteerd" : "Volledig betaald") : <>Tegoed: <span className="tabular-nums">{formatEUR(-open)}</span></>}
               </p>
             )}
             {invoice.status === "concept" && (

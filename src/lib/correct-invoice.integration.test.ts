@@ -16,6 +16,12 @@ import { createCreditNote, CreditNoteError } from "@/lib/create-credit-note";
 import { correctInvoice, CorrectInvoiceError } from "@/lib/correct-invoice";
 import { addManualLine } from "@/lib/invoice-lines-crud";
 import { recordPayment } from "@/lib/invoice-payments";
+import { convertQuote } from "@/lib/convert-quote";
+import { createQuote } from "@/lib/create-quote";
+import { sendQuote } from "@/lib/quote-lifecycle";
+import { acceptQuote } from "@/lib/accept-quote";
+import { regenerateInvoice, RegenerateNotAllowedError } from "@/lib/regenerate-invoice";
+import { loadPriorDeposits } from "@/lib/invoice-prior-deposits";
 import { toNumber } from "@/lib/serialize";
 
 const DB_PATH = path.join(os.tmpdir(), `correct-invoice-${process.pid}.db`);
@@ -182,5 +188,53 @@ describe("credit notes can't credit the same line twice (C1b)", () => {
     await createCreditNote(other.id, [{ lineId: line.id, quantity: qty - 0.5 }], client);
     await expect(createCreditNote(other.id, [{ lineId: line.id, quantity: 1 }], client)).rejects.toMatchObject({ code: "INVALID_QUANTITY" });
     await expect(createCreditNote(other.id, [{ lineId: line.id, quantity: 0.5 }], client)).resolves.toBeTruthy();
+  });
+});
+
+describe("review fixes (C1b/C2)", () => {
+  it("a corrected quote-invoice stays the quote's invoice: no second conversion, no regenerate from the project", async () => {
+    const q = await acceptQuote((await sendQuote((await createQuote(projectId, client)).id, client)).id, client);
+    const inv = await finalizeInvoice((await convertQuote(q.id, { mode: "full" }, client)).id, client);
+    const { replacement } = await correctInvoice(inv.id, client);
+    expect(replacement.sourceQuoteId).toBe(q.id);
+    await finalizeInvoice(replacement.id, client);
+    await expect(convertQuote(q.id, { mode: "full" }, client)).rejects.toMatchObject({ code: "ALREADY_CONVERTED" });
+    const again = await correctInvoice(replacement.id, client);
+    await expect(regenerateInvoice(again.replacement.id, client)).rejects.toBeInstanceOf(RegenerateNotAllowedError);
+  });
+
+  it("a full credit note nets a half-cent VAT invoice to exactly zero owed", async () => {
+    const draft = await createDraftInvoice({ projectId, invoiceRole: "standalone" }, client);
+    await client.invoiceLine.deleteMany({ where: { invoiceId: draft.id } });
+    await client.invoiceLine.create({
+      data: { invoiceId: draft.id, kind: "manual", description: "Halve cent", quantity: 1, unit: "stuk", unitPrice: 12.5, vatRate: 21, lineTotalExcl: 12.5, sortOrder: 0 },
+    });
+    await client.invoice.update({ where: { id: draft.id }, data: { subtotalExcl: 12.5, travelExcl: 0, deductionExcl: 0, vatAmount: 2.63, totalIncl: 15.13 } });
+    const sent = await finalizeInvoice(draft.id, client);
+    const cn = await createCreditNote(sent.id, undefined, client);
+    expect(toNumber(cn.vatAmount)).toBe(-toNumber(sent.vatAmount));
+    expect(toNumber(cn.totalIncl)).toBe(-toNumber(sent.totalIncl));
+  });
+
+  it("a deposit above 100% (or above the quote total) is refused", async () => {
+    const base = await client.project.findUniqueOrThrow({ where: { id: projectId } });
+    const fresh = await client.project.create({
+      data: {
+        name: "Voorschot-grens", clientId: base.clientId, startDate: new Date("2026-06-01"), endDate: new Date("2026-06-01"),
+        periods: { create: [{ name: "P", startDate: new Date("2026-06-01"), endDate: new Date("2026-06-01") }] },
+      },
+    });
+    const q = await acceptQuote((await sendQuote((await createQuote(fresh.id, client)).id, client)).id, client);
+    await expect(convertQuote(q.id, { mode: "deposit", depositType: "percentage", depositValue: 500 }, client)).rejects.toBeInstanceOf(Error);
+    await expect(convertQuote(q.id, { mode: "deposit", depositType: "fixed", depositValue: 1e9 }, client)).rejects.toBeInstanceOf(Error);
+  });
+
+  it("a deposit that was credited back in full is no longer deducted from a final invoice", async () => {
+    const dep = await createDraftInvoice({ projectId, invoiceRole: "deposit", depositType: "fixed", depositValue: 100 }, client);
+    const sent = await finalizeInvoice(dep.id, client);
+    expect((await loadPriorDeposits(client, projectId, 21)).some((d) => d.id === sent.id)).toBe(true);
+    const cn = await createCreditNote(sent.id, undefined, client);
+    await finalizeInvoice(cn.id, client);
+    expect((await loadPriorDeposits(client, projectId, 21)).some((d) => d.id === sent.id)).toBe(false);
   });
 });

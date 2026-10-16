@@ -3,6 +3,7 @@ import { prisma as defaultPrisma } from "@/lib/prisma";
 import { nextInvoiceSequence, formatInvoiceNumber, brusselsYear } from "@/lib/invoice-numbering";
 import { invoiceInclude } from "@/lib/serialize-invoice";
 import { QuoteError } from "@/lib/quote-error";
+import { lockRow } from "@/lib/row-lock";
 
 const DEFAULT_FORMAT = "OF-{year}-{seq:04d}";
 const DEFAULT_VALIDITY_DAYS = 30;
@@ -23,6 +24,7 @@ async function loadQuote(tx: PrismaClient, id: number) {
 export async function sendQuote(id: number, client: PrismaClient = defaultPrisma) {
   return client.$transaction(async (tx) => {
     const txClient = tx as unknown as PrismaClient;
+    await lockRow(txClient, "Invoice", id);
     const quote = await loadQuote(txClient, id);
     if (quote.status !== "concept") throw new QuoteError("WRONG_STATUS", "Alleen een concept-offerte kan verzonden worden");
 
@@ -53,9 +55,13 @@ export async function sendQuote(id: number, client: PrismaClient = defaultPrisma
 }
 
 async function moveStatus(id: number, from: string, to: string, message: string, client: PrismaClient) {
-  const quote = await loadQuote(client, id);
-  if (quote.status !== from) throw new QuoteError("WRONG_STATUS", message);
-  return client.invoice.update({ where: { id }, data: { status: to }, include: invoiceInclude });
+  return client.$transaction(async (tx) => {
+    const txClient = tx as unknown as PrismaClient;
+    await lockRow(txClient, "Invoice", id);
+    const quote = await loadQuote(txClient, id);
+    if (quote.status !== from) throw new QuoteError("WRONG_STATUS", message);
+    return txClient.invoice.update({ where: { id }, data: { status: to }, include: invoiceInclude });
+  });
 }
 
 /** verzonden → concept: a sent quote isn't a legal document, so it can be

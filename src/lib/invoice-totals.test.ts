@@ -61,3 +61,13 @@ describe("free-text and mixed-VAT lines (C8)", () => {
     expect(computeInvoiceTotals(lines).vatAmount).toBe(sumOfRows);
   });
 });
+
+describe("symmetric rounding (credit notes net to exactly zero)", () => {
+  it.each([12.5, 1250.5, 0.5, 10.25])("a full credit of %s excl @21%% has exactly the opposite VAT and total", (excl) => {
+    const invoice = computeInvoiceTotals([{ kind: "person", lineTotalExcl: excl, vatRate: 21 }]);
+    const credit = computeInvoiceTotals([{ kind: "person", lineTotalExcl: -excl, vatRate: 21 }]);
+    expect(credit.vatAmount).toBe(-invoice.vatAmount);
+    expect(credit.totalIncl).toBe(-invoice.totalIncl);
+    expect(Math.round((invoice.totalIncl + credit.totalIncl) * 100)).toBe(0);
+  });
+});

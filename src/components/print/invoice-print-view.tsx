@@ -28,7 +28,11 @@ export function InvoicePrintView({ id }: { id: string }) {
   const { data: settings = {}, isLoading: settingsLoading } = useSettings();
   const { data: invoice, isLoading: invoiceLoading } = useQuery<Invoice>({
     queryKey: ["invoice", Number(id)],
-    queryFn: () => fetch(`/api/invoices/${id}`).then((r) => r.json()),
+    queryFn: async () => {
+      const res = await fetch(`/api/invoices/${id}`);
+      if (!res.ok) throw new Error("Document ophalen mislukt");
+      return res.json();
+    },
   });
 
   const isLoading = invoiceLoading || settingsLoading;
@@ -42,7 +46,7 @@ export function InvoicePrintView({ id }: { id: string }) {
   }, [autoprint, ready]);
 
   if (isLoading) return <p className="p-6">Laden...</p>;
-  if (!invoice) return <p className="p-6">Factuur niet gevonden</p>;
+  if (!invoice) return <p className="p-6">Document niet gevonden</p>;
 
   return (
     <PrintLayout ready={ready}>

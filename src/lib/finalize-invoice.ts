@@ -5,6 +5,7 @@ import { invoiceInclude } from "@/lib/serialize-invoice";
 import { structuredReference } from "@/lib/invoice-reference";
 import { syncStatus } from "@/lib/invoice-payments";
 import { assertInvoiceable } from "@/lib/invoice-guards";
+import { lockRow } from "@/lib/row-lock";
 
 type FinalizeErrorCode = "NOT_FOUND" | "ALREADY_FINALIZED" | "CORRECTION_INCOMPLETE" | "NOT_AN_INVOICE";
 
@@ -36,6 +37,10 @@ function assertNumberable(kind: string): void {
 }
 
 async function finalizeInTx(txClient: PrismaClient, id: number) {
+  // Serialise with a concurrent finalize of the same row: without the lock both
+  // read "concept", the second draws the next number and overwrites the first
+  // one's — burning a number in a gapless series.
+  await lockRow(txClient, "Invoice", id);
   const invoice = await txClient.invoice.findUnique({ where: { id } });
   if (!invoice) throw new FinalizeInvoiceError("NOT_FOUND", "Factuur niet gevonden");
   assertNumberable(invoice.kind);
@@ -128,6 +133,7 @@ async function finalizePair(tx: PrismaClient, pair: CorrectionPair): Promise<voi
 export async function finalizeInvoice(id: number, client: PrismaClient = defaultPrisma) {
   return client.$transaction(async (tx) => {
     const txClient = tx as unknown as PrismaClient;
+    await lockRow(txClient, "Invoice", id);
     const invoice = await txClient.invoice.findUnique({ where: { id } });
     if (!invoice) throw new FinalizeInvoiceError("NOT_FOUND", "Factuur niet gevonden");
     assertNumberable(invoice.kind);

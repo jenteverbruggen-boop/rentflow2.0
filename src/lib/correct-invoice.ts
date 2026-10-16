@@ -2,6 +2,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { createCreditNote } from "@/lib/create-credit-note";
 import { invoiceInclude } from "@/lib/serialize-invoice";
+import { lockRow } from "@/lib/row-lock";
 
 export class CorrectInvoiceError extends Error {
   code: "NOT_FOUND" | "NOT_APPLICABLE" | "NOT_SENT" | "ALREADY_CREDITED" | "ALREADY_CORRECTED" | "DEPOSIT_DEDUCTED";
@@ -27,6 +28,9 @@ export class CorrectInvoiceError extends Error {
 export async function correctInvoice(invoiceId: number, client: PrismaClient = defaultPrisma) {
   return client.$transaction(async (tx) => {
     const txClient = tx as unknown as PrismaClient;
+    // Two concurrent "Corrigeren" would each see no credit note yet and create a
+    // pair; sending one pair would then over-credit the original.
+    await lockRow(txClient, "Invoice", invoiceId);
     const original = await txClient.invoice.findUnique({
       where: { id: invoiceId },
       include: { lines: true, creditNotes: { select: { id: true } }, corrections: { select: { id: true } } },
@@ -62,6 +66,10 @@ export async function correctInvoice(invoiceId: number, client: PrismaClient = d
         status: "concept",
         invoiceRole: original.invoiceRole,
         correctionOfId: original.id,
+        // Still the same quote's invoice: without this the quote could be
+        // converted again and the replacement could be regenerated from the
+        // project, dropping the quoted lines.
+        sourceQuoteId: original.sourceQuoteId,
         projectId: original.projectId,
         clientId: original.clientId,
         clientName: original.clientName,

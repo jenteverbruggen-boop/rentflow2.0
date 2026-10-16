@@ -7,6 +7,7 @@ import { netInvoicedExcl } from "@/lib/invoice-status";
 import { invoiceInclude } from "@/lib/serialize-invoice";
 import { toNumber } from "@/lib/serialize";
 import { QuoteError } from "@/lib/quote-error";
+import { lockRow } from "@/lib/row-lock";
 import type { DepositType, InvoiceLineKind, InvoiceLineUnit } from "@/types";
 
 export type ConvertMode = "full" | "deposit" | "final";
@@ -35,11 +36,21 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 export async function convertQuote(id: number, args: ConvertArgs, client: PrismaClient = defaultPrisma) {
   return client.$transaction(async (tx) => {
     const txClient = tx as unknown as PrismaClient;
+    // A double submit would otherwise let both calls see "nothing converted yet".
+    await lockRow(txClient, "Invoice", id);
     const quote = await txClient.invoice.findUnique({ where: { id }, include: { lines: true } });
     if (!quote) throw new QuoteError("NOT_FOUND", "Offerte niet gevonden");
     if (quote.kind !== "offerte") throw new QuoteError("NOT_A_QUOTE", "Dit is geen offerte");
     if (quote.status !== "aanvaard") throw new QuoteError("NOT_ACCEPTED", "Alleen een aanvaarde offerte kan omgezet worden");
     if (quote.projectId == null) throw new QuoteError("NOT_FOUND", "Offerte heeft geen project");
+
+    if (args.mode === "deposit") {
+      const value = args.depositValue ?? 0;
+      const total = toNumber(quote.subtotalExcl) + toNumber(quote.travelExcl);
+      if (args.depositType === "percentage" ? value > 100 : value > total) {
+        throw new QuoteError("WRONG_STATUS", "Het voorschot mag niet hoger zijn dan het offertebedrag");
+      }
+    }
 
     const live = (await txClient.invoice.findMany({
       where: { sourceQuoteId: id, kind: "invoice" },

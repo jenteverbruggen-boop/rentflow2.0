@@ -20,7 +20,8 @@ export async function loadPriorDeposits(
     where: { projectId, kind: "invoice", invoiceRole: "deposit", status: { not: "concept" } },
     include: { lines: true, creditNotes: true },
   });
-  return deposits.map((inv) => ({
+  return deposits
+    .map((inv) => ({
     id: inv.id,
     number: inv.number ?? "",
     invoiceDate: inv.invoiceDate ? format(inv.invoiceDate, "dd/MM/yyyy") : "",
@@ -36,5 +37,7 @@ export async function loadPriorDeposits(
       })),
     }),
     vatRate: toNumber(inv.lines.find((l) => l.kind === "deposit")?.vatRate ?? fallbackVatRate),
-  }));
+  }))
+    // A deposit that was credited back in full is nothing to deduct any more.
+    .filter((d) => d.netExcl !== 0);
 }

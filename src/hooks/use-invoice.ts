@@ -44,6 +44,7 @@ export function useInvoice(id: number) {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: key });
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    queryClient.invalidateQueries({ queryKey: ["quotes"] });
   };
 
   const query = useQuery({

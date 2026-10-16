@@ -8,7 +8,11 @@ export interface InvoiceTotals {
   totalIncl: number;
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
+// Symmetric: -x rounds to exactly -(round of x). `Math.round` rounds halves
+// toward +infinity, so a credit note's negated VAT (…-2.625 → -2.62) would
+// differ by a cent from its invoice's (2.625 → 2.63) and leave a permanent
+// 0.01 balance after a full credit.
+const round2 = (n: number) => Math.sign(n) * (Math.round(Math.abs(n) * 100) / 100);
 
 /** VAT per distinct rate, each rounded to cents. `computeInvoiceTotals`
  * sums exactly these, so the per-rate rows an invoice prints always add up
