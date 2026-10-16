@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuthMe } from "@/hooks/use-auth-me";
 import { visibleNavLinks } from "@/lib/nav-links";
 import { NavLinkList } from "@/components/nav-link-list";
+import { ProfileLink } from "@/components/profile-link";
 
 export function MobileTopBar() {
   const [open, setOpen] = useState(false);
@@ -42,7 +43,8 @@ export function MobileTopBar() {
           </SheetHeader>
           <NavLinkList links={links} onNavigate={() => setOpen(false)} />
           <Separator className="bg-sidebar-border" />
-          <div className="p-4">
+          <div className="p-4 space-y-1">
+            <ProfileLink onNavigate={() => setOpen(false)} />
             <Button
               variant="ghost"
               size="sm"

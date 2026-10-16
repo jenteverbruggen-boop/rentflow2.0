@@ -33,11 +33,6 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/", label: "Dashboard", icon: "home" },
   { href: "/projects", group: "Werk", label: "Projecten", icon: "folder", module: "projecten" },
   { href: "/planning", group: "Werk", label: "Planning", icon: "calendar", module: "planning" },
-  // O1.4/B2d — own reachable surface for agenda-feed self-service, gated on
-  // the same `planning: lezen` the component itself requires (not
-  // `instellingen`, which would hide it from a planning-capable role with
-  // no settings access — see calendar-feed-links.tsx).
-  { href: "/agenda-feeds", group: "Werk", label: "Agenda-feeds", icon: "link", module: "planning" },
   { href: "/notes", group: "Werk", label: "Notities", icon: "notes", module: "notities" },
   { href: "/people", group: "Gegevens", label: "Personen", icon: "people", module: "personen", badge: "person-link" },
   { href: "/materials", group: "Gegevens", label: "Materialen", icon: "package", module: "materialen" },

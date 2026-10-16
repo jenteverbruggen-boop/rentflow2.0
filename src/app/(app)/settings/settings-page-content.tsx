@@ -18,7 +18,7 @@ export function SettingsPageContent() {
       <LogoUpload />
       {/* O1.4/B2d — also kept here for convenience so an admin sees feed
           management alongside the rest of Settings. This is no longer the
-          only way in: /agenda-feeds (src/app/(app)/agenda-feeds/page.tsx)
+          only way in: /profile (src/app/(app)/profile/page.tsx)
           gates on `planning: lezen` directly, so a planning-capable role
           with no `instellingen` access (this page's gate) can still reach
           its own "Mijn diensten" feed there. Same component, no

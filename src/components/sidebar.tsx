@@ -4,6 +4,7 @@ import { Separator } from "./ui/separator";
 import { resolveCurrentAccess } from "@/lib/api-auth";
 import { visibleNavLinks } from "@/lib/nav-links";
 import { NavLinkList } from "./nav-link-list";
+import { ProfileLink } from "./profile-link";
 
 // Server Component — resolves permissions directly via
 // resolveCurrentAccess() rather than a client-side fetch to /api/auth/me
@@ -23,6 +24,7 @@ export async function Sidebar() {
 
       <Separator className="bg-sidebar-border" />
       <div className="p-3 space-y-1">
+        <ProfileLink />
         <ThemeToggle className="w-full justify-start px-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground" />
         <LogoutButton />
       </div>
