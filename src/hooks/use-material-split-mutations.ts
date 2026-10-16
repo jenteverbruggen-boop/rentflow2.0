@@ -12,6 +12,8 @@ interface AddArgs {
   materialId: number;
   quantity: number;
   allowOverbook?: boolean;
+  /** Hire the units beyond stock in from this supplier. */
+  subhire?: { supplierId: number };
 }
 
 /** The add/remove-unit/remove-bundle mutations for MaterialSplitEditor,

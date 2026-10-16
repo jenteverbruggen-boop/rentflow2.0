@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { createOrIncrementShortage } from "@/lib/shortage-row";
+import type { ShortageSubhire } from "@/lib/subhire-defaults";
 
 export async function freeStockItemIds(
   client: PrismaClient,
@@ -56,6 +57,9 @@ interface BookFlatArgs {
    * instead of throwing UNAVAIL. Only the caller (the route, after
    * checking the project's status) may set this. */
   allowOverbook?: boolean;
+  /** The missing units are hired in right away (supplier + price) instead of
+   * being left as an open shortage. Implies overbooking is allowed. */
+  subhire?: ShortageSubhire | null;
   client?: PrismaClient;
 }
 
@@ -71,7 +75,7 @@ export async function bookFlatMaterial(args: BookFlatArgs): Promise<BookFlatResu
     await lockMaterials(txClient, [args.materialId]);
     const free = await freeStockItemIds(txClient, args.materialId, args.from, args.to);
     const shortfall = args.quantity - free.length;
-    if (shortfall > 0 && !args.allowOverbook) {
+    if (shortfall > 0 && !args.allowOverbook && !args.subhire) {
       const err = new Error(
         `Niet genoeg vrij. Gevraagd: ${args.quantity}, beschikbaar: ${free.length}`,
       ) as Error & { code: string };
@@ -107,9 +111,11 @@ export async function bookFlatMaterial(args: BookFlatArgs): Promise<BookFlatResu
         setupCostSnapshot: args.setupCostSnapshot,
         discountPct: args.discountPct,
         discountAmount: args.discountAmount,
+        subhire: args.subhire,
       });
+      const name = args.materialName ?? `materiaal #${args.materialId}`;
       warnings.push(
-        `${shortfall}× ${args.materialName ?? `materiaal #${args.materialId}`} overboekt — niet in voorraad`,
+        args.subhire ? `${shortfall}× ${name} ingehuurd — niet in eigen voorraad` : `${shortfall}× ${name} overboekt — niet in voorraad`,
       );
     }
 

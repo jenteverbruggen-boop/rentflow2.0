@@ -107,6 +107,8 @@ export async function GET(req: NextRequest) {
               hasOverride: overrideMap.has(m.id),
               isBundle: m.isBundle,
               code: m.code,
+              subhireOnly: m.subhireOnly,
+              defaultSupplierId: m.defaultSupplierId,
             },
             totalStock: m._count.stockItems,
             availableCount,

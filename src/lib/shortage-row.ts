@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import type { ShortageSubhire } from "@/lib/subhire-defaults";
 
 interface ShortageRowArgs {
   periodId: number;
@@ -9,6 +10,8 @@ interface ShortageRowArgs {
   setupCostSnapshot?: number;
   discountPct?: number | null;
   discountAmount?: number | null;
+  /** Created already hired in from this supplier (resolved, never open). */
+  subhire?: ShortageSubhire | null;
 }
 
 /**
@@ -36,9 +39,17 @@ export async function createOrIncrementShortage(
       dayPriceSnapshot: args.dayPriceSnapshot,
       discountPct,
       discountAmount,
-      // Never fold new open units into a hired-in row: they would silently
-      // inherit its supplier and cost.
-      supplierId: null,
+      // Open units only fold into open rows, hired-in units only into a row
+      // of the same supplier and price — never across, or they would silently
+      // inherit the wrong supplier and cost.
+      supplierId: args.subhire?.supplierId ?? null,
+      ...(args.subhire
+        ? {
+            subhireCostBasis: args.subhire.basis,
+            subhireUnitCost: args.subhire.unitCost,
+            subhireCostOverride: args.subhire.costOverride,
+          }
+        : {}),
     },
   });
 
@@ -58,6 +69,15 @@ export async function createOrIncrementShortage(
         setupCostSnapshot: args.setupCostSnapshot ?? 0,
         discountPct,
         discountAmount,
+        ...(args.subhire
+          ? {
+              supplierId: args.subhire.supplierId,
+              subhireCostBasis: args.subhire.basis,
+              subhireUnitCost: args.subhire.unitCost,
+              subhireCostOverride: args.subhire.costOverride,
+              subhiredAt: new Date(),
+            }
+          : {}),
       },
     });
   }

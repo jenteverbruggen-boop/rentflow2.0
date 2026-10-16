@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMaterialAvailability } from "@/hooks/use-availability";
 import { useMaterialSplitMutations } from "@/hooks/use-material-split-mutations";
+import { useSuppliers } from "@/hooks/use-suppliers";
 import { periodDays } from "@/lib/pricing";
 import { groupMaterialAssignments } from "@/lib/grouping";
 import { canOverbook } from "@/lib/material-shortage";
@@ -44,6 +45,9 @@ export function MaterialSplitEditor({
     projectId: project.id,
   };
   const mats = useMaterialAvailability(range);
+  // Hiring in needs the supplier list; a caller without materials access just
+  // gets none (the endpoint refuses them) and the picker behaves as before.
+  const suppliers = (useSuppliers(false).query.data ?? []).filter((s) => !s.archived);
   const days = periodDays(period);
   const shortages = useMemo(() => period.shortages ?? [], [period.shortages]);
   const groups = groupMaterialAssignments(period.materials, shortages);
@@ -73,14 +77,14 @@ export function MaterialSplitEditor({
     return (mats.data ?? []).filter((m) => {
       // A fully-booked or stockless material must stay reachable when
       // overbooking is allowed — otherwise it can never be quoted.
-      if (m.availableCount === 0 && !overbookable) return false;
+      if (m.availableCount === 0 && !overbookable && !m.material.subhireOnly && suppliers.length === 0) return false;
       if (!q) return true;
       return (
         m.material.name.toLowerCase().includes(q) ||
         (m.material.category ?? "").toLowerCase().includes(q)
       );
     });
-  }, [mats.data, search, overbookable]);
+  }, [mats.data, search, overbookable, suppliers.length]);
 
   const byCategory = useMemo(
     () => groupAvailableByCategory(filtered),
@@ -121,6 +125,7 @@ export function MaterialSplitEditor({
             onAdd={(args) => add.mutate(args)}
             addPending={add.isPending}
             overbookable={overbookable}
+            suppliers={suppliers}
           />
           <MaterialAssignedPane
             periodName={period.name}

@@ -16,9 +16,11 @@ interface Props {
     materialId: number;
     quantity: number;
     allowOverbook: boolean;
+    subhire?: { supplierId: number };
   }) => void;
   addPending: boolean;
   overbookable: boolean;
+  suppliers: { id: number; name: string }[];
 }
 
 /** "Beschikbaar" pane, extracted from material-split-editor.tsx (Y3.6) —
@@ -34,6 +36,7 @@ export function MaterialAvailablePane({
   onAdd,
   addPending,
   overbookable,
+  suppliers,
 }: Props) {
   return (
     <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
@@ -78,13 +81,15 @@ export function MaterialAvailablePane({
                           item={m}
                           qty={qtyMap[m.material.id] ?? 1}
                           onQtyChange={(qty) => onQtyChange(m.material.id, qty)}
-                          onAdd={(allowOverbook) =>
+                          suppliers={suppliers}
+                          onAdd={(allowOverbook, subhireSupplierId) =>
                             onAdd({
                               materialId: m.material.id,
                               quantity: m.material.isBundle
                                 ? 1
                                 : (qtyMap[m.material.id] ?? 1),
                               allowOverbook,
+                              ...(subhireSupplierId != null ? { subhire: { supplierId: subhireSupplierId } } : {}),
                             })
                           }
                           addPending={addPending}

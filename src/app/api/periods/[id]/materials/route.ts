@@ -6,6 +6,8 @@ import { bookFlatMaterial, freeStockItemIds } from "@/lib/booking";
 import { bookBundleMaterial } from "@/lib/bundle-booking";
 import { bundleAvailableCount } from "@/lib/availability";
 import { canOverbook } from "@/lib/material-shortage";
+import { moneyVisible } from "@/lib/redact";
+import { resolveBookingSubhire, type SubhireRequest } from "@/lib/subhire-defaults";
 import { toNumber } from "@/lib/serialize";
 import { redactMoney } from "@/lib/redact";
 import { setDayPrice } from "@/lib/set-price";
@@ -23,7 +25,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
     const periodId = parseInt(id);
-    const { materialId, quantity, discountPct, discountAmount, allowOverbook } = await req.json();
+    const { materialId, quantity, discountPct, discountAmount, allowOverbook, subhire } = await req.json();
+    const subhireRequest: SubhireRequest | undefined =
+      subhire && Number.isInteger(subhire.supplierId) ? subhire : undefined;
     const qty = Math.max(1, parseInt(quantity) || 0);
     if (!materialId || !qty) return badRequest("materialId en quantity zijn verplicht");
 
@@ -47,9 +51,25 @@ export async function POST(req: NextRequest, { params }: Params) {
     // merely hidden from the catalogue and availability lists.
     if (material.archived) return badRequest("Dit materiaal is gearchiveerd en kan niet geboekt worden");
 
+    // Hiring in at booking time: an inhuur-only material always is (from its
+    // default supplier); any other only when the caller names a supplier.
+    // That is also the one way to exceed stock in a confirmed project — the
+    // excess is not an open shortage, it is already resolved.
+    const canSetCosts = moneyVisible(access);
+    const componentHire = new Map(
+      material.components.map((c) => [c.childId, resolveBookingSubhire(c.child, subhireRequest, canSetCosts)]),
+    );
+    const flatHire = material.isBundle ? null : resolveBookingSubhire(material, subhireRequest, canSetCosts);
+    const hiresIn = flatHire != null || [...componentHire.values()].some((h) => h != null);
+    if (hiresIn) {
+      const ids = new Set([flatHire?.supplierId, ...[...componentHire.values()].map((h) => h?.supplierId)].filter((v): v is number => v != null));
+      const active = await prisma.supplier.count({ where: { id: { in: [...ids] }, archived: false } });
+      if (active !== ids.size) return badRequest("Kies een leverancier die nog actief is");
+    }
+
     if (material.isBundle) {
       if (material.components.length === 0) return badRequest("Bundle heeft geen componenten");
-      if (overbookable && !wantsOverbook) {
+      if (overbookable && !wantsOverbook && !hiresIn) {
         const available = await bundleAvailableCount(material.id, { from: period.startDate, to: period.endDate });
         if (qty > available) {
           return NextResponse.json(
@@ -69,6 +89,7 @@ export async function POST(req: NextRequest, { params }: Params) {
             childName: c.child.name,
             quantity: c.quantity,
             dayPrice: toNumber(c.child.dayPrice),
+            subhire: componentHire.get(c.childId) ?? null,
           })),
         });
         return NextResponse.json(
@@ -94,7 +115,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       }
     }
 
-    if (overbookable && !wantsOverbook) {
+    if (overbookable && !wantsOverbook && !hiresIn) {
       const free = await freeStockItemIds(prisma, material.id, period.startDate, period.endDate);
       if (qty > free.length) {
         return NextResponse.json(
@@ -115,6 +136,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         discountPct: discountPct != null ? toNumber(discountPct) : null,
         discountAmount: discountAmount != null ? toNumber(discountAmount) : null,
         allowOverbook: wantsOverbook,
+        subhire: flatHire,
       });
       return NextResponse.json(
         redactMoney(

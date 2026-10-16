@@ -17,6 +17,8 @@ import { mergeShortagesIntoGroups } from "@/lib/material-shortage";
 import { subhireTotal } from "@/lib/subhire-cost";
 import { createDraftInvoice } from "@/lib/create-draft-invoice";
 import { deleteSupplier, SupplierInUseError } from "@/lib/suppliers";
+import { bookFlatMaterial } from "@/lib/booking";
+import { bookBundleMaterial } from "@/lib/bundle-booking";
 import { toNumber } from "@/lib/serialize";
 import type { PeriodMaterialShortage } from "@/types";
 
@@ -181,5 +183,69 @@ describe("billing and suppliers", () => {
     await expect(deleteSupplier(supplierId)).rejects.toBeInstanceOf(SupplierInUseError);
     const spare = await client.supplier.create({ data: { name: "Spare" } });
     await expect(deleteSupplier(spare.id)).resolves.toBeUndefined();
+  });
+});
+
+describe("hiring in while booking (C3)", () => {
+  async function bookingSetup(stock: number) {
+    const mat = await client.material.create({ data: { name: `Boek ${Math.random()}`, dayPrice: 10 } });
+    if (stock > 0) await client.stockItem.createMany({ data: Array.from({ length: stock }, (_, i) => ({ materialId: mat.id, unitNumber: i + 1 })) });
+    const project = await client.project.create({
+      data: {
+        name: `Boeking ${Math.random()}`, status: "bevestigd", startDate: new Date("2026-07-01"), endDate: new Date("2026-07-02"),
+        periods: { create: [{ name: "P", startDate: new Date("2026-07-01"), endDate: new Date("2026-07-02") }] },
+      },
+      include: { periods: true },
+    });
+    return { mat, periodId: project.periods[0].id, projectId: project.id };
+  }
+  const hire = { supplierId: 0, basis: "per_dag" as const, unitCost: 2, costOverride: null };
+
+  it("books the stock it has and hires the rest in — no open shortage, even in a confirmed project", async () => {
+    const { mat, periodId, projectId } = await bookingSetup(2);
+    const result = await bookFlatMaterial({
+      periodId, materialId: mat.id, materialName: mat.name, quantity: 5, from: new Date("2026-07-01"), to: new Date("2026-07-02"),
+      dayPriceSnapshot: 10, setupCostSnapshot: 0, subhire: { ...hire, supplierId }, client,
+    });
+    expect(result.assignments).toHaveLength(2);
+    expect(result.warnings[0]).toContain("ingehuurd");
+    const rows = await client.periodMaterialShortage.findMany({ where: { periodId } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ quantity: 3, supplierId, subhireCostBasis: "per_dag" });
+    await expect(assertNoShortages(projectId, client)).resolves.toBeUndefined();
+  });
+
+  it("without a hire, a confirmed project still refuses to go past stock", async () => {
+    const { mat, periodId } = await bookingSetup(1);
+    await expect(
+      bookFlatMaterial({ periodId, materialId: mat.id, quantity: 3, from: new Date("2026-07-01"), to: new Date("2026-07-02"), dayPriceSnapshot: 10, setupCostSnapshot: 0, client }),
+    ).rejects.toMatchObject({ code: "UNAVAIL" });
+  });
+
+  it("booking twice from the same supplier adds to one hired-in row", async () => {
+    const { mat, periodId } = await bookingSetup(0);
+    for (const quantity of [2, 3]) {
+      await bookFlatMaterial({
+        periodId, materialId: mat.id, quantity, from: new Date("2026-07-01"), to: new Date("2026-07-02"),
+        dayPriceSnapshot: 10, setupCostSnapshot: 0, subhire: { ...hire, supplierId }, client,
+      });
+    }
+    const rows = await client.periodMaterialShortage.findMany({ where: { periodId } });
+    expect(rows.map((r) => r.quantity)).toEqual([5]);
+  });
+
+  it("a set's missing component can be hired in, leaving the set booked and nothing open", async () => {
+    const part = await client.material.create({ data: { name: `Part ${Math.random()}`, dayPrice: 1 } });
+    const setMat = await client.material.create({ data: { name: `Set ${Math.random()}`, isBundle: true, dayPrice: 0 } });
+    const { periodId, projectId } = await bookingSetup(0);
+    await bookBundleMaterial({
+      periodId, materialId: setMat.id, quantity: 2, from: new Date("2026-07-01"), to: new Date("2026-07-02"), dayPriceSnapshot: 30,
+      components: [{ childId: part.id, quantity: 2, dayPrice: 1, subhire: { ...hire, supplierId } }], client,
+    });
+    const rows = await client.periodMaterialShortage.findMany({ where: { periodId } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ quantity: 4, supplierId, materialId: part.id });
+    expect(rows[0].bundleBookingId).not.toBeNull();
+    await expect(assertNoShortages(projectId, client)).resolves.toBeUndefined();
   });
 });

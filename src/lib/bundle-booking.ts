@@ -2,6 +2,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { lockMaterials, freeStockItemIds } from "@/lib/booking";
 import { createOrIncrementShortage } from "@/lib/shortage-row";
+import type { ShortageSubhire } from "@/lib/subhire-defaults";
 
 // Split out of booking.ts (which was already at the 150-line limit) to
 // keep the set/bundle booking flow — a materially different shape from
@@ -16,6 +17,8 @@ export interface ComponentSpec {
    * pro-rata split has a historical weight to divide by instead of
    * the live (and later possibly changed) Material.dayPrice. */
   dayPrice: number;
+  /** Hire this component in when it is short (supplier + price). */
+  subhire?: ShortageSubhire | null;
 }
 
 interface BookBundleArgs {
@@ -53,7 +56,7 @@ export async function bookBundleMaterial(args: BookBundleArgs): Promise<BookBund
       const needed = comp.quantity * args.quantity;
       const short = needed - free.length;
       if (short > 0) {
-        if (!args.allowOverbook) {
+        if (!args.allowOverbook && !comp.subhire) {
           const err = new Error(
             `Onvoldoende voorraad voor component: ${comp.childId}`,
           ) as Error & { code: string; childId: number };
@@ -108,9 +111,11 @@ export async function bookBundleMaterial(args: BookBundleArgs): Promise<BookBund
           quantity: short,
           bundleBookingId: bBooking.id,
           dayPriceSnapshot: 0,
+          subhire: comp.subhire,
         });
+        const name = comp.childName ?? `materiaal #${comp.childId}`;
         warnings.push(
-          `${short}× ${comp.childName ?? `materiaal #${comp.childId}`} overboekt — niet in voorraad`,
+          comp.subhire ? `${short}× ${name} ingehuurd — niet in eigen voorraad` : `${short}× ${name} overboekt — niet in voorraad`,
         );
       }
     }
