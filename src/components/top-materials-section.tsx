@@ -34,7 +34,7 @@ export function TopMaterialsSection({ data }: { data: TopMaterialEntry[] }) {
               </BarChart>
             </ChartContainer>
             <div className="overflow-x-auto rounded-lg border">
-              <Table>
+              <Table className="table-sticky-first">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Materiaal</TableHead>

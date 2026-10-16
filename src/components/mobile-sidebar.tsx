@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuthMe } from "@/hooks/use-auth-me";
 import { visibleNavLinks } from "@/lib/nav-links";
-import { NavSuggestionBadge } from "@/components/nav-suggestion-badge";
+import { NavLinkList } from "@/components/nav-link-list";
 
 export function MobileTopBar() {
   const [open, setOpen] = useState(false);
@@ -26,7 +25,7 @@ export function MobileTopBar() {
   }
 
   return (
-    <header className="md:hidden flex items-center gap-3 px-4 h-14 border-b border-sidebar-border bg-sidebar shrink-0">
+    <header className="lg:hidden flex items-center gap-3 px-4 h-14 border-b border-sidebar-border bg-sidebar shrink-0">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent">
@@ -41,20 +40,7 @@ export function MobileTopBar() {
           <SheetHeader className="p-5 border-b border-sidebar-border">
             <SheetTitle className="text-xl font-bold text-primary text-left">RentFlow</SheetTitle>
           </SheetHeader>
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-            {links.map(({ href, label, icon, badge }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-              >
-                <span>{icon}</span>
-                {label}
-                {badge === "person-link" && <NavSuggestionBadge />}
-              </Link>
-            ))}
-          </nav>
+          <NavLinkList links={links} onNavigate={() => setOpen(false)} />
           <Separator className="bg-sidebar-border" />
           <div className="p-4">
             <Button

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { Users, X } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LinePricePopover } from "@/components/line-price-popover";
@@ -30,7 +31,7 @@ export function PeriodPeopleSection({ period, project, days }: Props) {
 
   return (
     <section>
-      <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">👥 Personen</h4>
+      <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2"><InlineIcon icon={Users} /> Personen</h4>
       {period.people.length === 0 ? (
         <p className="text-xs text-muted-foreground">Geen toegewezen</p>
       ) : (

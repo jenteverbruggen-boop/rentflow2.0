@@ -7,6 +7,7 @@ import { useAuthMe } from "@/hooks/use-auth-me";
 import { DashboardStatTile } from "@/components/dashboard-stat-tile";
 import { UpcomingProjectsCard } from "@/components/upcoming-projects-card";
 import type { Project, Person, Material } from "@/types";
+import { CalendarDays, FolderKanban, Package, Receipt, Users, Wallet } from "lucide-react";
 
 interface StatsResponse {
   revenueByMonth: { booked: number; invoiced: number }[];
@@ -65,13 +66,13 @@ export default function DashboardPage() {
 
   const stats = isScoped
     ? [
-        { label: "Projecten", value: projects.length, icon: "📁", href: "/projects" },
-        { label: "Komende periodes", value: upcomingPeriodCount, icon: "🗓️", href: "/planning" },
+        { label: "Projecten", value: projects.length, icon: FolderKanban, href: "/projects" },
+        { label: "Komende periodes", value: upcomingPeriodCount, icon: CalendarDays, href: "/planning" },
       ]
     : [
-        { label: "Projecten", value: projects.length, icon: "📁", href: "/projects" },
-        { label: "Personen", value: peopleQuery.data?.length ?? 0, icon: "👥", href: "/people" },
-        { label: "Materialen", value: materialsQuery.data?.length ?? 0, icon: "📦", href: "/materials" },
+        { label: "Projecten", value: projects.length, icon: FolderKanban, href: "/projects" },
+        { label: "Personen", value: peopleQuery.data?.length ?? 0, icon: Users, href: "/people" },
+        { label: "Materialen", value: materialsQuery.data?.length ?? 0, icon: Package, href: "/materials" },
       ];
 
   // K3.1 — headline money figures, year-to-date. Hidden entirely (not
@@ -92,21 +93,24 @@ export default function DashboardPage() {
   const invoicedYtd = statsQuery.data?.revenueByMonth.reduce((s, m) => s + m.invoiced, 0) ?? 0;
   const moneyTiles = canSeeCijfers
     ? [
-        { label: `Omzet ${year} (geboekt)`, value: formatEUR(bookedYtd), icon: "💶", href: "/cijfers" },
-        { label: `Omzet ${year} (gefactureerd)`, value: formatEUR(invoicedYtd), icon: "🧾", href: "/cijfers" },
+        { label: `Omzet ${year} (geboekt)`, value: formatEUR(bookedYtd), icon: Wallet, href: "/cijfers" },
+        { label: `Omzet ${year} (gefactureerd)`, value: formatEUR(invoicedYtd), icon: Receipt, href: "/cijfers" },
       ]
     : [];
-  const allTiles = [...stats, ...moneyTiles];
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Dashboard</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {allTiles.map((s) => (
-          <DashboardStatTile key={s.label} label={s.label} value={s.value} icon={s.icon} href={s.href} />
-        ))}
-      </div>
+      {[stats, moneyTiles].map((tiles, i) =>
+        tiles.length > 0 && (
+          <div key={i} className={i === 0 ? "grid grid-cols-3 gap-2 sm:gap-4" : "grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4"}>
+            {tiles.map((s) => (
+              <DashboardStatTile key={s.label} label={s.label} value={s.value} icon={s.icon} href={s.href} />
+            ))}
+          </div>
+        ),
+      )}
 
       <UpcomingProjectsCard projects={upcoming} />
     </div>

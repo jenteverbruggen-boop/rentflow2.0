@@ -5,6 +5,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { projectShortageLines } from "@/lib/project-shortages";
 import type { Project } from "@/types";
+import { TriangleAlert } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface Props {
   project: Project;
@@ -67,7 +69,7 @@ export function ProjectOverbookAlert({ project }: Props) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="text-amber-600 dark:text-amber-500 space-y-0.5">
             <p className="font-medium">
-              ⚠ {total} unit(s) overboekt — niet in voorraad
+              <InlineIcon icon={TriangleAlert} /> {total} unit(s) overboekt — niet in voorraad
             </p>
             {lines.map((l) => (
               <p key={l.id} className="text-xs">

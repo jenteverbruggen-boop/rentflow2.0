@@ -1,4 +1,5 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Link2, TriangleAlert } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 import { QuantityInput } from "@/components/quantity-input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,12 +48,12 @@ export function MaterialAvailableRow({
         </p>
         {m.material.isBundle && m.sharedComponents && m.sharedComponents.length > 0 && (
           <p className="text-[10px] text-muted-foreground truncate">
-            🔗 deelt voorraad: {m.sharedComponents.join(", ")}
+            <InlineIcon icon={Link2} /> deelt voorraad: {m.sharedComponents.join(", ")}
           </p>
         )}
         {isOverbooking && (
           <p className="text-[10px] text-amber-600 dark:text-amber-500 truncate">
-            ⚠ {over} {m.material.isBundle ? "set(s)" : "unit(s)"} overboekt —
+            <InlineIcon icon={TriangleAlert} /> {over} {m.material.isBundle ? "set(s)" : "unit(s)"} overboekt —
             niet in voorraad
           </p>
         )}

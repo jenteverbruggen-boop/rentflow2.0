@@ -31,6 +31,10 @@ const schema = z.object({
 
 export type SettingsFormValues = z.infer<typeof schema>;
 
+// Every field starts as "" so the inputs are controlled from the first render
+// (an empty `{}` made React warn about uncontrolled → controlled inputs).
+const EMPTY = Object.fromEntries(Object.keys(schema.shape).map((k) => [k, ""])) as SettingsFormValues;
+
 /** J2b.9 — split into company-settings-fields.tsx +
  * invoice-settings-fields.tsx (both ~90 lines) once the six new
  * invoice settings pushed this file over the 150-line limit; this
@@ -43,11 +47,11 @@ export function SettingsForm() {
   });
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {},
+    defaultValues: EMPTY,
   });
 
   useEffect(() => {
-    if (settings) form.reset(settings as SettingsFormValues);
+    if (settings) form.reset({ ...EMPTY, ...settings } as SettingsFormValues);
   }, [settings, form]);
 
   const save = useMutation({
@@ -63,7 +67,7 @@ export function SettingsForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Instellingen</CardTitle>
+        <CardTitle className="text-base">Bedrijf en facturatie</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>

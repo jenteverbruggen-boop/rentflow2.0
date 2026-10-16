@@ -7,6 +7,7 @@ import { formatEUR } from "@/lib/pricing";
 import { toNumber } from "@/lib/serialize";
 import { materialGroupCost, type MaterialGroup } from "@/lib/grouping";
 import type { Project } from "@/types";
+import { Package } from "lucide-react";
 
 interface MaterialGroupRowProps {
   group: MaterialGroup;
@@ -30,7 +31,7 @@ export function MaterialGroupCostRow({ group, days, periodId, project }: Materia
   return (
     <tr className="border-b last:border-0">
       <td className="py-2 pl-3 pr-2 align-middle">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-secondary text-sm">📦</span>
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-secondary text-sm"><Package className="h-3.5 w-3.5" aria-hidden /></span>
       </td>
       <td className="py-2 pr-4 text-sm align-middle">
         <div className="font-medium leading-tight flex items-center gap-1.5">

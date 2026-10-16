@@ -44,7 +44,7 @@ export function PersonUtilisationSection({ data }: { data: PersonUtilisationEntr
               </BarChart>
             </ChartContainer>
             <div className="overflow-x-auto rounded-lg border">
-              <Table>
+              <Table className="table-sticky-first">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Persoon</TableHead>

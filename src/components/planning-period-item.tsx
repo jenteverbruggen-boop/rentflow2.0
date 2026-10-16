@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, statusVariant } from "@/lib/utils";
 import type { PlanningPeriod, PlanningProject } from "@/lib/planning-include";
+import { Package, Users } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface Props {
   period: PlanningPeriod;
@@ -53,7 +55,7 @@ export function PlanningPeriodItem({ period, project }: Props) {
             {fmtTime(period.startDate)}–{fmtTime(period.endDate)}
           </p>
           <p>
-            👥 {period.peopleCount} personen · 📦 {period.materialsCount} materialen
+            <InlineIcon icon={Users} /> {period.peopleCount} personen · <InlineIcon icon={Package} /> {period.materialsCount} materialen
           </p>
         </div>
         <Link href={`/projects/${project.id}`} className="text-xs text-primary hover:underline block">

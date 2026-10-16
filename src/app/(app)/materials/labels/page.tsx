@@ -7,6 +7,7 @@ import { MaterialLabel } from "@/components/print/material-label";
 import type { MaterialSort, MaterialTypeFilter } from "@/components/materials-filter-bar";
 import { useMaterialFilters } from "@/hooks/use-material-filters";
 import { resolveLabelMaterials } from "@/lib/label-selection";
+import { PageHeader } from "@/components/page-header";
 import { LabelMaterialPicker } from "./label-material-picker";
 import type { Material } from "@/types";
 
@@ -66,15 +67,12 @@ export default function LabelsPage() {
       <style>{PRINT_CSS}</style>
 
       <div className="no-print p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Materiaallabels — A4 (3×8)</h2>
-          <div className="flex gap-2">
-            <Button onClick={() => window.print()}>Afdrukken</Button>
-            <Button variant="ghost" onClick={() => window.history.back()}>
-              ← Terug
-            </Button>
-          </div>
-        </div>
+        <PageHeader title="Materiaallabels — A4 (3×8)">
+          <Button onClick={() => window.print()}>Afdrukken</Button>
+          <Button variant="ghost" onClick={() => window.history.back()}>
+            ← Terug
+          </Button>
+        </PageHeader>
 
         <LabelMaterialPicker
           materials={filtered}
@@ -99,6 +97,7 @@ export default function LabelsPage() {
         </p>
       </div>
 
+      <div className="overflow-x-auto print:overflow-visible">
       <div className="print-root label-sheet">
         {pages.map((page, pi) => (
           <div
@@ -126,6 +125,7 @@ export default function LabelsPage() {
             </div>
           </div>
         ))}
+      </div>
       </div>
     </>
   );

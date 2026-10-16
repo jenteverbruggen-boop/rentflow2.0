@@ -30,7 +30,7 @@ export function ProjectDetailTabs({
 }: Props) {
   return (
     <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
-      <div className="overflow-x-auto pb-1">
+      <div className="overflow-x-auto pb-1 fade-edge-r">
         <TabsList className="w-max">
           <TabsTrigger value="overview">Overzicht</TabsTrigger>
           <TabsTrigger value="periods">Periodes</TabsTrigger>

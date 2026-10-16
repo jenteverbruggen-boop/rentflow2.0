@@ -23,6 +23,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -38,6 +39,38 @@
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
+}
+
+/* Tailwind v4 defaults `border` to currentColor (white in dark mode, black in
+   light). Restore the token so every bare `border` / `border-b` is subtle. */
+@layer base {
+  *,
+  ::after,
+  ::before {
+    border-color: var(--border);
+  }
+}
+
+/* Keep the first column (name / number) visible while a wide table scrolls
+   sideways on narrow screens. Use on tables that sit on a card surface. */
+@media (max-width: 1023px) {
+  .table-sticky-first th:first-child,
+  .table-sticky-first td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: var(--card);
+    box-shadow: 1px 0 0 var(--border);
+  }
+}
+
+/* Fades the right edge of a horizontally scrolling strip (tabs) so it is
+   obvious there is more off-screen. */
+.fade-edge-r {
+  mask-image: linear-gradient(to right, black calc(100% - 1.5rem), transparent);
+}
+@media (min-width: 1024px) {
+  .fade-edge-r { mask-image: none; }
 }
 
 body {
@@ -73,6 +106,7 @@ label {
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.488 0.243 264.376);
@@ -114,6 +148,7 @@ label {
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.145 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.488 0.243 264.376);

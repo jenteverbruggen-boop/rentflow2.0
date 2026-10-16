@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { computeDayBlocks, type DayBlockPeriod } from "@/lib/planning-day-blocks";
 import { cn, statusVariant } from "@/lib/utils";
+import { TriangleAlert } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface Props {
   day: Date;
@@ -48,7 +50,7 @@ export function PlanningDayTimeline({ day, periods }: Props) {
             style={{ top: `${b.topPct}%`, height: `${b.heightPct}%` }}
           >
             <span className="font-medium truncate block">
-              {(b.clampedStart || b.clampedEnd) && "⚠ "}
+              {(b.clampedStart || b.clampedEnd) && <><InlineIcon icon={TriangleAlert} /> </>}
               {b.projectName}
             </span>
             <span className="opacity-70">{b.label}</span>

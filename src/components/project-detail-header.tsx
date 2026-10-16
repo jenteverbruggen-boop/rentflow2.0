@@ -3,13 +3,21 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, ChevronDown, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { StatusSelect } from "@/components/status-select";
 import { ProjectEditButton } from "@/components/project-edit-button";
 import { OverbookBadge } from "@/components/overbook-badge";
 import { formatEUR, projectTotal } from "@/lib/pricing";
 import { projectShortageLines } from "@/lib/project-shortages";
 import type { Project } from "@/types";
+
+const PRINT_DOCS = [
+  { slug: "pakbon", label: "Pakbon" },
+  { slug: "callsheet", label: "Callsheet" },
+  { slug: "kosten", label: "Kostenoverzicht" },
+];
 
 interface Props {
   project: Project;
@@ -28,31 +36,31 @@ export function ProjectDetailHeader({ project }: Props) {
 
   return (
     <>
-      <Button
-        variant="ghost"
-        className="text-muted-foreground -ml-2"
-        onClick={() => router.push("/projects")}
-      >
-        ← Terug
-      </Button>
-
-      <div className="flex flex-wrap gap-2 justify-end no-print">
-        <ProjectEditButton project={project} />
-        <Link href={`/projects/${project.id}/pakbon`}>
-          <Button variant="outline" size="sm">
-            Pakbon afdrukken
-          </Button>
-        </Link>
-        <Link href={`/projects/${project.id}/callsheet`}>
-          <Button variant="outline" size="sm">
-            Callsheet afdrukken
-          </Button>
-        </Link>
-        <Link href={`/projects/${project.id}/kosten`}>
-          <Button variant="outline" size="sm">
-            Kosten afdrukken
-          </Button>
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2 no-print">
+        <Button
+          variant="ghost"
+          className="text-muted-foreground -ml-2"
+          onClick={() => router.push("/projects")}
+        >
+          <ArrowLeft className="h-4 w-4" /> Terug
+        </Button>
+        <div className="flex flex-wrap gap-2">
+          <ProjectEditButton project={project} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Printer className="h-4 w-4" /> Afdrukken <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {PRINT_DOCS.map(({ slug, label }) => (
+                <DropdownMenuItem key={slug} asChild>
+                  <Link href={`/projects/${project.id}/${slug}`}>{label}</Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <Card>
@@ -73,15 +81,15 @@ export function ProjectDetailHeader({ project }: Props) {
                 })}
               </p>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <div>
-                <p className="text-xs text-muted-foreground">Totaal</p>
+            <div className="shrink-0">
+              <p className="text-xs text-muted-foreground">Totaal</p>
+              <div className="flex items-center gap-3">
                 <p className="text-xl font-semibold tabular-nums">
                   {formatEUR(total)}
                 </p>
+                {overbooked > 0 && <OverbookBadge units={overbooked} />}
+                <StatusSelect project={project} />
               </div>
-              {overbooked > 0 && <OverbookBadge units={overbooked} />}
-              <StatusSelect project={project} />
             </div>
           </div>
         </CardContent>

@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { StockItem } from "@/types";
+import { Lock, Pencil, Trash2 } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface Props {
   item: StockItem;
@@ -30,7 +32,7 @@ export function StockItemRow({ item, selected, onToggleSelect, onEdit, onDelete 
                 <Checkbox checked={false} disabled aria-label={`Unit #${item.unitNumber} is geboekt en kan niet geselecteerd worden`} />
               </span>
             </TooltipTrigger>
-            <TooltipContent>🔒 Geboekt — kan niet verwijderd worden</TooltipContent>
+            <TooltipContent><InlineIcon icon={Lock} /> Geboekt — kan niet verwijderd worden</TooltipContent>
           </Tooltip>
         ) : (
           <Checkbox
@@ -42,16 +44,16 @@ export function StockItemRow({ item, selected, onToggleSelect, onEdit, onDelete 
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-medium">
-          #{item.unitNumber} {item.identifier ? `· ${item.identifier}` : ""} {booked && "🔒"}
+          #{item.unitNumber} {item.identifier ? `· ${item.identifier}` : ""} {booked && <InlineIcon icon={Lock} className="text-muted-foreground" />}
         </p>
         {item.notes && <p className="text-xs text-muted-foreground mt-0.5">{item.notes}</p>}
         {!item.identifier && !item.notes && <p className="text-xs text-muted-foreground">—</p>}
       </div>
-      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={onEdit}>
-        ✏️
+      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label="Unit bewerken" onClick={onEdit}>
+        <Pencil className="h-3.5 w-3.5" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 hover:text-destructive" onClick={onDelete}>
-        🗑️
+      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 hover:text-destructive" aria-label="Unit verwijderen" onClick={onDelete}>
+        <Trash2 className="h-3.5 w-3.5" />
       </Button>
     </div>
   );

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { Package, X } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -41,7 +42,7 @@ export function PeriodBookings({ period, project }: Props) {
 
         <section>
           <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-semibold uppercase text-muted-foreground">📦 Materialen</h4>
+            <h4 className="text-xs font-semibold uppercase text-muted-foreground"><InlineIcon icon={Package} /> Materialen</h4>
             {period.materials.length > 0 && (
               <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => setPackingListOpen(true)}>
                 Paklijst

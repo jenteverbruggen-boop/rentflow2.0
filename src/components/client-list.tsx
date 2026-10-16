@@ -24,8 +24,8 @@ export function ClientList({ clients, onRates, onEdit, onDelete }: Props) {
     <div className="grid gap-3">
       {clients.map((c) => (
         <Card key={c.id}>
-          <CardContent className="py-4 flex items-start justify-between gap-3">
-            <div>
+          <CardContent className="py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
               <p className="font-semibold">{c.name}</p>
               {c.contactName && (
                 <p className="text-sm text-muted-foreground">{c.contactName}</p>
@@ -41,7 +41,7 @@ export function ClientList({ clients, onRates, onEdit, onDelete }: Props) {
                 </Badge>
               )}
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex flex-wrap gap-2 sm:shrink-0">
               <Button size="sm" variant="outline" onClick={() => onRates(c)}>
                 Tarieven
               </Button>

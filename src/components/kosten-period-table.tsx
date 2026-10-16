@@ -51,6 +51,7 @@ export function KostenPeriodTable({ period }: Props) {
         <span className="text-base font-semibold tabular-nums">{formatEUR(total)}</span>
       </div>
       <PeriodSubtotals period={period} />
+      <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-xs uppercase tracking-wide text-muted-foreground">
@@ -125,6 +126,7 @@ export function KostenPeriodTable({ period }: Props) {
           )}
         </tbody>
       </table>
+      </div>
     </section>
   );
 }

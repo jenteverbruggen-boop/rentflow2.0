@@ -4,10 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { PageActionsMenu } from "@/components/page-actions-menu";
 import { InvoiceStatusBadge } from "@/components/invoice-status-badge";
 import { formatEUR } from "@/lib/pricing";
 import { useInvoices } from "@/hooks/use-invoices";
+import { Download } from "lucide-react";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Alle statussen" },
@@ -29,28 +31,23 @@ export default function FacturenPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Facturen</h2>
-        <div className="flex gap-2">
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <a href="/api/invoices/export" target="_blank" rel="noreferrer">
-            <Button variant="outline">⬇️ Exporteren</Button>
-          </a>
-        </div>
-      </div>
+      <PageHeader title="Facturen">
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <PageActionsMenu actions={[{ label: "Exporteren", icon: Download, href: "/api/invoices/export" }]} />
+      </PageHeader>
 
       {invoices.length === 0 ? (
         <p className="text-muted-foreground text-sm">Geen facturen gevonden.</p>
       ) : (
         <div className="border rounded-lg overflow-x-auto bg-card">
-          <Table>
+          <Table className="table-sticky-first">
             <TableHeader>
               <TableRow>
                 <TableHead>Nummer</TableHead>

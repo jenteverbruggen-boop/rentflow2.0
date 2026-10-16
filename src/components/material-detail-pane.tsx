@@ -13,6 +13,8 @@ import { MaterialSummaryGrid } from "@/components/material-summary-grid";
 import { MaterialDetailHeader } from "@/components/material-detail-header";
 import { useMaterialUpdate } from "@/hooks/use-material-update";
 import type { Material, StockItem } from "@/types";
+import { Link2 } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface MaterialDetailPaneProps {
   material: Material | null;
@@ -93,7 +95,7 @@ export function MaterialDetailPane({
           <div className="space-y-2">
             {material.usedInSets && material.usedInSets.length > 0 && (
               <div className="rounded-md border border-border p-3 text-xs space-y-1">
-                <p className="font-semibold">🔗 Gedeeld — zit in {material.usedInSets.length} {material.usedInSets.length === 1 ? "set" : "sets"}</p>
+                <p className="font-semibold"><InlineIcon icon={Link2} /> Gedeeld — zit in {material.usedInSets.length} {material.usedInSets.length === 1 ? "set" : "sets"}</p>
                 {material.usedInSets.map((s) => (
                   <p key={s.id} className="text-muted-foreground">{s.name} (×{s.quantity})</p>
                 ))}

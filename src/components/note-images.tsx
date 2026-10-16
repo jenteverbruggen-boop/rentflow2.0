@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { useNote } from "@/hooks/use-notes";
 import { useNoteImageMutations } from "@/hooks/use-note-images";
 import type { NoteImage } from "@/types";
+import { Camera } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface Props {
   noteId: number;
@@ -73,7 +75,7 @@ export function NoteImages({ noteId, editable }: Props) {
       {editable && images.length < MAX_IMAGES_PER_NOTE && (
         <>
           <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={upload.isPending}>
-            {upload.isPending ? "Uploaden..." : "📷 Foto's toevoegen"}
+            {upload.isPending ? "Uploaden..." : <><InlineIcon icon={Camera} /> Foto&apos;s toevoegen</>}
           </Button>
           <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
         </>

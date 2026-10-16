@@ -9,7 +9,7 @@ export type MaterialTypeFilter = "all" | "sets" | "loose";
 
 const TYPE_OPTIONS: { value: MaterialTypeFilter; label: string }[] = [
   { value: "all", label: "Alle" },
-  { value: "sets", label: "🎁 Sets" },
+  { value: "sets", label: "Sets" },
   { value: "loose", label: "Losse" },
 ];
 

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatEUR } from "@/lib/pricing";
 import type { Material } from "@/types";
+import { Pencil, Trash2 } from "lucide-react";
 
 interface Props {
   material: Material;
@@ -31,7 +32,7 @@ export function StockSheetHeader({ material, onEdit, onDelete }: Props) {
 
       <div className="flex gap-2 mb-4">
         <Button size="sm" variant="outline" onClick={onEdit}>
-          ✏️ Bewerken
+          <Pencil className="h-4 w-4" /> Bewerken
         </Button>
         <Button
           size="sm"
@@ -40,7 +41,7 @@ export function StockSheetHeader({ material, onEdit, onDelete }: Props) {
             if (confirm(`Materiaal "${material.name}" verwijderen?`)) onDelete();
           }}
         >
-          🗑️ Verwijderen
+          <Trash2 className="h-4 w-4" /> Verwijderen
         </Button>
       </div>
 

@@ -10,6 +10,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { BlockingShortage } from "@/hooks/use-project-status-mutation";
+import { TriangleAlert } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface Props {
   shortages: BlockingShortage[] | null;
@@ -49,7 +51,7 @@ export function OverbookBlockDialog({ shortages, message, onClose }: Props) {
               <ul className="space-y-0.5 text-amber-600 dark:text-amber-500">
                 {(shortages ?? []).map((s) => (
                   <li key={s.id}>
-                    ⚠ {s.periodName} · {s.materialName} · {s.quantity} overboekt
+                    <InlineIcon icon={TriangleAlert} /> {s.periodName} · {s.materialName} · {s.quantity} overboekt
                   </li>
                 ))}
               </ul>

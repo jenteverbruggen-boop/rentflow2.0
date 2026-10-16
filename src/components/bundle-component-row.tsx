@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { QuantityInput } from "@/components/quantity-input";
 import { formatEUR } from "@/lib/pricing";
 import type { Material, MaterialComponent } from "@/types";
+import { Link2 } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface BundleComponentRowProps {
   component: MaterialComponent;
@@ -35,7 +37,7 @@ export function BundleComponentRow({
         <span className="truncate">{child?.name ?? `#${component.childId}`}</span>
         {sharedWith && sharedWith.length > 0 && (
           <p className="text-[10px] text-muted-foreground truncate">
-            🔗 gedeeld — ook in: {sharedWith.map((s) => s.name).join(", ")}
+            <InlineIcon icon={Link2} /> gedeeld — ook in: {sharedWith.map((s) => s.name).join(", ")}
           </p>
         )}
       </div>

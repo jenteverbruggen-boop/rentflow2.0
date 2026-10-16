@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatEUR } from "@/lib/pricing";
 import type { InvoiceLine } from "@/types";
+import { Pencil, Trash2 } from "lucide-react";
 
 interface Props {
   line: InvoiceLine;
@@ -69,8 +70,12 @@ export function InvoiceLineRow({ line, editable, onUpdate, onDelete }: Props) {
             </>
           ) : (
             <>
-              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>✏️</Button>
-              <Button size="sm" variant="ghost" onClick={onDelete}>🗑️</Button>
+              <Button size="sm" variant="ghost" aria-label="Regel bewerken" onClick={() => setEditing(true)}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" aria-label="Regel verwijderen" onClick={onDelete}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </>
           )}
         </td>

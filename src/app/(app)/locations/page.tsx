@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { PageActionsMenu } from "@/components/page-actions-menu";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { LocationForm } from "@/components/location-form";
 import type { Location } from "@/types";
+import { Download } from "lucide-react";
 
 export default function LocationsPage() {
   const queryClient = useQueryClient();
@@ -64,22 +67,17 @@ export default function LocationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Locaties</h2>
-        <div className="flex gap-2">
-          <a href="/api/locations/export" target="_blank" rel="noreferrer">
-            <Button variant="outline">⬇️ Exporteren</Button>
-          </a>
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            + Nieuwe locatie
-          </Button>
-        </div>
-      </div>
+      <PageHeader title="Locaties">
+        <PageActionsMenu actions={[{ label: "Exporteren", icon: Download, href: "/api/locations/export" }]} />
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setFormOpen(true);
+          }}
+        >
+          + Nieuwe locatie
+        </Button>
+      </PageHeader>
 
       {locations.length === 0 ? (
         <p className="text-muted-foreground">Nog geen locaties.</p>
@@ -87,8 +85,8 @@ export default function LocationsPage() {
         <div className="grid gap-3">
           {locations.map((l) => (
             <Card key={l.id}>
-              <CardContent className="py-4 flex items-start justify-between gap-3">
-                <div>
+              <CardContent className="py-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                   <p className="font-semibold">{l.name}</p>
                   {[l.address, [l.postalCode, l.city].filter(Boolean).join(" ")]
                     .filter(Boolean)
@@ -111,7 +109,7 @@ export default function LocationsPage() {
                     </Badge>
                   )}
                 </div>
-                <div className="flex gap-2 shrink-0">
+                <div className="flex flex-wrap gap-2 sm:shrink-0">
                   <Button
                     size="sm"
                     variant="outline"

@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import type { StockItem } from "@/types";
+import { Trash2 } from "lucide-react";
 
 interface Props {
   units: StockItem[];
@@ -40,7 +41,7 @@ export function StockSelectionBar({
       </Button>
       {selectedIds.length > 0 && (
         <Button type="button" variant="destructive" size="sm" className="h-7 ml-auto" disabled={isPending} onClick={onRemoveSelection}>
-          🗑️ Verwijder selectie ({selectedIds.length})
+          <Trash2 className="h-4 w-4" /> Verwijder selectie ({selectedIds.length})
         </Button>
       )}
     </div>

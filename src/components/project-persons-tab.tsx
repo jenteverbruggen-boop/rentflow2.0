@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PeriodTimelinePicker } from "@/components/period-timeline-picker";
 import { PersonSplitEditor } from "@/components/person-split-editor";
 import type { Project } from "@/types";
+import { TriangleAlert } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface Props {
   project: Project;
@@ -26,7 +28,7 @@ export function ProjectPersonsTab({ project, selectedPeriodId, onSelectPeriod }:
       {warnings.length > 0 && (
         <Alert>
           <AlertDescription className="text-amber-600">
-            {warnings.map((w, i) => <p key={i}>⚠ {w}</p>)}
+            {warnings.map((w, i) => <p key={i}><InlineIcon icon={TriangleAlert} /> {w}</p>)}
           </AlertDescription>
         </Alert>
       )}

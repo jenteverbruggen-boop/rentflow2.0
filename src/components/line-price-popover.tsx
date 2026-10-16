@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, TriangleAlert } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -152,7 +153,7 @@ export function LinePricePopover({
             <Separator />
             <div className="space-y-1.5">
               <p className="text-xs text-amber-600">
-                ⚠ Deze regel heeft een ander snapshot dan de huidige projectprijs ({formatEUR(effective)}).
+                <InlineIcon icon={TriangleAlert} /> Deze regel heeft een ander snapshot dan de huidige projectprijs ({formatEUR(effective)}).
               </p>
               <Button
                 size="sm"

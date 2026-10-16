@@ -13,6 +13,8 @@ import { brusselsStartOfDay, brusselsEndOfDay } from "@/lib/brussels-time";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Period, Project } from "@/types";
+import { TriangleAlert } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 const schema = z.object({
   name: z.string().min(1, "Naam is verplicht"),
@@ -110,7 +112,7 @@ export function PeriodForm({ open, onOpenChange, defaultValues, project, onSubmi
             {outOfRange && (
               <Alert>
                 <AlertDescription className="text-amber-600">
-                  ⚠ Deze periode valt buiten de projectperiode
+                  <InlineIcon icon={TriangleAlert} /> Deze periode valt buiten de projectperiode
                 </AlertDescription>
               </Alert>
             )}

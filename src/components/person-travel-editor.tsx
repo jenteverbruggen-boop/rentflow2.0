@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { Plane, X } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { QuantityInput } from "@/components/quantity-input";
@@ -67,7 +68,7 @@ export function PersonTravelEditor({
   return (
     <div className="mt-1.5 space-y-1 border-t border-border/60 pt-1.5">
       <p className="text-[11px] font-medium uppercase text-muted-foreground">
-        ✈️ Reiskosten
+        <InlineIcon icon={Plane} /> Reiskosten
       </p>
       {travelCosts.map((t) => (
         <div key={t.id} className="flex items-center gap-2 text-xs">

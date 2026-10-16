@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { PageActionsMenu } from "@/components/page-actions-menu";
 import { PersonForm } from "@/components/person-form";
 import { PersonCard } from "./person-card";
 import { PersonLinkSuggestionsBanner } from "@/components/person-link-suggestions-banner";
 import { FunctionsManagerDialog } from "@/components/functions-manager-dialog";
 import type { Person } from "@/types";
+import { Briefcase, Download } from "lucide-react";
 
 async function fetchPeople(): Promise<Person[]> {
   const res = await fetch("/api/people");
@@ -53,16 +56,10 @@ export default function PeoplePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Personen</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setFunctionsOpen(true)}>Functies</Button>
-          <a href="/api/people/export" target="_blank" rel="noreferrer">
-            <Button variant="outline">⬇️ Exporteren</Button>
-          </a>
-          <Button onClick={() => { setEditing(null); setOpen(true); }}>+ Nieuwe persoon</Button>
-        </div>
-      </div>
+      <PageHeader title="Personen">
+        <PageActionsMenu actions={[{ label: "Functies beheren", icon: Briefcase, onSelect: () => setFunctionsOpen(true) }, { label: "Exporteren", icon: Download, href: "/api/people/export" }]} />
+        <Button onClick={() => { setEditing(null); setOpen(true); }}>+ Nieuwe persoon</Button>
+      </PageHeader>
 
       <PersonLinkSuggestionsBanner />
 

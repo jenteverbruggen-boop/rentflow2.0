@@ -43,7 +43,7 @@ export function RevenueByClientSection({ data }: { data: RevenueClientEntry[] })
               </BarChart>
             </ChartContainer>
             <div className="overflow-x-auto rounded-lg border">
-              <Table>
+              <Table className="table-sticky-first">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Klant</TableHead>

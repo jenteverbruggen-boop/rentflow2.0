@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { nl } from "date-fns/locale";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { ProjectList } from "@/components/project-list";
+import { ProjectsToolbar } from "@/components/projects-toolbar";
+import { filterProjects, hiddenByStatus, type ProjectStatusFilter } from "@/lib/project-filter";
+import { PageActionsMenu } from "@/components/page-actions-menu";
 import { ProjectForm, type ProjectFormValues } from "@/components/project-form";
-import { statusVariant } from "@/lib/utils";
 import type { Project } from "@/types";
+import { Download } from "lucide-react";
 
 async function fetchProjects(): Promise<Project[]> {
   const res = await fetch("/api/projects");
@@ -50,41 +50,36 @@ export default function ProjectsPage() {
   });
 
   function openCreate() { setEditing(null); setOpen(true); }
+  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>("open");
+  const [query, setQuery] = useState("");
+  const visible = filterProjects(projects, statusFilter, query);
+
   function openEdit(p: Project) { setEditing(p); setOpen(true); }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Projecten</h2>
-        <div className="flex gap-2">
-          <a href="/api/projects/export" target="_blank" rel="noreferrer">
-            <Button variant="outline">⬇️ Exporteren</Button>
-          </a>
-          <Button onClick={openCreate}>+ Nieuw project</Button>
-        </div>
-      </div>
+      <PageHeader title="Projecten">
+        <PageActionsMenu actions={[{ label: "Exporteren", icon: Download, href: "/api/projects/export" }]} />
+        <Button onClick={openCreate}>+ Nieuw project</Button>
+      </PageHeader>
 
-      <div className="space-y-3">
-        {projects.map((p) => (
-          <Card key={p.id}>
-            <CardContent className="flex items-center justify-between py-4">
-              <Link href={`/projects/${p.id}`} className="flex-1 hover:opacity-80 min-w-0">
-                <p className="font-medium">{p.name}</p>
-                <p className="text-sm text-muted-foreground truncate">
-                  {[p.client, p.location, format(new Date(p.startDate), "d MMM yyyy", { locale: nl })].filter(Boolean).join(" · ")}
-                </p>
-              </Link>
-              <div className="flex items-center gap-3 ml-4 shrink-0">
-                <Badge className={statusVariant(p.status)}>{p.status}</Badge>
-                <Button variant="ghost" size="icon" onClick={() => openEdit(p)}>✏️</Button>
-                <Button variant="ghost" size="icon" onClick={() => {
-                  if (confirm("Project verwijderen?")) remove.mutate(p.id);
-                }}>🗑️</Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <ProjectsToolbar
+        query={query}
+        onQueryChange={setQuery}
+        status={statusFilter}
+        onStatusChange={setStatusFilter}
+        hidden={hiddenByStatus(projects, statusFilter, query)}
+      />
+
+      {visible.length === 0 && (
+        <p className="text-muted-foreground text-sm">Geen projecten gevonden.</p>
+      )}
+
+      <ProjectList
+        projects={visible}
+        onEdit={openEdit}
+        onDelete={(p) => { if (confirm("Project verwijderen?")) remove.mutate(p.id); }}
+      />
 
       <ProjectForm
         open={open}

@@ -34,7 +34,7 @@ export function BundleComponentEditor({ material }: BundleComponentEditorProps) 
     const sets = allMaterials
       .filter((m) => m.isBundle && m.id !== material.id && (m.components ?? []).some((c) => c.childId === childId))
       .map((m) => m.name);
-    return sets.length > 0 ? `🔗 ook in: ${sets.join(", ")}` : null;
+    return sets.length > 0 ? `Ook in: ${sets.join(", ")}` : null;
   };
 
   const liveSum = components.reduce((acc, c) => {

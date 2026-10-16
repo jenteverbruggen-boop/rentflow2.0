@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { PlanningProject } from "@/lib/planning-include";
+import { Package, Users } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface Props {
   weekProjects: { project: PlanningProject; people: number; materials: number }[];
@@ -37,8 +39,8 @@ export function PlanningWeekList({ weekProjects }: Props) {
                     </p>
                   </div>
                   <div className="text-xs text-muted-foreground text-right">
-                    <p>👥 {people} personen</p>
-                    <p>📦 {materials} materialen</p>
+                    <p><InlineIcon icon={Users} /> {people} personen</p>
+                    <p><InlineIcon icon={Package} /> {materials} materialen</p>
                   </div>
                 </Link>
                 {i < weekProjects.length - 1 && <Separator />}

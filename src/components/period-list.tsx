@@ -2,7 +2,8 @@
 
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, Package, Pencil, Trash2, Users } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,7 +95,7 @@ export function PeriodList({
                   · {periodDays(p)} d
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  👥 {p.people.length} · 📦 {p.materials.length}
+                  <InlineIcon icon={Users} /> {p.people.length} · <InlineIcon icon={Package} /> {p.materials.length}
                 </p>
               </div>
               <div className="flex flex-col gap-1">

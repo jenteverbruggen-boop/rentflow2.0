@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import type { Material } from "@/types";
+import { Gift } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface Props {
   material: Material;
@@ -20,7 +22,7 @@ export function MaterialDetailHeader({
       <div className="flex items-start justify-between gap-4">
         <div>
           <CardTitle>
-            {material.isBundle && "🎁 "}
+            {material.isBundle && <><InlineIcon icon={Gift} className="h-4 w-4" /> </>}
             {material.name}
           </CardTitle>
           {material.isBundle && (
@@ -33,7 +35,7 @@ export function MaterialDetailHeader({
             variant={material.isBundle ? "default" : "outline"}
             onClick={onToggleBundle}
           >
-            {material.isBundle ? "🎁 Set" : "Markeer als set"}
+            {material.isBundle ? <><InlineIcon icon={Gift} /> Set</> : "Markeer als set"}
           </Button>
           {!material.isBundle && (
             <Button size="sm" variant="outline" onClick={onManageUnits}>

@@ -2,8 +2,9 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { PageActionsMenu } from "@/components/page-actions-menu";
 import { MaterialForm } from "@/components/material-form";
 import { MaterialDetailPane } from "@/components/material-detail-pane";
 import {
@@ -17,6 +18,7 @@ import { MaterialImportDialog } from "@/components/material-import-dialog";
 import { useMaterials } from "@/hooks/use-materials";
 import { useMaterialFilters } from "@/hooks/use-material-filters";
 import type { Material } from "@/types";
+import { Camera, Download, Tag, Upload } from "lucide-react";
 
 function MaterialsPageContent() {
   const { query, create } = useMaterials();
@@ -67,24 +69,13 @@ function MaterialsPageContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Materialen</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setScanOpen(true)}>
-            📷 Scan
-          </Button>
-          <Link href="/materials/labels">
-            <Button variant="outline">🏷️ Labels</Button>
-          </Link>
-          <Button variant="outline" onClick={() => setImportOpen(true)}>
-            ⬆️ Importeren
-          </Button>
-          <a href="/api/materials/export" target="_blank" rel="noreferrer">
-            <Button variant="outline">⬇️ Exporteren</Button>
-          </a>
-          <Button onClick={() => setFormOpen(true)}>+ Nieuw materiaal</Button>
-        </div>
-      </div>
+      <PageHeader title="Materialen">
+        <Button variant="outline" onClick={() => setScanOpen(true)}>
+          <Camera className="h-4 w-4" /> Scan
+        </Button>
+        <PageActionsMenu actions={[{ label: "Labels afdrukken", icon: Tag, href: "/materials/labels" }, { label: "Importeren", icon: Upload, onSelect: () => setImportOpen(true) }, { label: "Exporteren", icon: Download, href: "/api/materials/export" }]} />
+        <Button onClick={() => setFormOpen(true)}>+ Nieuw materiaal</Button>
+      </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)] gap-4">
         <MaterialsTreePane

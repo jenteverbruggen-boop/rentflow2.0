@@ -10,6 +10,8 @@ import { EntityImportPreviewTable } from "@/components/entity-import-preview-tab
 import { EntityImportResult } from "@/components/entity-import-result";
 import { useEntityImport } from "@/hooks/use-entity-import";
 import { ENTITY_LABELS, type ImportEntity, type ImportMode, type ImportPreview, type ImportApplyResult } from "@/lib/import/pipeline-client-types";
+import { TriangleAlert } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 // P3.3/§7.7 — Invoices are never listed, in either mode: a sent
 // invoice's numbering/amounts are frozen, and an "upsert" import is
@@ -84,7 +86,7 @@ export default function ImportPage() {
       {step === "setup" && (
         <Card>
           <CardHeader>
-            <CardTitle>Bestand kiezen</CardTitle>
+            <CardTitle className="text-base">Bestand kiezen</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
@@ -114,7 +116,7 @@ export default function ImportPage() {
                   variant={mode === "replace" ? "destructive" : "outline"}
                   onClick={() => setMode("replace")}
                 >
-                  ⚠️ Vervangen
+                  <InlineIcon icon={TriangleAlert} /> Vervangen
                 </Button>
               </div>
               {mode === "replace" && (
@@ -146,7 +148,7 @@ export default function ImportPage() {
       {step === "preview" && preview && (
         <Card className={mode === "replace" ? "border-destructive/50" : undefined}>
           <CardHeader>
-            <CardTitle>{mode === "replace" ? "⚠️ Vervangen bevestigen" : "Voorbeeld"}</CardTitle>
+            <CardTitle className="text-base">{mode === "replace" ? <><InlineIcon icon={TriangleAlert} /> Vervangen bevestigen</> : "Voorbeeld"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <EntityImportPreviewTable preview={preview} />

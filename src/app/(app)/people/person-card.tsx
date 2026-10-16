@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { PersonDocuments } from "@/components/person-documents";
 import { PersonCalendarFeed } from "@/components/person-calendar-feed";
 import type { Person } from "@/types";
+import { Pencil, Trash2 } from "lucide-react";
 
 interface Props {
   person: Person;
@@ -39,11 +40,11 @@ export function PersonCard({ person, expanded, onToggle, onEdit, onDelete }: Pro
             )}
           </div>
           <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
-              ✏️
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Persoon bewerken" onClick={onEdit}>
+              <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDelete}>
-              🗑️
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Persoon verwijderen" onClick={onDelete}>
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>

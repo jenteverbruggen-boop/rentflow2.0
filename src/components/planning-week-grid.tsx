@@ -19,13 +19,13 @@ interface Props {
  * paints Wednesday. */
 export function PlanningWeekGrid({ days }: Props) {
   return (
-    <div className="grid grid-cols-7 gap-2">
+    <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-7 gap-2">
       {days.map(({ date, periods }) => {
         const isToday = isSameDay(date, new Date());
         return (
           <Card
             key={date.toISOString()}
-            className={cn("min-h-32", isToday && "border-primary")}
+            className={cn("md:min-h-32", isToday && "border-primary")}
           >
             <CardContent className="p-3">
               <p

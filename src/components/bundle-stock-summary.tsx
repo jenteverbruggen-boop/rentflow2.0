@@ -1,6 +1,8 @@
 "use client";
 
 import type { BundleStock } from "@/types";
+import { Link2, TriangleAlert } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface BundleStockSummaryProps {
   bundleStock: BundleStock;
@@ -35,7 +37,7 @@ export function BundleStockSummary({ bundleStock }: BundleStockSummaryProps) {
               .filter((c) => c.sharedWith && c.sharedWith.length > 0)
               .map((c) => (
                 <p key={c.childId} className="text-[10px] text-muted-foreground">
-                  🔗 {c.name} — gedeeld met {c.sharedWith!.map((s) => s.name).join(", ")}
+                  <InlineIcon icon={Link2} /> {c.name} — gedeeld met {c.sharedWith!.map((s) => s.name).join(", ")}
                 </p>
               ))}
           </div>
@@ -45,7 +47,7 @@ export function BundleStockSummary({ bundleStock }: BundleStockSummaryProps) {
       {hasIncomplete && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 space-y-1.5">
           <p className="text-xs font-semibold">
-            ⚠️ 1 onvolledige set — nog niet compleet
+            <InlineIcon icon={TriangleAlert} className="text-amber-500" /> 1 onvolledige set — nog niet compleet
           </p>
           {incompleteRows.map((c) => (
             <div

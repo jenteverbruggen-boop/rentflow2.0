@@ -53,7 +53,7 @@ export function CalendarFeedRow({ kind, personId, label, feed, warning, disabled
             <p className="text-xs text-muted-foreground">Nog geen link aangemaakt</p>
           )}
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex flex-wrap gap-2 @md:shrink-0">
           {url && (
             <Button size="sm" variant="outline" onClick={copy}>
               {copied ? "Gekopieerd" : "Kopieer link"}

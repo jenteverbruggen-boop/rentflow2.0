@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { formatEUR } from "@/lib/pricing";
 import { useInvoicePayments } from "@/hooks/use-invoice-payments";
 import type { Invoice } from "@/types";
+import { Trash2 } from "lucide-react";
 
 /** J2b.7 — payments table + "registreer betaling" form + the
  * remainingBalance figure. The form only shows for a sent (non-
@@ -36,7 +37,9 @@ export function InvoicePaymentsPanel({ invoice }: { invoice: Invoice }) {
               </span>
               <span className="flex items-center gap-2">
                 <span className="tabular-nums">{formatEUR(p.amount)}</span>
-                <Button size="sm" variant="ghost" onClick={() => deletePayment.mutate(p.id)}>🗑️</Button>
+                <Button size="sm" variant="ghost" aria-label="Betaling verwijderen" onClick={() => deletePayment.mutate(p.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </span>
             </li>
           ))}

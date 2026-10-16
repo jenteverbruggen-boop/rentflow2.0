@@ -52,7 +52,8 @@ export function UsersPageContent() {
 
       <PersonLinkSuggestionsBanner />
 
-      <Table>
+      <div className="border rounded-lg bg-card overflow-hidden">
+      <Table className="table-sticky-first">
         <TableHeader>
           <TableRow>
             <TableHead>Naam</TableHead>
@@ -104,6 +105,7 @@ export function UsersPageContent() {
           ))}
         </TableBody>
       </Table>
+      </div>
 
       {editing ? (
         <UserForm

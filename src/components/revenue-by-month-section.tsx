@@ -56,7 +56,7 @@ export function RevenueByMonthSection({ data }: { data: RevenueMonthEntry[] }) {
               </ComposedChart>
             </ChartContainer>
             <div className="overflow-x-auto rounded-lg border">
-              <Table>
+              <Table className="table-sticky-first">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Maand</TableHead>

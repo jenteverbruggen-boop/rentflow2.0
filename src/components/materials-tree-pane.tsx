@@ -8,15 +8,22 @@ import {
   type MaterialTypeFilter,
 } from "@/components/materials-filter-bar";
 import type { Material } from "@/types";
+import { Gift, Link2, TriangleAlert } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 export type { MaterialSort, MaterialTypeFilter };
 
-function stockLabel(m: Material): string {
+function stockLabel(m: Material): React.ReactNode {
   if (!m.isBundle) return `Voorraad: ${m.totalStock ?? 0}`;
   const sets = m.bundleStock?.completeSets ?? 0;
-  const warn = m.bundleStock?.hasIncomplete ? " ⚠️" : "";
-  const shared = m.bundleStock?.components.some((c) => c.sharedWith && c.sharedWith.length > 0) ? " 🔗" : "";
-  return `${sets} sets${warn}${shared}`;
+  const warn = m.bundleStock?.hasIncomplete;
+  const shared = m.bundleStock?.components.some((c) => c.sharedWith && c.sharedWith.length > 0);
+  return (
+    <>
+      {sets} sets {warn && <InlineIcon icon={TriangleAlert} className="text-amber-500" />}{" "}
+      {shared && <InlineIcon icon={Link2} />}
+    </>
+  );
 }
 
 interface MaterialTreePaneProps {
@@ -65,7 +72,7 @@ export function MaterialsTreePane({
   }
 
   return (
-    <Card className="h-full">
+    <Card className="h-full lg:h-auto lg:sticky lg:top-0 lg:self-start">
       <CardHeader className="pb-4">
         <CardTitle className="text-base">Materialen</CardTitle>
       </CardHeader>
@@ -82,7 +89,7 @@ export function MaterialsTreePane({
           onTypeFilterChange={onTypeFilterChange}
         />
 
-        <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-1">
+        <div className="space-y-4 lg:max-h-[calc(100vh-22rem)] lg:overflow-y-auto lg:pr-1">
           {materialsByCategory.map(([cat, items]) => (
             <div key={cat} className="space-y-1">
               <button
@@ -107,7 +114,7 @@ export function MaterialsTreePane({
                       ].join(" ")}
                     >
                       <p className="text-sm font-medium truncate">
-                        {m.isBundle && <span aria-hidden>🎁 </span>}
+                        {m.isBundle && <><InlineIcon icon={Gift} /> </>}
                         {m.name}
                       </p>
                       <p className="text-xs text-muted-foreground">

@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
+import { PageActionsMenu } from "@/components/page-actions-menu";
 import { ClientForm } from "@/components/client-form";
 import { ClientList } from "@/components/client-list";
 import { ClientDeleteDialog } from "@/components/client-delete-dialog";
 import { ClientRatesDialog } from "@/components/client-rates-dialog";
 import type { Client } from "@/types";
+import { Download } from "lucide-react";
 
 async function get<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -62,17 +65,12 @@ export default function ClientsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Klanten</h2>
-        <div className="flex gap-2">
-          <a href="/api/clients/export" target="_blank" rel="noreferrer">
-            <Button variant="outline">⬇️ Exporteren</Button>
-          </a>
-          <Button onClick={() => { setEditing(null); setFormOpen(true); }}>
-            + Nieuwe klant
-          </Button>
-        </div>
-      </div>
+      <PageHeader title="Klanten">
+        <PageActionsMenu actions={[{ label: "Exporteren", icon: Download, href: "/api/clients/export" }]} />
+        <Button onClick={() => { setEditing(null); setFormOpen(true); }}>
+          + Nieuwe klant
+        </Button>
+      </PageHeader>
 
       <ClientList
         clients={clients}

@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { periodDays, periodTotal, formatEUR } from "@/lib/pricing";
 import type { Project } from "@/types";
+import { Package, Users } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 
 interface Props {
   project: Project;
@@ -19,7 +21,7 @@ export function ProjectOverviewTab({ project, onJumpToPeriod }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="Periodes" value={String(project.periods.length)} />
         <Stat label="Totaal dagen" value={String(totalDays)} />
         <Stat label="Persoonboekingen" value={String(totalPersonBookings)} />
@@ -37,19 +39,19 @@ export function ProjectOverviewTab({ project, onJumpToPeriod }: Props) {
                 <button
                   key={p.id}
                   type="button"
-                  className="w-full flex items-center justify-between bg-muted/40 hover:bg-muted/60 rounded-md px-3 py-2 text-left transition-colors"
+                  className="w-full flex flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-muted/40 hover:bg-muted/60 rounded-md px-3 py-2 text-left transition-colors"
                   onClick={() => onJumpToPeriod(p.id)}
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium">{p.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {format(new Date(p.startDate), "d MMM", { locale: nl })} –{" "}
                       {format(new Date(p.endDate), "d MMM yyyy", { locale: nl })} · {periodDays(p)} d
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant="secondary" className="text-xs">👥 {p.people.length}</Badge>
-                    <Badge variant="secondary" className="text-xs">📦 {p.materials.length}</Badge>
+                  <div className="flex items-center gap-2 sm:gap-3 ml-auto">
+                    <Badge variant="secondary" className="text-xs"><InlineIcon icon={Users} /> {p.people.length}</Badge>
+                    <Badge variant="secondary" className="text-xs"><InlineIcon icon={Package} /> {p.materials.length}</Badge>
                     <span className="text-sm font-medium tabular-nums w-24 text-right">
                       {formatEUR(periodTotal(p))}
                     </span>

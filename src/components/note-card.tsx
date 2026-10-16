@@ -3,7 +3,8 @@
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import Link from "next/link";
-import { Pencil, Trash2 } from "lucide-react";
+import { Building2, FolderKanban, Pencil, Trash2 } from "lucide-react";
+import { InlineIcon } from "@/components/inline-icon";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,10 +75,10 @@ export function NoteCard({ note, onEdit, onDelete, hideLinkBadge }: Props) {
             <div className="flex flex-wrap items-center gap-2">
               {note.project && (
                 <Link href={`/projects/${note.project.id}`}>
-                  <Badge variant="secondary">📁 {note.project.name}</Badge>
+                  <Badge variant="secondary"><InlineIcon icon={FolderKanban} /> {note.project.name}</Badge>
                 </Link>
               )}
-              {note.client && <Badge variant="secondary">🏢 {note.client.name}</Badge>}
+              {note.client && <Badge variant="secondary"><InlineIcon icon={Building2} /> {note.client.name}</Badge>}
               {unassigned && (
                 <>
                   <Badge className="bg-amber-600 text-white">Niet toegewezen</Badge>
