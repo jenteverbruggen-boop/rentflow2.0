@@ -265,6 +265,97 @@ describe("buildPersonFeedIcs (O1.2)", () => {
   });
 });
 
+describe("materials and address in the personal feed (C7)", () => {
+  const unfold = (ics: string) => ics.replace(/\r\n /g, "");
+  let projectId: number;
+  let past: number;
+
+  beforeAll(async () => {
+    const cat = await client.category.create({ data: { name: "Tenten C7", prefix: "TC7" } });
+    const tent = await client.material.create({
+      data: { name: "Tent 6x3", categoryId: cat.id, dayPrice: 80, notes: "intern: sleutel bij Jan", costPrice: 400 },
+    });
+    const set = await client.material.create({ data: { name: "Geluidset", isBundle: true, dayPrice: 150 } });
+    const stock = await Promise.all(
+      [1, 2, 3, 4].map((n) => client.stockItem.create({ data: { materialId: tent.id, unitNumber: n } })),
+    );
+    const location = await client.location.create({
+      data: { name: "Zaal Ommegang", address: "Markt 1", postalCode: "9000", city: "Gent", notes: "intern: poortcode 1234", phone: "0499 99 99 99" },
+    });
+    const project = await client.project.create({
+      data: { name: "Materiaal Project", locationId: location.id, startDate: new Date("2026-11-02"), endDate: new Date("2026-11-03") },
+    });
+    projectId = project.id;
+    const period = await client.period.create({
+      data: { projectId, name: "Evenement", startDate: new Date("2026-11-02T08:00:00Z"), endDate: new Date("2026-11-02T18:00:00Z") },
+    });
+    await client.periodPerson.create({ data: { periodId: period.id, personId: ids.alice, dayPriceSnapshot: 300 } });
+    const booking = await client.periodBundleBooking.create({
+      data: { periodId: period.id, materialId: set.id, quantity: 1, dayPriceSnapshot: 150 },
+    });
+    // Three owned tents, one unit that belongs to the set (must not be listed
+    // on its own), and two tents that are overbooked.
+    await client.periodStockItem.createMany({
+      data: [
+        { periodId: period.id, stockItemId: stock[0].id, dayPriceSnapshot: 80 },
+        { periodId: period.id, stockItemId: stock[1].id, dayPriceSnapshot: 80 },
+        { periodId: period.id, stockItemId: stock[2].id, dayPriceSnapshot: 80 },
+        { periodId: period.id, stockItemId: stock[3].id, dayPriceSnapshot: 0, bundleBookingId: booking.id },
+      ],
+    });
+    await client.periodMaterialShortage.create({
+      data: { periodId: period.id, materialId: tent.id, quantity: 2, dayPriceSnapshot: 80 },
+    });
+
+    // An already finished period (long before "now") with the same material.
+    const old = await client.period.create({
+      data: { projectId, name: "Oud", startDate: new Date("2026-01-05T08:00:00Z"), endDate: new Date("2026-01-05T18:00:00Z") },
+    });
+    past = old.id;
+    await client.periodPerson.create({ data: { periodId: old.id, personId: ids.alice, dayPriceSnapshot: 300 } });
+    await client.periodStockItem.create({ data: { periodId: old.id, stockItemId: stock[0].id, dayPriceSnapshot: 80 } });
+  });
+
+  const NOW = new Date("2026-10-16T09:00:00Z");
+
+  it("lists the period's materials in the description: owned + overbooked units, sets as sets, no set components", async () => {
+    const ics = unfold(await buildPersonFeedIcs(ids.alice, NOW, client));
+    // Sorted by category: the set has none ("Overig"), the tent is under "Tenten C7".
+    expect(ics).toContain("Materiaal:\\n- 1x Geluidset (set)\\n- 5x Tent 6x3");
+    expect(ics).not.toMatch(/- 1x Tent 6x3/);
+  });
+
+  it("never leaks prices, notes or location contact details", async () => {
+    const ics = unfold(await buildPersonFeedIcs(ids.alice, NOW, client));
+    expect(ics).not.toContain("sleutel bij Jan"); // Material.notes
+    expect(ics).not.toContain("poortcode"); // Location.notes
+    expect(ics).not.toContain("0499"); // Location.phone
+    expect(ics).not.toMatch(/€|EUR|prijs|price/i);
+  });
+
+  it("uses the full address as the event location", async () => {
+    const ics = unfold(await buildPersonFeedIcs(ids.alice, NOW, client));
+    expect(ics).toContain("LOCATION:Zaal Ommegang\\, Markt 1\\, 9000 Gent");
+  });
+
+  it("skips materials for periods that ended long ago", async () => {
+    const ics = unfold(await buildPersonFeedIcs(ids.alice, NOW, client));
+    const oldEvent = ics.split("BEGIN:VEVENT").find((ev) => ev.includes(`UID:period-${past}@`))!;
+    expect(oldEvent).toBeDefined();
+    expect(oldEvent).not.toContain("Materiaal:");
+  });
+
+  it("leaves the company feed untouched: short location, no materials", async () => {
+    const ics = unfold(await buildCompanyFeedIcs(NOW, client));
+    expect(ics).not.toContain("Materiaal:");
+    expect(ics).toContain("LOCATION:Zaal Ommegang\r\n");
+  });
+
+  afterAll(async () => {
+    await client.project.delete({ where: { id: projectId } });
+  });
+});
+
 describe("buildCompanyFeedIcs (O1.3)", () => {
   it("includes every period, unfiltered by ownership", async () => {
     const ics = await buildCompanyFeedIcs(new Date("2026-08-14T09:00:00Z"), client);
