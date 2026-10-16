@@ -3,19 +3,16 @@ import { prisma as defaultPrisma } from "@/lib/prisma";
 import { assertDraftMutable } from "@/lib/invoices";
 import { computeInvoiceTotals } from "@/lib/invoice-totals";
 import { toNumber } from "@/lib/serialize";
-import type { InvoiceLineKind, InvoiceLineUnit } from "@/types";
+import { assertLinePatchAllowed, newLineData, roundMoney, type LineFields } from "@/lib/invoice-line-rules";
+import type { InvoiceLineKind } from "@/types";
 
 export class InvoiceNotFoundError extends Error {}
 export class InvoiceLineNotFoundError extends Error {}
 
-export interface ManualLineInput {
-  description: string;
-  quantity: number;
-  unit: InvoiceLineUnit;
-  unitPrice: number;
-  vatRate?: number;
-  section?: string | null;
-}
+/** A line the PO types in: a priced `manual` line, or a free-text paragraph
+ * (`text`, description + optional section only). */
+export type ManualLineInput = Pick<LineFields, "description"> &
+  Partial<Omit<LineFields, "description">> & { kind?: "manual" | "text" };
 
 /** J2b.4 — every line CUD op recomputes and persists the five
  * invoice-level totals in the same transaction; the caller never sees
@@ -48,16 +45,12 @@ export async function addManualLine(
     const txClient = tx as unknown as PrismaClient;
     await loadMutableInvoice(txClient, invoiceId);
 
-    let vatRate = input.vatRate;
-    if (vatRate == null) {
-      // Read the setting through the same tx connection — getSettings()
-      // uses the default (outer) Prisma client, and calling it from
-      // inside this transaction would deadlock SQLite's single
-      // connection in dev/tests (a real, once-hit bug, not a
-      // hypothetical).
-      const row = await txClient.setting.findUnique({ where: { key: "btwRate" } });
-      vatRate = Number(row?.value || "21");
-    }
+    // Read the default through the same tx connection — getSettings()
+    // uses the default (outer) Prisma client, and calling it from
+    // inside this transaction would deadlock SQLite's single
+    // connection in dev/tests (a real, once-hit bug, not a
+    // hypothetical).
+    const row = await txClient.setting.findUnique({ where: { key: "btwRate" } });
     const maxSort = await txClient.invoiceLine.aggregate({
       where: { invoiceId },
       _max: { sortOrder: true },
@@ -65,15 +58,8 @@ export async function addManualLine(
     const line = await txClient.invoiceLine.create({
       data: {
         invoiceId,
-        kind: "manual",
-        description: input.description,
-        quantity: input.quantity,
-        unit: input.unit,
-        unitPrice: input.unitPrice,
-        vatRate,
-        lineTotalExcl: input.quantity * input.unitPrice,
+        ...newLineData(input.kind ?? "manual", input, Number(row?.value || "21")),
         sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
-        section: input.section ?? null,
       },
     });
     await recomputeTotals(txClient, invoiceId);
@@ -84,7 +70,7 @@ export async function addManualLine(
 export async function updateInvoiceLine(
   invoiceId: number,
   lineId: number,
-  patch: Partial<ManualLineInput>,
+  patch: Partial<LineFields>,
   client: PrismaClient = defaultPrisma,
 ) {
   return client.$transaction(async (tx) => {
@@ -93,17 +79,25 @@ export async function updateInvoiceLine(
     const line = await txClient.invoiceLine.findFirst({ where: { id: lineId, invoiceId } });
     if (!line) throw new InvoiceLineNotFoundError();
 
+    assertLinePatchAllowed(
+      {
+        kind: line.kind, unit: line.unit, quantity: toNumber(line.quantity),
+        unitPrice: toNumber(line.unitPrice), vatRate: toNumber(line.vatRate),
+      },
+      patch,
+    );
+    const isText = line.kind === "text";
     const quantity = patch.quantity ?? toNumber(line.quantity);
-    const unitPrice = patch.unitPrice ?? toNumber(line.unitPrice);
+    const unitPrice = roundMoney(patch.unitPrice ?? toNumber(line.unitPrice));
     const updated = await txClient.invoiceLine.update({
       where: { id: lineId },
       data: {
         description: patch.description,
-        quantity,
+        quantity: isText ? undefined : quantity,
         unit: patch.unit,
-        unitPrice,
+        unitPrice: isText ? undefined : unitPrice,
         vatRate: patch.vatRate,
-        lineTotalExcl: quantity * unitPrice,
+        lineTotalExcl: isText ? undefined : roundMoney(quantity * unitPrice),
         section: patch.section,
       },
     });

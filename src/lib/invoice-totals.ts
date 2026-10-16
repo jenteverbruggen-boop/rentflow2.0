@@ -8,6 +8,22 @@ export interface InvoiceTotals {
   totalIncl: number;
 }
 
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** VAT per distinct rate, each rounded to cents. `computeInvoiceTotals`
+ * sums exactly these, so the per-rate rows an invoice prints always add up
+ * to its `vatAmount`. Free-text lines carry no VAT and never appear. */
+export function vatByRate(
+  lines: Pick<DraftInvoiceLine, "kind" | "lineTotalExcl" | "vatRate">[],
+): Map<number, number> {
+  const raw = new Map<number, number>();
+  for (const l of lines) {
+    if (l.kind === "text") continue;
+    raw.set(l.vatRate, (raw.get(l.vatRate) ?? 0) + (l.lineTotalExcl * l.vatRate) / 100);
+  }
+  return new Map([...raw].map(([rate, amount]) => [rate, round2(amount)]));
+}
+
 /**
  * J2b.2 — rolls a set of draft/persisted lines up into the five
  * Invoice-level totals (design doc §1.1): `travel` lines feed
@@ -26,20 +42,19 @@ export function computeInvoiceTotals(
   let subtotalExcl = 0;
   let travelExcl = 0;
   let deductionExcl = 0;
-  let vatAmount = 0;
 
   for (const l of lines) {
+    if (l.kind === "text") continue;
     if (l.kind === "travel") travelExcl += l.lineTotalExcl;
     else if (l.kind === "deduction") deductionExcl += l.lineTotalExcl;
     else subtotalExcl += l.lineTotalExcl;
-    vatAmount += (l.lineTotalExcl * l.vatRate) / 100;
   }
 
-  const round = (n: number) => Math.round(n * 100) / 100;
+  const round = round2;
   subtotalExcl = round(subtotalExcl);
   travelExcl = round(travelExcl);
   deductionExcl = round(deductionExcl);
-  vatAmount = round(vatAmount);
+  const vatAmount = round([...vatByRate(lines).values()].reduce((a, b) => a + b, 0));
   const totalIncl = round(subtotalExcl + travelExcl + deductionExcl + vatAmount);
 
   return { subtotalExcl, travelExcl, deductionExcl, vatAmount, totalIncl };

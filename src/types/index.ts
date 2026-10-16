@@ -453,7 +453,10 @@ export type InvoiceLineKind =
   | "travel"
   | "deduction"
   | "deposit"
-  | "manual";
+  | "manual"
+  // Free-text paragraph (extra agreements, conditions): no quantity, price
+  // or VAT — contributes nothing to any total.
+  | "text";
 export type InvoiceLineUnit = "dag" | "uur" | "stuk";
 export type DepositType = "fixed" | "percentage";
 

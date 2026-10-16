@@ -7,18 +7,25 @@ import { serializeInvoiceLine } from "@/lib/serialize-invoice";
 
 type Params = { params: Promise<{ id: string }> };
 
-const lineSchema = z.object({
-  description: z.string().min(1, "Omschrijving is verplicht"),
-  quantity: z.number(),
-  unit: z.enum(["dag", "uur", "stuk"]),
-  unitPrice: z.number(),
-  vatRate: z.number().optional(),
-  section: z.string().nullable().optional(),
-});
+const lineSchema = z
+  .object({
+    kind: z.enum(["manual", "text"]).default("manual"),
+    description: z.string().trim().min(1, "Omschrijving is verplicht").max(2000, "Maximaal 2000 tekens"),
+    quantity: z.number().positive("Aantal moet groter zijn dan 0").optional(),
+    unit: z.enum(["dag", "uur", "stuk"]).optional(),
+    unitPrice: z.number().finite().optional(),
+    vatRate: z.number().min(0).max(100).optional(),
+    section: z.string().nullable().optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.kind === "manual" && (v.quantity === undefined || v.unit === undefined || v.unitPrice === undefined)) {
+      ctx.addIssue({ code: "custom", message: "Aantal, eenheid en prijs zijn verplicht" });
+    }
+  });
 
-/** J2b.4 — POST /api/invoices/:id/lines (design doc §7): a manual line,
- * concept only. Returns the whole invoice (not just the new line) so
- * the caller sees the recomputed totals in the same response. */
+/** J2b.4 — POST /api/invoices/:id/lines (design doc §7): a priced manual
+ * line or a free-text paragraph, concept only. Returns the new line; the
+ * hook invalidates the invoice query to pick up the recomputed totals. */
 export async function POST(req: NextRequest, { params }: Params) {
   const access = await requireModule("kosten_facturen", "wijzigen").catch(() => null);
   if (!access) return forbidden();

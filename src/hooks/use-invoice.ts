@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Invoice, InvoiceLine, InvoiceLineUnit } from "@/types";
 
 export interface ManualLineValues {
+  kind?: "manual";
   description: string;
   quantity: number;
   unit: InvoiceLineUnit;
@@ -9,6 +10,15 @@ export interface ManualLineValues {
   vatRate?: number;
   section?: string | null;
 }
+
+/** A free-text paragraph: no amounts, just words on the document. */
+export interface TextLineValues {
+  kind: "text";
+  description: string;
+  section?: string | null;
+}
+
+export type NewLineValues = ManualLineValues | TextLineValues;
 
 async function throwOnError(res: Response): Promise<void> {
   if (!res.ok) {
@@ -59,7 +69,7 @@ export function useInvoice(id: number) {
   });
 
   const addLine = useMutation({
-    mutationFn: async (values: ManualLineValues) =>
+    mutationFn: async (values: NewLineValues) =>
       parseJson<InvoiceLine>(
         await fetch(`/api/invoices/${id}/lines`, {
           method: "POST",
@@ -71,7 +81,7 @@ export function useInvoice(id: number) {
   });
 
   const updateLine = useMutation({
-    mutationFn: async ({ lineId, ...values }: { lineId: number } & Partial<ManualLineValues>) =>
+    mutationFn: async ({ lineId, ...values }: { lineId: number } & Partial<Omit<ManualLineValues, "kind">>) =>
       parseJson<InvoiceLine>(
         await fetch(`/api/invoices/${id}/lines/${lineId}`, {
           method: "PATCH",

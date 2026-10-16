@@ -1,5 +1,6 @@
 import { Separator } from "@/components/ui/separator";
 import { formatEUR } from "@/lib/pricing";
+import { vatByRate } from "@/lib/invoice-totals";
 import type { Invoice } from "@/types";
 
 /** J2b.7 — the invoice-level equivalent of CostSummary
@@ -8,11 +9,7 @@ import type { Invoice } from "@/types";
  * BTW_RATE line — invoices never use pricing.ts's BTW_RATE constant
  * (§12: VAT is computed strictly per-line here). */
 export function InvoiceSummary({ invoice }: { invoice: Invoice }) {
-  const vatByRate = new Map<number, number>();
-  for (const line of invoice.lines) {
-    const amount = line.lineTotalExcl * (line.vatRate / 100);
-    vatByRate.set(line.vatRate, (vatByRate.get(line.vatRate) ?? 0) + amount);
-  }
+  const vatRows = vatByRate(invoice.lines);
 
   return (
     <div className="flex justify-end">
@@ -35,10 +32,10 @@ export function InvoiceSummary({ invoice }: { invoice: Invoice }) {
           </div>
         )}
         <Separator className="my-1" />
-        {[...vatByRate.entries()].map(([rate, amount]) => (
+        {[...vatRows.entries()].map(([rate, amount]) => (
           <div key={rate} className="flex justify-between gap-6 text-sm">
             <span className="text-muted-foreground">BTW {rate}%</span>
-            <span className="tabular-nums">{formatEUR(Math.round(amount * 100) / 100)}</span>
+            <span className="tabular-nums">{formatEUR(amount)}</span>
           </div>
         ))}
         <Separator className="my-1" />

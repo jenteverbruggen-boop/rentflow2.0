@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { formatEUR } from "@/lib/pricing";
-import type { InvoiceLine } from "@/types";
+import { vatOptions } from "@/lib/invoice-vat-options";
+import type { InvoiceLine, InvoiceLineUnit } from "@/types";
 import { Pencil, Trash2 } from "lucide-react";
 
 interface Props {
   line: InvoiceLine;
   editable: boolean;
-  onUpdate?: (values: { description: string; quantity: number; unitPrice: number }) => void;
+  onUpdate?: (values: { description: string; quantity: number; unitPrice: number; unit?: InvoiceLineUnit; vatRate?: number }) => void;
   onDelete?: () => void;
 }
 
@@ -23,15 +25,26 @@ export function InvoiceLineRow({ line, editable, onUpdate, onDelete }: Props) {
   const [description, setDescription] = useState(line.description);
   const [quantity, setQuantity] = useState(String(line.quantity));
   const [unitPrice, setUnitPrice] = useState(String(line.unitPrice));
+  const [unit, setUnit] = useState<InvoiceLineUnit>(line.unit);
+  const [vatRate, setVatRate] = useState(String(line.vatRate));
+  // Unit and VAT are only free on the PO's own lines (the API enforces it);
+  // a deduction mirrors an already-invoiced deposit and is not editable at all.
+  const isOwn = line.kind === "manual";
+  const locked = line.kind === "deduction";
 
   function save() {
-    onUpdate?.({ description, quantity: Number(quantity), unitPrice: Number(unitPrice) });
+    onUpdate?.({
+      description, quantity: Number(quantity), unitPrice: Number(unitPrice),
+      ...(isOwn ? { unit, vatRate: Number(vatRate) } : {}),
+    });
     setEditing(false);
   }
   function cancel() {
     setDescription(line.description);
     setQuantity(String(line.quantity));
     setUnitPrice(String(line.unitPrice));
+    setUnit(line.unit);
+    setVatRate(String(line.vatRate));
     setEditing(false);
   }
 
@@ -51,13 +64,32 @@ export function InvoiceLineRow({ line, editable, onUpdate, onDelete }: Props) {
         {editing ? (
           <div className="flex gap-1">
             <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="h-8 w-16" />
+            {isOwn && (
+              <Select value={unit} onValueChange={(v) => setUnit(v as InvoiceLineUnit)}>
+                <SelectTrigger className="h-8 w-20"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stuk">stuk</SelectItem>
+                  <SelectItem value="dag">dag</SelectItem>
+                  <SelectItem value="uur">uur</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             <Input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className="h-8 w-24" />
           </div>
         ) : (
           `${line.quantity} ${line.unit} × ${formatEUR(line.unitPrice)}`
         )}
       </td>
-      <td className="py-2 pr-3 text-xs text-muted-foreground tabular-nums align-middle">{line.vatRate}%</td>
+      <td className="py-2 pr-3 text-xs text-muted-foreground tabular-nums align-middle">
+        {editing && isOwn ? (
+          <Select value={vatRate} onValueChange={setVatRate}>
+            <SelectTrigger className="h-8 w-20"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {vatOptions(line.vatRate).map((r) => <SelectItem key={r} value={String(r)}>{r}%</SelectItem>)}
+            </SelectContent>
+          </Select>
+        ) : `${line.vatRate}%`}
+      </td>
       <td className="py-2 pr-3 text-right text-sm font-semibold tabular-nums align-middle">
         {formatEUR(editing ? Number(quantity) * Number(unitPrice) : line.lineTotalExcl)}
       </td>
@@ -70,9 +102,11 @@ export function InvoiceLineRow({ line, editable, onUpdate, onDelete }: Props) {
             </>
           ) : (
             <>
-              <Button size="sm" variant="ghost" aria-label="Regel bewerken" onClick={() => setEditing(true)}>
-                <Pencil className="h-4 w-4" />
-              </Button>
+              {!locked && (
+                <Button size="sm" variant="ghost" aria-label="Regel bewerken" onClick={() => setEditing(true)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
               <Button size="sm" variant="ghost" aria-label="Regel verwijderen" onClick={onDelete}>
                 <Trash2 className="h-4 w-4" />
               </Button>

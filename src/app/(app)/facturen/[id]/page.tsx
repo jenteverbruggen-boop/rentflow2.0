@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { InvoiceStatusBadge } from "@/components/invoice-status-badge";
 import { InvoiceLinesSection } from "@/components/invoice-lines-section";
 import { InvoiceSummary } from "@/components/invoice-summary";
+import { InvoiceAddLine } from "@/components/invoice-add-line";
 import { InvoicePaymentsPanel } from "@/components/invoice-payments-panel";
 import { CreditNoteDialog } from "@/components/credit-note-dialog";
 import { useInvoice } from "@/hooks/use-invoice";
@@ -73,6 +74,7 @@ export default function InvoiceDetailPage() {
         onUpdateLine={(lineId, values) => updateLine.mutate({ lineId, ...values })}
         onDeleteLine={(lineId) => deleteLine.mutate(lineId)}
       />
+      {isConcept && <InvoiceAddLine invoiceId={invoice.id} lines={invoice.lines} />}
 
       <Separator />
       <InvoiceSummary invoice={invoice} />

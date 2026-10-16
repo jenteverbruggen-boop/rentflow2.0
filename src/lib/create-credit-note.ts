@@ -52,11 +52,17 @@ export async function createCreditNote(
     throw new CreditNoteError("NOT_SENT", "Alleen verzonden facturen kunnen gecrediteerd worden");
   }
 
+  // Free-text paragraphs carry no amount, so there is nothing to credit:
+  // a full mirror leaves them out (their quantity of 0 would fail the check
+  // below) and an explicit selection of one is refused.
   const inputLines: CreditNoteLineInput[] =
-    lines ?? original.lines.map((l) => ({ lineId: l.id, quantity: undefined }));
+    lines ?? original.lines.filter((l) => l.kind !== "text").map((l) => ({ lineId: l.id, quantity: undefined }));
   const creditLines = inputLines.map((entry) => {
     const source = original.lines.find((l) => l.id === entry.lineId);
     if (!source) throw new CreditNoteError("LINE_NOT_FOUND", `Regel ${entry.lineId} bestaat niet op deze factuur`);
+    if (source.kind === "text") {
+      throw new CreditNoteError("INVALID_QUANTITY", "Een tekstregel heeft geen bedrag en kan niet gecrediteerd worden");
+    }
     const sourceQuantity = toNumber(source.quantity);
     const quantity = entry.quantity ?? sourceQuantity;
     if (quantity <= 0 || quantity > sourceQuantity) {

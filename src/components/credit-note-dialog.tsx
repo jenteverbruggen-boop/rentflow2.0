@@ -63,7 +63,7 @@ export function CreditNoteDialog({ open, onOpenChange, invoice }: Props) {
           </div>
           {mode === "partial" && (
             <ul className="space-y-2 max-h-64 overflow-y-auto">
-              {invoice.lines.map((line) => (
+              {invoice.lines.filter((line) => line.kind !== "text").map((line) => (
                 <li key={line.id} className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={line.id in selected} onChange={() => toggle(line.id, line.quantity)} />
                   <span className="flex-1 min-w-0 truncate">{line.description}</span>
