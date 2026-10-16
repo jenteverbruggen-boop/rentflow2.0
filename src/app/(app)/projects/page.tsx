@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { ProjectList } from "@/components/project-list";
 import { ProjectsToolbar } from "@/components/projects-toolbar";
-import { filterProjects, hiddenByStatus, type ProjectStatusFilter } from "@/lib/project-filter";
+import {
+  filterProjects, hiddenByStatus, parseStatusParam, serializeStatusParam,
+  type ProjectStatusFilter,
+} from "@/lib/project-filter";
 import { PageActionsMenu } from "@/components/page-actions-menu";
 import { ProjectForm, type ProjectFormValues } from "@/components/project-form";
 import type { Project } from "@/types";
@@ -18,7 +22,9 @@ async function fetchProjects(): Promise<Project[]> {
   return res.json();
 }
 
-export default function ProjectsPage() {
+function ProjectsPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
@@ -50,7 +56,15 @@ export default function ProjectsPage() {
   });
 
   function openCreate() { setEditing(null); setOpen(true); }
-  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>("open");
+  const statusFilter = parseStatusParam(searchParams.get("status"));
+  function setStatusFilter(next: ProjectStatusFilter) {
+    const params = new URLSearchParams(searchParams.toString());
+    const serialized = serializeStatusParam(next);
+    if (serialized === null) params.delete("status");
+    else params.set("status", serialized);
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : "?", { scroll: false });
+  }
   const [query, setQuery] = useState("");
   const visible = filterProjects(projects, statusFilter, query);
 
@@ -89,5 +103,13 @@ export default function ProjectsPage() {
         isPending={upsert.isPending}
       />
     </div>
+  );
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense fallback={<p className="text-muted-foreground">Laden...</p>}>
+      <ProjectsPageContent />
+    </Suspense>
   );
 }

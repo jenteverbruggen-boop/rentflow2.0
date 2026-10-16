@@ -1,14 +1,14 @@
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { ProjectStatusFilter } from "@/lib/project-filter";
+import {
+  ALL_STATUSES, OPEN_STATUSES, STATUS_LABELS, serializeStatusParam, toggleStatus,
+  type ProjectStatusFilter,
+} from "@/lib/project-filter";
 
-const OPTIONS: { value: ProjectStatusFilter; label: string }[] = [
-  { value: "open", label: "Lopend" },
-  { value: "afgerond", label: "Afgerond" },
-  { value: "geannuleerd", label: "Geannuleerd" },
-  { value: "all", label: "Alles" },
-];
+function isPreset(status: ProjectStatusFilter, preset: ProjectStatusFilter): boolean {
+  return serializeStatusParam(status) === serializeStatusParam(preset);
+}
 
 interface Props {
   query: string;
@@ -18,8 +18,9 @@ interface Props {
   hidden: number;
 }
 
-/** Search + status chips above the project list. "Lopend" (concept,
- * bevestigd, actief) is the default; finished work is one click away. */
+/** Search + status chips above the project list. Each status is its own
+ * toggle (any combination); "Lopend" (concept, bevestigd, actief) is the
+ * default preset and "Alles" shows everything. */
 export function ProjectsToolbar({ query, onQueryChange, status, onStatusChange, hidden }: Props) {
   return (
     <div className="space-y-2">
@@ -36,23 +37,30 @@ export function ProjectsToolbar({ query, onQueryChange, status, onStatusChange, 
           />
         </div>
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Status">
-          {OPTIONS.map((o) => (
+          {ALL_STATUSES.map((s) => (
             <Button
-              key={o.value}
+              key={s}
               size="sm"
-              variant={status === o.value ? "default" : "outline"}
-              aria-pressed={status === o.value}
-              onClick={() => onStatusChange(o.value)}
+              variant={status.includes(s) ? "default" : "outline"}
+              aria-pressed={status.includes(s)}
+              onClick={() => onStatusChange(toggleStatus(status, s))}
             >
-              {o.label}
+              {STATUS_LABELS[s]}
             </Button>
           ))}
+          <span className="mx-1 w-px self-stretch bg-border" aria-hidden />
+          <Button size="sm" variant={isPreset(status, OPEN_STATUSES) ? "secondary" : "ghost"} onClick={() => onStatusChange(OPEN_STATUSES)}>
+            Lopend
+          </Button>
+          <Button size="sm" variant={isPreset(status, ALL_STATUSES) ? "secondary" : "ghost"} onClick={() => onStatusChange(ALL_STATUSES)}>
+            Alles
+          </Button>
         </div>
       </div>
       {hidden > 0 && (
         <p className="text-sm text-muted-foreground">
           {hidden} {hidden === 1 ? "project" : "projecten"} verborgen door het statusfilter.{" "}
-          <button type="button" className="underline underline-offset-2 hover:text-foreground" onClick={() => onStatusChange("all")}>
+          <button type="button" className="underline underline-offset-2 hover:text-foreground" onClick={() => onStatusChange(ALL_STATUSES)}>
             Toon alles
           </button>
         </p>
