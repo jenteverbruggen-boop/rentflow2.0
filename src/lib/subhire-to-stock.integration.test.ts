@@ -78,6 +78,12 @@ describe("takeOwnStockForHire (C3)", () => {
     await expect(takeOwnStockForHire(none.periodId, none.row.id, 1, client)).rejects.toMatchObject({ code: "NOTHING_FREE" });
   });
 
+  it("refuses a cancelled project", async () => {
+    const { projectId, periodId, row } = await hiredRow(2, true);
+    await client.project.update({ where: { id: projectId }, data: { status: "geannuleerd" } });
+    await expect(takeOwnStockForHire(periodId, row.id, 1, client)).rejects.toMatchObject({ code: "PROJECT_LOCKED" });
+  });
+
   it("is never triggered by fillShortages", async () => {
     const { projectId, periodId, row } = await hiredRow(2, true);
     await fillShortages(projectId, client);

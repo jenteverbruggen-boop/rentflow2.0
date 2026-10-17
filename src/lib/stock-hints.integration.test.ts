@@ -75,4 +75,20 @@ describe("computeStockHints (C1)", () => {
     expect(hint).toMatchObject({ kind: "open", freeNow: 0, more: 2 });
     expect(hint && hint.kind === "open" && hint.holders).toHaveLength(3);
   });
+
+  it("offers no own stock to a cancelled project and counts distinct units per holder", async () => {
+    const m = await client.material.create({ data: { name: "Kruk", dayPrice: 1 } });
+    const items = await Promise.all([1, 2].map((unitNumber) => client.stockItem.create({ data: { materialId: m.id, unitNumber } })));
+    const holder = await project("Houder");
+    const second = await client.period.create({ data: { projectId: holder.projectId, name: "Tweede", startDate: from, endDate: to } });
+    for (const periodId of [holder.periodId, second.id]) {
+      await client.periodStockItem.create({ data: { periodId, stockItemId: items[0].id, dayPriceSnapshot: 1 } });
+    }
+    const me = await project("Geannuleerd", "geannuleerd");
+    const hired = await client.periodMaterialShortage.create({ data: { periodId: me.periodId, materialId: m.id, quantity: 1, dayPriceSnapshot: 1, supplierId } });
+    const open = await client.periodMaterialShortage.create({ data: { periodId: me.periodId, materialId: m.id, quantity: 1, dayPriceSnapshot: 1 } });
+    const hints = await computeStockHints(me.projectId, client);
+    expect(hints.find((h) => h.shortageId === hired.id)).toMatchObject({ ownFreeNow: 0 });
+    expect(hints.find((h) => h.shortageId === open.id)).toMatchObject({ holders: [{ units: 1 }] });
+  });
 });

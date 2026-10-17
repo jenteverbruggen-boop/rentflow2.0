@@ -35,7 +35,7 @@ export function ProjectSubhireList({ project }: { project: Project }) {
       .filter((s) => s.supplierId != null)
       .map((s) => ({ period, s, total: subhireTotal(s, periodDays(period)), sold: hiredRowRevenue(period, s, periodDays(period)) })),
   );
-  if (rows.length === 0) return null;
+  if (rows.length === 0 && !notice) return null;
   const totalCost = rows.reduce((sum, r) => sum + (r.total ?? 0), 0);
   const incomplete = rows.some((r) => r.total == null);
   const totalSold = rows.reduce((sum, r) => sum + r.sold, 0);
@@ -54,7 +54,7 @@ export function ProjectSubhireList({ project }: { project: Project }) {
                 via {s.supplier?.name ?? "leverancier"}
                 {money && (total != null ? ` · inkoop ${formatEUR(total)}` : " · inkoopprijs onbekend")}
               </p>
-              {ownFree(hints?.get(s.id), s.quantity) > 0 && (
+              {project.status !== "geannuleerd" && ownFree(hints?.get(s.id), s.quantity) > 0 && (
                 <p className="text-xs text-emerald-700 dark:text-emerald-500">
                   {ownFree(hints?.get(s.id), s.quantity)} eigen unit(s) vrij ·{" "}
                   <button type="button" className="underline underline-offset-2" disabled={toStock.isPending}
@@ -84,7 +84,7 @@ export function ProjectSubhireList({ project }: { project: Project }) {
             </div>
           </div>
         ))}
-        {money && (
+        {money && rows.length > 0 && (
           <p className="px-2 pt-1 text-xs text-muted-foreground">
             Aangerekend <b>{formatEUR(totalSold)}</b> · inkoop <b>{formatEUR(totalCost)}</b> · marge <b>{formatEUR(totalSold - totalCost)}</b>
             {incomplete && " (nog niet alle prijzen ingevuld)"}

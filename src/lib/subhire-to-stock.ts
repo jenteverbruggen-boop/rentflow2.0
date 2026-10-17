@@ -26,10 +26,16 @@ export async function takeOwnStockForHire(
     await lockMaterials(txClient, [peek.materialId]);
     const row = await txClient.periodMaterialShortage.findUnique({
       where: { id: shortageId },
-      include: { supplier: true, period: true },
+      include: { supplier: true, period: { include: { project: { select: { status: true } } } } },
     });
     if (!row || row.periodId !== periodId) throw new SubhireError("NOT_FOUND", "Inhuur niet gevonden");
     if (row.supplierId == null) throw new SubhireError("NOT_SUBHIRED", "Dit is niet ingehuurd");
+
+    // A cancelled project has released its stock; taking units back would
+    // re-claim it for a project nobody is running.
+    if (row.period.project.status === "geannuleerd") {
+      throw new SubhireError("PROJECT_LOCKED", "Een geannuleerd project kan geen eigen voorraad meer gebruiken");
+    }
 
     const free = await freeStockItemIds(txClient, row.materialId, row.period.startDate, row.period.endDate);
     const converted = Math.min(quantity, row.quantity, free.length);

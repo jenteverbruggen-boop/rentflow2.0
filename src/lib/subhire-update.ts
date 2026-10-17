@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
+import { lockMaterials } from "@/lib/booking";
 import { SubhireError, assertUsableSupplier, loadRow, type SubhireArgs } from "@/lib/subhire";
 import type { SubhireCostBasis } from "@/types";
 
@@ -19,6 +20,8 @@ export async function updateSubhire(
 ) {
   return client.$transaction(async (tx) => {
     const txClient = tx as unknown as PrismaClient;
+    const peek = await loadRow(txClient, shortageId, periodId);
+    await lockMaterials(txClient, [peek.materialId]);
     const row = await loadRow(txClient, shortageId, periodId);
     if (row.supplierId == null) throw new SubhireError("NOT_SUBHIRED", "Dit is niet ingehuurd");
     const changed = patch.supplierId !== undefined && patch.supplierId !== row.supplierId;
