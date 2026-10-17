@@ -10,7 +10,8 @@ import { useStockHints } from "@/hooks/use-stock-hints";
 import { useSubhire } from "@/hooks/use-subhire";
 import { canSeeMoney } from "@/lib/me-access";
 import { formatEUR, periodDays } from "@/lib/pricing";
-import { shortageCost, canOverbook } from "@/lib/material-shortage";
+import { canOverbook } from "@/lib/material-shortage";
+import { hiredRowRevenue } from "@/lib/subhire-revenue";
 import { subhireTotal } from "@/lib/subhire-cost";
 import type { Project, StockHint } from "@/types";
 
@@ -32,11 +33,10 @@ export function ProjectSubhireList({ project }: { project: Project }) {
   const rows = project.periods.flatMap((period) =>
     (period.shortages ?? [])
       .filter((s) => s.supplierId != null)
-      .map((s) => ({ period, s, total: subhireTotal(s, periodDays(period)), sold: shortageCost([s], periodDays(period)) })),
+      .map((s) => ({ period, s, total: subhireTotal(s, periodDays(period)), sold: hiredRowRevenue(period, s, periodDays(period)) })),
   );
   if (rows.length === 0) return null;
   const totalCost = rows.reduce((sum, r) => sum + (r.total ?? 0), 0);
-  const componentCost = rows.filter((r) => r.s.bundleBookingId != null).reduce((sum, r) => sum + (r.total ?? 0), 0);
   const incomplete = rows.some((r) => r.total == null);
   const totalSold = rows.reduce((sum, r) => sum + r.sold, 0);
 
@@ -86,7 +86,7 @@ export function ProjectSubhireList({ project }: { project: Project }) {
         ))}
         {money && (
           <p className="px-2 pt-1 text-xs text-muted-foreground">
-            Aangerekend <b>{formatEUR(totalSold)}</b> · inkoop <b>{formatEUR(totalCost)}</b> · marge <b>{formatEUR(totalSold - (totalCost - componentCost))}</b>
+            Aangerekend <b>{formatEUR(totalSold)}</b> · inkoop <b>{formatEUR(totalCost)}</b> · marge <b>{formatEUR(totalSold - totalCost)}</b>
             {incomplete && " (nog niet alle prijzen ingevuld)"}
           </p>
         )}

@@ -30,7 +30,7 @@ export function SubhireStatsSection({ data }: { data: SubhireStatsEntry }) {
         </div>
         {data.componentCost > 0 && (
           <p className="text-xs text-muted-foreground">
-            Daarbovenop {formatEUR(data.componentCost)} inkoop voor ingehuurde onderdelen van sets (die zijn niet apart aangerekend en zitten niet in de marge).
+            Waarvan {formatEUR(data.componentCost)} inkoop voor ingehuurde onderdelen van sets (hun omzet is het aandeel in de setprijs).
           </p>
         )}
         {data.unpricedRows > 0 && (

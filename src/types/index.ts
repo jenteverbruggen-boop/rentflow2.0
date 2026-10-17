@@ -146,6 +146,8 @@ export interface PeriodBundleBooking {
   quantity: number;
   dayPriceSnapshot: number | null;
   material?: Material & { components?: MaterialComponent[] };
+  /** Per-component weights snapshotted at booking (money: `dayPriceAtBooking`). */
+  components?: { id: number; bundleBookingId: number; materialId: number; quantity: number; dayPriceAtBooking: number | null }[];
 }
 
 export interface Material {

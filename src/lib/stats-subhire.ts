@@ -1,5 +1,5 @@
 import { periodDays } from "@/lib/pricing";
-import { shortageCost } from "@/lib/material-shortage";
+import { hiredRowRevenue } from "@/lib/subhire-revenue";
 import { subhireTotal } from "@/lib/subhire-cost";
 import type { Period } from "@/types";
 
@@ -12,8 +12,9 @@ export interface SubhireStats {
   margin: number;
   rows: number;
   unpricedRows: number;
-  /** Supplier cost of hired-in *components of a set*. The set is billed as a
-   * whole, so these have no revenue of their own and stay out of the margin. */
+  /** Of `cost`: what suppliers charge for hired-in *components of a set*. Their
+   * revenue is the component's pro-rata share of the set line, so they count
+   * in the margin like every other hired row. */
   componentCost: number;
 }
 
@@ -36,12 +37,9 @@ export function computeSubhireStats(periods: Period[]): SubhireStats {
     const days = periodDays(period);
     for (const row of (period.shortages ?? []).filter((s) => s.supplierId != null)) {
       const total = subhireTotal(row, days);
-      if (row.bundleBookingId != null) {
-        componentCost += total ?? 0;
-        continue;
-      }
+      if (row.bundleBookingId != null) componentCost += total ?? 0;
       rows += 1;
-      revenue += shortageCost([row], days);
+      revenue += hiredRowRevenue(period, row, days);
       if (total == null) unpricedRows += 1;
       else cost += total;
     }

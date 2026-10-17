@@ -27,6 +27,8 @@ export const projectInclude = {
       bundleBookings: {
         include: {
           material: { include: { components: { include: { child: true } } } },
+          // The per-component weights: a hired component's share of the set's revenue.
+          components: true,
         },
         orderBy: { id: "asc" },
       },

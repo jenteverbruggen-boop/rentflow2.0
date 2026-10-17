@@ -71,6 +71,7 @@ export function serializeProject(project: ProjectWithIncludes) {
       bundleBookings: period.bundleBookings.map((b) => ({
         ...b,
         dayPriceSnapshot: toNumber(b.dayPriceSnapshot),
+        components: b.components.map((c) => ({ ...c, dayPriceAtBooking: toNumber(c.dayPriceAtBooking) })),
         material: {
           ...b.material,
           ...materialExtraMoney(b.material),

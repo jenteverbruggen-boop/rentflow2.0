@@ -1,6 +1,7 @@
 import { groupMaterialAssignments, materialGroupCost } from "@/lib/grouping";
 import { periodDays } from "@/lib/pricing";
-import { toNumber } from "@/lib/serialize";
+import type { ComponentWeight } from "@/lib/bundle-share";
+import { componentShare, missingUnits, unitsNeeded } from "@/lib/bundle-share";
 import type { Period } from "@/types";
 
 export interface PaybackMaterial {
@@ -22,12 +23,7 @@ export interface PaybackStockItem {
 /** One row per component per bundle booking — DDL-3's
  * PeriodBundleBookingComponent, the only place a set's per-component
  * weight is ever recorded. */
-export interface BundleComponentWeight {
-  bundleBookingId: number;
-  materialId: number;
-  quantity: number;
-  dayPriceAtBooking: number;
-}
+export type BundleComponentWeight = ComponentWeight & { dayPriceAtBooking: number };
 
 export interface PaybackResult {
   materialId: number;
@@ -104,16 +100,13 @@ function bundleShareFor(materialId: number, periods: Period[], weights: BundleCo
   for (const period of periods) {
     const days = periodDays(period);
     for (const booking of period.bundleBookings ?? []) {
-      const componentWeights = weights.filter((w) => w.bundleBookingId === booking.id);
-      const thisWeight = componentWeights.find((w) => w.materialId === materialId);
-      if (!thisWeight) continue;
-
-      const totalWeight = componentWeights.reduce((s, w) => s + w.dayPriceAtBooking * w.quantity, 0);
-      const bundleLineTotal = toNumber(booking.dayPriceSnapshot) * booking.quantity * days;
-      revenue +=
-        totalWeight === 0
-          ? bundleLineTotal / componentWeights.length
-          : bundleLineTotal * ((thisWeight.dayPriceAtBooking * thisWeight.quantity) / totalWeight);
+      const share = componentShare(booking, weights, materialId, days);
+      if (share === 0) continue;
+      // Units of this component that are hired in or still open don't come
+      // from owned stock: they take their pro-rata part of the share away.
+      const needed = unitsNeeded(booking, weights, materialId);
+      const missing = missingUnits(period.shortages ?? [], booking.id, materialId);
+      revenue += needed > 0 ? share * Math.max(0, (needed - missing) / needed) : share;
     }
   }
   return revenue;

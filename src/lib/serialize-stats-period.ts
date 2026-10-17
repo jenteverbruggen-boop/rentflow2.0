@@ -8,7 +8,7 @@ export const statsPeriodInclude = {
   people: {
     include: { person: true, travelCosts: true },
   },
-  bundleBookings: true,
+  bundleBookings: { include: { components: true } },
   // Overbooked and hired-in units are billed like owned ones, so booked
   // revenue, the top-materials ranking and the inhuur figures all need them.
   // (Payback groups only `materials`, so owned-unit payback is unaffected.)
@@ -56,6 +56,7 @@ export function serializeStatsPeriod(period: StatsPeriod) {
     bundleBookings: period.bundleBookings.map((b) => ({
       ...b,
       dayPriceSnapshot: toNumber(b.dayPriceSnapshot),
+      components: b.components.map((c) => ({ ...c, dayPriceAtBooking: toNumber(c.dayPriceAtBooking) })),
     })),
     shortages: period.shortages.map((s) => ({
       ...s,

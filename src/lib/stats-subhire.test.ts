@@ -30,8 +30,8 @@ describe("computeSubhireStats (C3)", () => {
     expect(s).toMatchObject({ rows: 1, cost: 0, unpricedRows: 1 });
   });
 
-  it("a hired-in component of a set has no revenue of its own: its cost is reported apart, not as a loss", () => {
+  it("a hired-in component whose set can't be found has no revenue, but its cost still counts (D2)", () => {
     const s = computeSubhireStats([period([shortage({ bundleBookingId: 5, dayPriceSnapshot: 0 })])]);
-    expect(s).toMatchObject({ rows: 0, revenue: 0, cost: 0, margin: 0, componentCost: 8 });
+    expect(s).toMatchObject({ rows: 1, revenue: 0, cost: 8, margin: -8, componentCost: 8 });
   });
 });
