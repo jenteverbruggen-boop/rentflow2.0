@@ -70,6 +70,14 @@ describe("createAdhocSubhire (E5)", () => {
     expect(await client.material.count({ where: { name: "Tent XL" } })).toBe(1);
   });
 
+  it("treats names that differ only in case or padding as the same", async () => {
+    const a = await period();
+    await createAdhocSubhire(a.periodId, { name: "Beamer", supplierId, quantity: 1 }, client);
+    const existing = await client.material.findFirstOrThrow({ where: { name: "Beamer" } });
+    await expect(createAdhocSubhire(a.periodId, { name: " beamer ", supplierId, quantity: 1 }, client))
+      .rejects.toMatchObject({ code: "NAME_TAKEN", materialId: existing.id });
+  });
+
   it("refuses an archived supplier and rolls back the material", async () => {
     const a = await period();
     const old = (await client.supplier.create({ data: { name: "Oud", archived: true } })).id;

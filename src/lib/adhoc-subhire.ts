@@ -56,7 +56,10 @@ export async function createAdhocSubhire(
     if (!period) throw new AdhocSubhireError("NOT_FOUND", "Periode niet gevonden");
     const supplier = await txClient.supplier.findUnique({ where: { id: input.supplierId } });
     if (!supplier || supplier.archived) throw new AdhocSubhireError("BAD_SUPPLIER", "Kies een leverancier die nog actief is");
-    const clash = await txClient.material.findFirst({ where: { name, archived: false }, select: { id: true } });
+    // Case-insensitive in code so it behaves the same on SQLite and Postgres.
+    const lower = name.toLowerCase();
+    const active = await txClient.material.findMany({ where: { archived: false }, select: { id: true, name: true } });
+    const clash = active.find((m) => m.name.trim().toLowerCase() === lower);
     if (clash) throw new AdhocSubhireError("NAME_TAKEN", `Er bestaat al een materiaal met de naam "${name}"`, clash.id);
 
     const code = await nextCodeForCategory(txClient, category.id);
