@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/sidebar";
 import { MobileTopBar } from "@/components/mobile-sidebar";
 import { LinkedPersonWarning } from "@/components/linked-person-warning";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,7 +11,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <MobileTopBar />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           <LinkedPersonWarning />
-          {children}
+          {/* Every tooltip in the app (stock units, overbook badges…) needs a
+              provider; only the project page had one, so e.g. the stock sheet
+              on /materials crashed. */}
+          <TooltipProvider>{children}</TooltipProvider>
         </main>
       </div>
     </div>
