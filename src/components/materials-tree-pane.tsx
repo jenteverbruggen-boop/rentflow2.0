@@ -7,6 +7,7 @@ import {
   type MaterialSort,
   type MaterialTypeFilter,
 } from "@/components/materials-filter-bar";
+import { noSellingPrice } from "@/lib/price-warnings";
 import type { Material } from "@/types";
 import { Gift, Link2, TriangleAlert } from "lucide-react";
 import { InlineIcon } from "@/components/inline-icon";
@@ -120,6 +121,7 @@ export function MaterialsTreePane({
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {stockLabel(m)}
+                        {noSellingPrice(m) && <span className="ml-1 text-amber-700 dark:text-amber-500">· geen verkoopprijs</span>}
                       </p>
                     </button>
                   ))}

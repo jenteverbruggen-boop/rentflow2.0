@@ -4,6 +4,7 @@ import { QuantityInput } from "@/components/quantity-input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatEUR } from "@/lib/pricing";
+import { noSellingPrice } from "@/lib/price-warnings";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useState } from "react";
 import type { MaterialAvailability } from "@/types";
@@ -63,6 +64,11 @@ export function MaterialAvailableRow({
           {m.material.isBundle ? "set(s) vrij" : `/${m.totalStock} vrij`} ·{" "}
           {formatEUR(m.material.dayPrice)}/d
         </p>
+        {noSellingPrice(m.material) && (
+          <p className="text-[10px] text-amber-700 dark:text-amber-500 truncate">
+            <InlineIcon icon={TriangleAlert} /> geen verkoopprijs — wordt aan €0 gefactureerd
+          </p>
+        )}
         {m.material.isBundle && m.sharedComponents && m.sharedComponents.length > 0 && (
           <p className="text-[10px] text-muted-foreground truncate">
             <InlineIcon icon={Link2} /> deelt voorraad: {m.sharedComponents.join(", ")}
