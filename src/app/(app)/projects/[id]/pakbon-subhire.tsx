@@ -8,7 +8,7 @@ export function PakbonSubhire({ periods }: { periods: Period[] }) {
   const bySupplier = new Map<string, { period: string; name: string; units: number }[]>();
   for (const period of periods) {
     for (const s of period.shortages ?? []) {
-      // Component shortages belong to a set that is booked as a whole.
+      // Hired components of a set are listed too: they arrive from the supplier.
       if (s.supplierId == null) continue;
       const supplier = s.supplier?.name ?? "Onbekende leverancier";
       const lines = bySupplier.get(supplier) ?? [];

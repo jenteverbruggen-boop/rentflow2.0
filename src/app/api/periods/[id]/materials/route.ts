@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireModule, forbidden, badRequest, conflict, notFound, serverError } from "@/lib/api-auth";
 import { effectiveMaterialPrice } from "@/lib/effective-price";
@@ -19,6 +20,15 @@ import {
 
 type Params = { params: Promise<{ id: string }> };
 
+// Only the `subhire` block is validated strictly (it feeds supplier cost rows);
+// the rest of the body keeps its lenient parsing below.
+const subhireSchema = z.object({
+  supplierId: z.number().int().positive(),
+  basis: z.enum(["per_huur", "per_dag"]).optional(),
+  unitCost: z.number().min(0).nullable().optional(),
+  costOverride: z.number().min(0).nullable().optional(),
+});
+
 export async function POST(req: NextRequest, { params }: Params) {
   const access = await requireModule("planning", "wijzigen").catch(() => null);
   if (!access) return forbidden();
@@ -27,8 +37,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const periodId = parseInt(id);
     const { materialId, quantity, discountPct, discountAmount, allowOverbook, subhire } = await req.json();
-    const subhireRequest: SubhireRequest | undefined =
-      subhire && Number.isInteger(subhire.supplierId) ? subhire : undefined;
+    const parsedHire = subhire == null ? null : subhireSchema.safeParse(subhire);
+    if (parsedHire && !parsedHire.success) return badRequest(parsedHire.error.issues[0]?.message ?? "Ongeldige inhuur");
+    const subhireRequest: SubhireRequest | undefined = parsedHire?.data;
     const qty = Math.max(1, parseInt(quantity) || 0);
     if (!materialId || !qty) return badRequest("materialId en quantity zijn verplicht");
 
