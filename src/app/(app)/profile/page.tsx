@@ -1,6 +1,7 @@
 import { requireAuth, resolveCurrentAccess } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { satisfies } from "@/lib/modules";
+import { AccountSecurity } from "@/components/account-security";
 import { CalendarFeedLinks } from "@/components/calendar-feed-links";
 
 // Server Component. Open to every authenticated user — the account block
@@ -31,6 +32,7 @@ export default async function ProfilePage() {
         <dt className="text-muted-foreground">Rol</dt>
         <dd>{user?.roleRel.label}</dd>
       </dl>
+      <AccountSecurity />
       {showFeeds && <CalendarFeedLinks />}
     </div>
   );

@@ -11,6 +11,8 @@ model User {
   id            Int            @id @default(autoincrement())
   email         String         @unique
   password      String
+  // Bumped on password change / "log out everywhere"; JWTs carry it as `tv`.
+  tokenVersion  Int            @default(0)
   name          String
   // UI preference kept on the account, so light/dark follows the user to every
   // device and survives logging out and in. null = never chosen on an account

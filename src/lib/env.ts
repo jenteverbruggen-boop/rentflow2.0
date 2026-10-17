@@ -28,6 +28,27 @@ const parsed = envSchema.safeParse({
   JWT_SECRET: process.env.JWT_SECRET,
 });
 
+// Production-only: the example/placeholder secrets shipped in .env.example,
+// the Dockerfile and CI must never sign real sessions. Skipped during
+// `next build` (the Dockerfile builds with a placeholder, by design).
+const KNOWN_WEAK_SECRETS = [
+  "change_me_to_a_long_random_secret",
+  "local-dev-secret-change-in-production",
+  "ci-placeholder-secret",
+  "docker-build-placeholder-secret-unused-at-runtime",
+];
+const isProductionRuntime =
+  process.env.NODE_ENV === "production" &&
+  process.env.NEXT_PHASE !== "phase-production-build";
+if (parsed.success && isProductionRuntime) {
+  const secret = parsed.data.JWT_SECRET;
+  if (secret.length < 32 || KNOWN_WEAK_SECRETS.includes(secret)) {
+    throw new Error(
+      "Invalid environment configuration — JWT_SECRET: in production it must be at least 32 characters and not an example/placeholder value (generate one with `openssl rand -hex 32`)",
+    );
+  }
+}
+
 if (!parsed.success) {
   const issues = parsed.error.issues
     .map((i) => `${i.path.join(".")}: ${i.message}`)

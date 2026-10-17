@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { BCRYPT_COST } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
 import { requireModule, badRequest, notFound, conflict, serverError, forbidden } from "@/lib/api-auth";
 import { resolveRoleAssignment } from "@/lib/role-assignment";
@@ -36,6 +37,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const data: {
       roleId?: number;
       password?: string;
+      tokenVersion?: { increment: number };
       personId?: number | null;
     } = {};
     if (body.roleId !== undefined) {
@@ -56,7 +58,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       if (typeof body.password !== "string" || body.password.length < 8) {
         return badRequest("Wachtwoord moet minimaal 8 tekens zijn");
       }
-      data.password = await bcrypt.hash(body.password, 10);
+      data.password = await bcrypt.hash(body.password, BCRYPT_COST);
+      // An admin reset must kick the account's existing sessions out.
+      data.tokenVersion = { increment: 1 };
     }
 
     if (Object.keys(data).length === 0) return badRequest("Geen wijzigingen opgegeven");

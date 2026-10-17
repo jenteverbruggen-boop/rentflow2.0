@@ -17,6 +17,14 @@ const EXEMPT = [
   { file: "auth/logout/route.ts", reason: "must work pre-auth" },
   { file: "auth/register/route.ts", reason: "stub, returns notFound()" },
   {
+    file: "auth/password/route.ts",
+    reason: "self-service — acts only on the caller's own account, gated by requireAuth + current password",
+  },
+  {
+    file: "auth/logout-all/route.ts",
+    reason: "self-service — revokes only the caller's own sessions, gated by requireAuth",
+  },
+  {
     file: "auth/me/route.ts",
     reason: "forward (N4.1) — the discovery endpoint a client calls before knowing its permissions; gating it is circular",
   },

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { BCRYPT_COST } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
 import {
   requireModule,
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) return conflict("Email is al in gebruik");
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, BCRYPT_COST);
     try {
       const user = await prisma.user.create({
         data: {

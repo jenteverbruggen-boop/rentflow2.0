@@ -1,15 +1,39 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { verifyToken, type TokenPayload } from "./auth";
+import { AUTH_COOKIE } from "./auth-config";
 import { prisma } from "./prisma";
 import { satisfies } from "./modules";
 import type { AccessLevel, ModuleKey } from "@/types";
 
-export async function requireAuth(): Promise<TokenPayload> {
+async function readTokenPayload(): Promise<TokenPayload> {
   const cookieStore = await cookies();
-  const token = cookieStore.get("rentflow_token")?.value;
+  const token = cookieStore.get(AUTH_COOKIE)?.value;
   if (!token) throw new Error("Unauthorized");
   return verifyToken(token);
+}
+
+/**
+ * A token whose `tv` no longer matches User.tokenVersion (password change,
+ * "log out everywhere") is revoked. Drop the dead cookie best-effort so the
+ * next request is a clean 401/redirect instead of another failed call — it
+ * throws inside Server Components, where cookies are read-only.
+ */
+async function rejectRevoked(): Promise<never> {
+  try {
+    (await cookies()).delete(AUTH_COOKIE);
+  } catch {}
+  throw new Error("Unauthorized");
+}
+
+export async function requireAuth(): Promise<TokenPayload> {
+  const payload = await readTokenPayload();
+  const user = await prisma.user.findUnique({
+    where: { id: payload.id },
+    select: { tokenVersion: true },
+  });
+  if (!user || user.tokenVersion !== payload.tv) return rejectRevoked();
+  return payload;
 }
 
 /**
@@ -24,10 +48,14 @@ export interface ResolvedAccess {
   permissions: Partial<Record<ModuleKey, AccessLevel>>;
 }
 
-async function resolveAccess(userId: number): Promise<ResolvedAccess | null> {
+async function resolveAccess(
+  userId: number,
+  tokenVersion: number,
+): Promise<ResolvedAccess | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
+      tokenVersion: true,
       personId: true,
       roleRel: {
         select: {
@@ -41,6 +69,7 @@ async function resolveAccess(userId: number): Promise<ResolvedAccess | null> {
   // or a backfill miss) — fail closed on every module, not just the one
   // being checked.
   if (!user || !user.roleRel) return null;
+  if (user.tokenVersion !== tokenVersion) return rejectRevoked();
 
   const permissions: Partial<Record<ModuleKey, AccessLevel>> = {};
   for (const p of user.roleRel.permissions) {
@@ -63,8 +92,8 @@ async function resolveAccess(userId: number): Promise<ResolvedAccess | null> {
  * pointing at a real role, throws rather than returning an empty set.
  */
 export async function resolveCurrentAccess(): Promise<ResolvedAccess> {
-  const payload = await requireAuth();
-  const access = await resolveAccess(payload.id);
+  const payload = await readTokenPayload();
+  const access = await resolveAccess(payload.id, payload.tv);
   if (!access) throw new Error("Forbidden");
   return access;
 }
