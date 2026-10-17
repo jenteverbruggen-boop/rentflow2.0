@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -26,6 +27,11 @@ export function MaterialSubhireSection({ material, onSave }: Props) {
   const { query } = useSuppliers(false);
   const suppliers = query.data ?? [];
   const money = canSeeMoney(me);
+  const [error, setError] = useState<string | null>(null);
+  // The server may refuse a change (no supplier yet, units still exist...):
+  // show its message here instead of an unhandled rejection.
+  const save = (field: EditableMaterialField, value: string) =>
+    onSave(field, value).then(() => setError(null), (e: Error) => setError(e.message));
 
   return (
     <div className="space-y-3 rounded-md border border-border p-3">
@@ -34,7 +40,7 @@ export function MaterialSubhireSection({ material, onSave }: Props) {
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Standaardleverancier</Label>
           <Select value={material.defaultSupplierId == null ? NONE : String(material.defaultSupplierId)}
-            onValueChange={(v) => onSave("defaultSupplierId", v === NONE ? "" : v)}>
+            onValueChange={(v) => save("defaultSupplierId", v === NONE ? "" : v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value={NONE}>Geen</SelectItem>
@@ -45,7 +51,7 @@ export function MaterialSubhireSection({ material, onSave }: Props) {
         {money && (
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Verrekening leverancier</Label>
-            <Select value={material.subhireCostBasis ?? "per_huur"} onValueChange={(v) => onSave("subhireCostBasis", v)}>
+            <Select value={material.subhireCostBasis ?? "per_huur"} onValueChange={(v) => save("subhireCostBasis", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="per_huur">Per huur (eenmalig)</SelectItem>
@@ -65,10 +71,11 @@ export function MaterialSubhireSection({ material, onSave }: Props) {
         )}
         <div className="flex items-center gap-2 self-end pb-2">
           <Checkbox id={`subhire-only-${material.id}`} checked={!!material.subhireOnly}
-            onCheckedChange={(v) => onSave("subhireOnly", String(v === true))} />
+            onCheckedChange={(v) => save("subhireOnly", String(v === true))} />
           <Label htmlFor={`subhire-only-${material.id}`} className="font-normal">Enkel inhuur (nooit in eigen stock)</Label>
         </div>
       </div>
+      {error && <p className="text-xs text-destructive" role="alert">{error}</p>}
     </div>
   );
 }

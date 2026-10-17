@@ -13,17 +13,35 @@ export function subhireFieldsData(body: Record<string, unknown>) {
   };
 }
 
+export interface CurrentSubhireState {
+  defaultSupplierId: number | null;
+  subhireOnly: boolean;
+  isBundle?: boolean;
+  /** Number of own stock items the material has. */
+  stockCount?: number;
+}
+
 /** An inhuur-only item is always rented in, so it must say from whom —
- * otherwise booking it could never resolve its own shortage. Returns an error
- * message, or null when fine. `current` is the persisted row on an update. */
+ * otherwise booking it could never resolve its own shortage. It is also
+ * exclusive with own stock and with being a set. Returns an error message, or
+ * null when fine. `current` is the persisted row on an update. */
 export function subhireFieldsError(
   body: Record<string, unknown>,
-  current?: { defaultSupplierId: number | null; subhireOnly: boolean } | null,
+  current?: CurrentSubhireState | null,
 ): string | null {
-  const onlyAfter = body.subhireOnly !== undefined ? Boolean(body.subhireOnly) : (current?.subhireOnly ?? false);
+  const wasOnly = current?.subhireOnly ?? false;
+  const wasBundle = current?.isBundle ?? false;
+  const onlyAfter = body.subhireOnly !== undefined ? Boolean(body.subhireOnly) : wasOnly;
+  const bundleAfter = body.isBundle !== undefined ? Boolean(body.isBundle) : wasBundle;
   const supplierAfter =
     body.defaultSupplierId !== undefined ? (body.defaultSupplierId as number | null) : (current?.defaultSupplierId ?? null);
-  return onlyAfter && supplierAfter == null ? "Een inhuur-materiaal heeft een standaardleverancier nodig" : null;
+  if (onlyAfter && supplierAfter == null) return "Een inhuur-materiaal heeft een standaardleverancier nodig";
+  // Only on the change itself: a legacy row must stay saveable.
+  if (onlyAfter && !wasOnly && (current?.stockCount ?? 0) > 0) {
+    return "Verwijder eerst de units — een inhuur-materiaal heeft geen eigen voorraad";
+  }
+  if (onlyAfter && bundleAfter && !(wasOnly && wasBundle)) return "Een set kan niet enkel-inhuur zijn";
+  return null;
 }
 
 /** The named default supplier must exist and still be active — an archived one

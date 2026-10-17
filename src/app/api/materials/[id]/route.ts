@@ -80,9 +80,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
         subhireUnitCost: true,
         defaultSupplierId: true,
         subhireOnly: true,
+        isBundle: true,
+        _count: { select: { stockItems: true } },
       },
     });
-    const subhireError = subhireFieldsError(body, currentMaterial);
+    const subhireError = subhireFieldsError(
+      body,
+      currentMaterial && { ...currentMaterial, stockCount: currentMaterial._count.stockItems },
+    );
     if (subhireError) return badRequest(subhireError);
     const badSupplier = await supplierError(prisma, body);
     if (badSupplier) return badRequest(badSupplier);

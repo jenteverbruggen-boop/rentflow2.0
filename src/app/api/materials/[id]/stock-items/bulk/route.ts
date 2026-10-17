@@ -14,6 +14,8 @@ import { nextUnitNumbers, type BulkUnit } from "@/lib/stock-bulk";
 import { resolveRemoval } from "@/lib/stock-bulk-removal";
 import type { StockBulkAddResult, StockBulkRemoveResult } from "@/types";
 
+class SubhireOnlyError extends Error {}
+
 type Params = { params: Promise<{ id: string }> };
 
 const addSchema = z.object({
@@ -38,6 +40,8 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     const result = await prisma.$transaction(async (tx) => {
       await lockMaterials(tx as unknown as PrismaClient, [materialId]);
+      const material = await tx.material.findUnique({ where: { id: materialId }, select: { subhireOnly: true } });
+      if (material?.subhireOnly) throw new SubhireOnlyError();
       const last = await tx.stockItem.findFirst({
         where: { materialId },
         orderBy: { unitNumber: "desc" },
@@ -60,6 +64,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     return NextResponse.json(result);
   } catch (err) {
+    if (err instanceof SubhireOnlyError) return conflict("Een inhuur-materiaal heeft geen eigen voorraad");
     return serverError((err as Error).message);
   }
 }

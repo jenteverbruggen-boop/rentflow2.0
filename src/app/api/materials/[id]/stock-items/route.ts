@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireModule, forbidden, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, conflict, serverError } from "@/lib/api-auth";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
 import { redactMoney } from "@/lib/redact";
 
@@ -75,6 +75,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const materialId = parseInt(id);
     const { identifier, notes } = await req.json();
+    const material = await prisma.material.findUnique({ where: { id: materialId }, select: { subhireOnly: true } });
+    if (material?.subhireOnly) return conflict("Een inhuur-materiaal heeft geen eigen voorraad");
     const last = await prisma.stockItem.findFirst({
       where: { materialId },
       orderBy: { unitNumber: "desc" },
