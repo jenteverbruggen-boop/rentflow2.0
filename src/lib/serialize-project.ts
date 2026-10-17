@@ -6,6 +6,17 @@ type ProjectWithIncludes = Prisma.ProjectGetPayload<{
   include: typeof projectInclude;
 }>;
 
+/** Decimal money columns of a Material that the spreads below would otherwise
+ * pass through raw (a string on Postgres). */
+function materialExtraMoney(m: { costPrice: unknown; listPrice: unknown; revenueBefore: unknown; subhireUnitCost: unknown }) {
+  return {
+    costPrice: toNumberOrNull(m.costPrice),
+    listPrice: toNumberOrNull(m.listPrice),
+    revenueBefore: toNumberOrNull(m.revenueBefore),
+    subhireUnitCost: toNumberOrNull(m.subhireUnitCost),
+  };
+}
+
 /**
  * Explicit shape-aware mapper for the `projectInclude` tree returned by
  * `/api/projects`, `/api/projects/[id]`. Prefer this over a recursive
@@ -29,6 +40,7 @@ export function serializeProject(project: ProjectWithIncludes) {
           ...m.stockItem,
           material: {
             ...m.stockItem.material,
+            ...materialExtraMoney(m.stockItem.material),
             dayPrice: toNumber(m.stockItem.material.dayPrice),
             setupCost: toNumberOrNull(m.stockItem.material.setupCost),
             bundlePriceOverride: toNumberOrNull(
@@ -61,12 +73,13 @@ export function serializeProject(project: ProjectWithIncludes) {
         dayPriceSnapshot: toNumber(b.dayPriceSnapshot),
         material: {
           ...b.material,
+          ...materialExtraMoney(b.material),
           dayPrice: toNumber(b.material.dayPrice),
           setupCost: toNumberOrNull(b.material.setupCost),
           bundlePriceOverride: toNumberOrNull(b.material.bundlePriceOverride),
           components: b.material.components.map((c) => ({
             ...c,
-            child: { ...c.child, dayPrice: toNumber(c.child.dayPrice) },
+            child: { ...c.child, ...materialExtraMoney(c.child), dayPrice: toNumber(c.child.dayPrice) },
           })),
         },
       })),
@@ -80,6 +93,7 @@ export function serializeProject(project: ProjectWithIncludes) {
         subhireCostOverride: toNumberOrNull(s.subhireCostOverride),
         material: {
           ...s.material,
+          ...materialExtraMoney(s.material),
           dayPrice: toNumber(s.material.dayPrice),
           setupCost: toNumberOrNull(s.material.setupCost),
           bundlePriceOverride: toNumberOrNull(s.material.bundlePriceOverride),
@@ -92,6 +106,7 @@ export function serializeProject(project: ProjectWithIncludes) {
       dayPrice: toNumber(mp.dayPrice),
       material: {
         ...mp.material,
+        ...materialExtraMoney(mp.material),
         dayPrice: toNumber(mp.material.dayPrice),
         setupCost: toNumberOrNull(mp.material.setupCost),
         bundlePriceOverride: toNumberOrNull(mp.material.bundlePriceOverride),

@@ -9,7 +9,7 @@ import { useAuthMe } from "@/hooks/use-auth-me";
 import { useSubhire } from "@/hooks/use-subhire";
 import { canSeeMoney } from "@/lib/me-access";
 import { formatEUR, periodDays } from "@/lib/pricing";
-import { shortageCost } from "@/lib/material-shortage";
+import { shortageCost, canOverbook } from "@/lib/material-shortage";
 import { subhireTotal } from "@/lib/subhire-cost";
 import type { Project } from "@/types";
 
@@ -30,6 +30,7 @@ export function ProjectSubhireList({ project }: { project: Project }) {
   );
   if (rows.length === 0) return null;
   const totalCost = rows.reduce((sum, r) => sum + (r.total ?? 0), 0);
+  const componentCost = rows.filter((r) => r.s.bundleBookingId != null).reduce((sum, r) => sum + (r.total ?? 0), 0);
   const incomplete = rows.some((r) => r.total == null);
   const totalSold = rows.reduce((sum, r) => sum + r.sold, 0);
 
@@ -57,7 +58,8 @@ export function ProjectSubhireList({ project }: { project: Project }) {
                 })}>
                 Wijzig
               </Button>
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={undo.isPending}
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={undo.isPending || !canOverbook(project.status)}
+                title={canOverbook(project.status) ? undefined : "Niet mogelijk in een bevestigd project — wijzig de leverancier"}
                 onClick={() => undo.mutate({ periodId: period.id, shortageId: s.id })}>
                 Ongedaan maken
               </Button>
@@ -66,7 +68,7 @@ export function ProjectSubhireList({ project }: { project: Project }) {
         ))}
         {money && (
           <p className="px-2 pt-1 text-xs text-muted-foreground">
-            Aangerekend <b>{formatEUR(totalSold)}</b> · inkoop <b>{formatEUR(totalCost)}</b> · marge <b>{formatEUR(totalSold - totalCost)}</b>
+            Aangerekend <b>{formatEUR(totalSold)}</b> · inkoop <b>{formatEUR(totalCost)}</b> · marge <b>{formatEUR(totalSold - (totalCost - componentCost))}</b>
             {incomplete && " (nog niet alle prijzen ingevuld)"}
           </p>
         )}

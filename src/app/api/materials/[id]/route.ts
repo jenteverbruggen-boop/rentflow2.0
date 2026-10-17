@@ -11,7 +11,7 @@ import {
 import { redactMoney } from "@/lib/redact";
 import { findRejectedMoneyWrite, moneyFieldsToIgnore } from "@/lib/money-write-guard";
 import { materialMoneyData, serializeMaterialMoney } from "@/lib/material-money-fields";
-import { subhireFieldsData, subhireFieldsError } from "@/lib/material-subhire-fields";
+import { subhireFieldsData, subhireFieldsError, supplierError } from "@/lib/material-subhire-fields";
 import { resolveLegacyCategoryName } from "@/lib/material-category";
 
 const MATERIAL_MONEY_FIELDS = [
@@ -84,6 +84,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
     });
     const subhireError = subhireFieldsError(body, currentMaterial);
     if (subhireError) return badRequest(subhireError);
+    const badSupplier = await supplierError(prisma, body);
+    if (badSupplier) return badRequest(badSupplier);
     if (findRejectedMoneyWrite(body, access, currentMaterial)) return forbidden();
 
     // Money-blind caller: useMaterialUpdate's redacted-to-0/null echo

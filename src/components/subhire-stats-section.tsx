@@ -28,6 +28,11 @@ export function SubhireStatsSection({ data }: { data: SubhireStatsEntry }) {
             </div>
           ))}
         </div>
+        {data.componentCost > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Daarbovenop {formatEUR(data.componentCost)} inkoop voor ingehuurde onderdelen van sets (die zijn niet apart aangerekend en zitten niet in de marge).
+          </p>
+        )}
         {data.unpricedRows > 0 && (
           <p className="text-xs text-amber-600 dark:text-amber-500">
             Voor {data.unpricedRows} ingehuurde regel(s) is nog geen inkoopprijs ingevuld — de marge is dus te hoog ingeschat.

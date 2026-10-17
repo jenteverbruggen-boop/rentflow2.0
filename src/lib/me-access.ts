@@ -8,6 +8,11 @@ export function hasAccess(me: AuthMe | undefined, module: ModuleKey, level: Acce
   return !!me && satisfies(me.permissions[module] ?? "geen", level);
 }
 
+/** Mirror of `moneyWritable`: may this caller enter money (supplier prices)? */
+export function canWriteMoney(me: AuthMe | undefined): boolean {
+  return !!me && me.scope !== "own" && hasAccess(me, "kosten_facturen", "wijzigen");
+}
+
 /** Same rule as `moneyVisible` (src/lib/redact.ts): own scope never sees money. */
 export function canSeeMoney(me: AuthMe | undefined): boolean {
   return !!me && me.scope !== "own" && hasAccess(me, "kosten_facturen");

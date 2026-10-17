@@ -6,8 +6,9 @@ import { bookFlatMaterial, freeStockItemIds } from "@/lib/booking";
 import { bookBundleMaterial } from "@/lib/bundle-booking";
 import { bundleAvailableCount } from "@/lib/availability";
 import { canOverbook } from "@/lib/material-shortage";
-import { moneyVisible } from "@/lib/redact";
-import { resolveBookingSubhire, type SubhireRequest } from "@/lib/subhire-defaults";
+import { moneyWritable } from "@/lib/redact";
+import { resolveBookingHires } from "@/lib/booking-hire";
+import type { SubhireRequest } from "@/lib/subhire-defaults";
 import { toNumber } from "@/lib/serialize";
 import { redactMoney } from "@/lib/redact";
 import { setDayPrice } from "@/lib/set-price";
@@ -51,21 +52,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     // merely hidden from the catalogue and availability lists.
     if (material.archived) return badRequest("Dit materiaal is gearchiveerd en kan niet geboekt worden");
 
-    // Hiring in at booking time: an inhuur-only material always is (from its
-    // default supplier); any other only when the caller names a supplier.
-    // That is also the one way to exceed stock in a confirmed project — the
-    // excess is not an open shortage, it is already resolved.
-    const canSetCosts = moneyVisible(access);
-    const componentHire = new Map(
-      material.components.map((c) => [c.childId, resolveBookingSubhire(c.child, subhireRequest, canSetCosts)]),
-    );
-    const flatHire = material.isBundle ? null : resolveBookingSubhire(material, subhireRequest, canSetCosts);
-    const hiresIn = flatHire != null || [...componentHire.values()].some((h) => h != null);
-    if (hiresIn) {
-      const ids = new Set([flatHire?.supplierId, ...[...componentHire.values()].map((h) => h?.supplierId)].filter((v): v is number => v != null));
-      const active = await prisma.supplier.count({ where: { id: { in: [...ids] }, archived: false } });
-      if (active !== ids.size) return badRequest("Kies een leverancier die nog actief is");
-    }
+    const { hires, error: hireError } = await resolveBookingHires(prisma, material, subhireRequest, moneyWritable(access));
+    if (hireError) return badRequest(hireError);
+    const { flatHire, componentHire, hiresIn } = hires;
 
     if (material.isBundle) {
       if (material.components.length === 0) return badRequest("Bundle heeft geen componenten");

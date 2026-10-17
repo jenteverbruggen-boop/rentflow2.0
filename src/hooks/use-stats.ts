@@ -45,6 +45,7 @@ export interface SubhireStatsEntry {
   margin: number;
   rows: number;
   unpricedRows: number;
+  componentCost: number;
 }
 
 export interface StatsResponse {

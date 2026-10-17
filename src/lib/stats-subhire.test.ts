@@ -13,7 +13,7 @@ const period = (shortages: PeriodMaterialShortage[]): Period =>
 describe("computeSubhireStats (C3)", () => {
   it("revenue is what the client pays, cost what the supplier charges, margin the difference", () => {
     // 2 days: revenue 4 × €5 × 2 = 40; cost per huur 4 × €2 = 8
-    expect(computeSubhireStats([period([shortage({})])])).toEqual({ revenue: 40, cost: 8, margin: 32, rows: 1, unpricedRows: 0 });
+    expect(computeSubhireStats([period([shortage({})])])).toEqual({ revenue: 40, cost: 8, margin: 32, rows: 1, unpricedRows: 0, componentCost: 0 });
   });
 
   it("a per-day cost multiplies by the period's days", () => {
@@ -28,5 +28,10 @@ describe("computeSubhireStats (C3)", () => {
   it("a row without a price is counted as unpriced, not as free", () => {
     const s = computeSubhireStats([period([shortage({ subhireUnitCost: null })])]);
     expect(s).toMatchObject({ rows: 1, cost: 0, unpricedRows: 1 });
+  });
+
+  it("a hired-in component of a set has no revenue of its own: its cost is reported apart, not as a loss", () => {
+    const s = computeSubhireStats([period([shortage({ bundleBookingId: 5, dayPriceSnapshot: 0 })])]);
+    expect(s).toMatchObject({ rows: 0, revenue: 0, cost: 0, margin: 0, componentCost: 8 });
   });
 });

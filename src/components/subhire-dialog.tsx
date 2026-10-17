@@ -9,7 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { useAuthMe } from "@/hooks/use-auth-me";
 import { useSuppliers } from "@/hooks/use-suppliers";
 import { useSubhire } from "@/hooks/use-subhire";
-import { canSeeMoney } from "@/lib/me-access";
+import { canWriteMoney } from "@/lib/me-access";
 import type { SubhireCostBasis } from "@/types";
 
 export interface SubhireTarget {
@@ -39,7 +39,7 @@ const num = (v: string) => (v.trim() === "" ? null : Number(v));
  * (everyone else gets the material's defaults, applied server-side). */
 export function SubhireDialog({ projectId, target, onClose }: Props) {
   const { data: me } = useAuthMe();
-  const money = canSeeMoney(me);
+  const money = canWriteMoney(me);
   const { query } = useSuppliers(false, !!target);
   const { hire, update } = useSubhire(projectId);
   const [supplierId, setSupplierId] = useState("");

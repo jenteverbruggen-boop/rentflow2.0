@@ -1,10 +1,11 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { lockMaterials } from "@/lib/booking";
+import { canOverbook } from "@/lib/material-shortage";
 import type { SubhireCostBasis } from "@/types";
 
 export type SubhireErrorCode =
-  | "NOT_FOUND" | "ALREADY_SUBHIRED" | "NOT_SUBHIRED" | "BAD_SUPPLIER" | "BAD_QUANTITY";
+  | "NOT_FOUND" | "ALREADY_SUBHIRED" | "NOT_SUBHIRED" | "BAD_SUPPLIER" | "BAD_QUANTITY" | "PROJECT_LOCKED";
 
 export class SubhireError extends Error {
   code: SubhireErrorCode;
@@ -119,6 +120,13 @@ export async function undoSubhire(periodId: number, shortageId: number, client: 
     await lockMaterials(txClient, [peek.materialId]);
     const row = await loadRow(txClient, shortageId, periodId);
     if (row.supplierId == null) throw new SubhireError("NOT_SUBHIRED", "Dit is niet ingehuurd");
+    // Undoing leaves an *open* shortage, which only a concept/cancelled project
+    // may carry: in a confirmed project it would block every later save of the
+    // project and its invoicing. There, replace the supplier or remove the line.
+    const period = await txClient.period.findUnique({ where: { id: periodId }, select: { project: { select: { status: true } } } });
+    if (period && !canOverbook(period.project.status)) {
+      throw new SubhireError("PROJECT_LOCKED", "In een bevestigd project kan je een inhuur niet terugzetten naar overboekt — wijzig de leverancier of verwijder de lijn");
+    }
 
     const open = await txClient.periodMaterialShortage.findFirst({
       where: {

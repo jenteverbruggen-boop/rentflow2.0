@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,19 +40,25 @@ export function ThemeToggle({ iconOnly = false, className }: ThemeToggleProps) {
     setIsDark(document.documentElement.classList.contains("dark"));
   }, []);
 
-  // The account's saved theme wins over whatever this browser remembered.
+  // The account's saved theme wins over whatever this browser remembered. An
+  // account that never chose (null — everyone, right after this shipped) adopts
+  // this browser's current look instead, so nobody is flipped to a default.
+  const loaded = me !== undefined;
   const saved = me?.theme;
+  const seeded = useRef(false);
   useEffect(() => {
-    if (!saved) return;
-    applyTheme(saved);
-    setIsDark(saved === "dark");
-  }, [saved]);
+    if (!loaded) return;
+    if (saved) {
+      applyTheme(saved);
+      setIsDark(saved === "dark");
+    } else if (!seeded.current) {
+      seeded.current = true;
+      save(document.documentElement.classList.contains("dark") ? "dark" : "light");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, saved]);
 
-  function toggle() {
-    const next: Theme = isDark ? "light" : "dark";
-    applyTheme(next);
-    setIsDark(next === "dark");
-    // Update the cached account first, or the effect above would flip it back.
+  function save(next: Theme) {
     queryClient.setQueryData<AuthMe>(["auth-me"], (old) => (old ? { ...old, theme: next } : old));
     fetch("/api/auth/me", {
       method: "PATCH",
@@ -61,6 +67,13 @@ export function ThemeToggle({ iconOnly = false, className }: ThemeToggleProps) {
     }).then((res) => {
       if (!res.ok) queryClient.invalidateQueries({ queryKey: ["auth-me"] });
     }).catch(() => queryClient.invalidateQueries({ queryKey: ["auth-me"] }));
+  }
+
+  function toggle() {
+    const next: Theme = isDark ? "light" : "dark";
+    applyTheme(next);
+    setIsDark(next === "dark");
+    save(next); // updates the cached account first, or the effect above would flip it back
   }
 
   return (

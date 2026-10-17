@@ -31,7 +31,9 @@ export async function createOrIncrementShortage(
   const discountPct = args.discountPct ?? null;
   const discountAmount = args.discountAmount ?? null;
 
-  const existing = await tx.periodMaterialShortage.findFirst({
+  // A fixed supplier total belongs to exactly one booking: merging two such
+  // rows would keep one total for twice the units.
+  const existing = args.subhire?.costOverride != null ? null : await tx.periodMaterialShortage.findFirst({
     where: {
       periodId: args.periodId,
       materialId: args.materialId,

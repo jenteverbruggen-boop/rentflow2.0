@@ -39,15 +39,20 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (existing.supplierId != null) return conflict("Dit materiaal is ingehuurd — pas de inhuur aan");
 
     const quantity = parsed.data.quantity ?? existing.quantity - (parsed.data.decrement ?? 0);
+    // The writes carry `supplierId: null` too: a hire that lands between the
+    // read above and here must not be overwritten or deleted by the min-button.
     if (quantity <= 0) {
-      await prisma.periodMaterialShortage.delete({ where: { id: existing.id } });
+      const gone = await prisma.periodMaterialShortage.deleteMany({ where: { id: existing.id, supplierId: null } });
+      if (gone.count === 0) return conflict("Dit materiaal is ondertussen ingehuurd — pas de inhuur aan");
       return NextResponse.json({ success: true, deleted: true });
     }
 
-    const updated = await prisma.periodMaterialShortage.update({
-      where: { id: existing.id },
+    const changed = await prisma.periodMaterialShortage.updateMany({
+      where: { id: existing.id, supplierId: null },
       data: { quantity },
     });
+    if (changed.count === 0) return conflict("Dit materiaal is ondertussen ingehuurd — pas de inhuur aan");
+    const updated = await prisma.periodMaterialShortage.findUniqueOrThrow({ where: { id: existing.id } });
     return NextResponse.json({
       ...updated,
       subhireUnitCost: undefined,
@@ -71,7 +76,8 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     const existing = await prisma.periodMaterialShortage.findUnique({ where: { id: parseInt(shortageId) } });
     if (!existing || existing.periodId !== parseInt(id)) return notFound();
     if (existing.supplierId != null) return conflict("Dit materiaal is ingehuurd — maak de inhuur eerst ongedaan");
-    await prisma.periodMaterialShortage.delete({ where: { id: existing.id } });
+    const gone = await prisma.periodMaterialShortage.deleteMany({ where: { id: existing.id, supplierId: null } });
+    if (gone.count === 0) return conflict("Dit materiaal is ondertussen ingehuurd — maak de inhuur eerst ongedaan");
     return NextResponse.json({ success: true });
   } catch (err) {
     return serverError((err as Error).message);

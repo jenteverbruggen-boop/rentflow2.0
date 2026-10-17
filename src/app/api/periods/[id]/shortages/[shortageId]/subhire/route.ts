@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireModule, forbidden, badRequest, notFound, conflict, serverError } from "@/lib/api-auth";
 import { subhireShortage, updateSubhire, undoSubhire, SubhireError } from "@/lib/subhire";
-import { moneyVisible, redactMoney } from "@/lib/redact";
+import { moneyWritable, redactMoney } from "@/lib/redact";
 import { toNumberOrNull } from "@/lib/serialize";
 
 type Params = { params: Promise<{ id: string; shortageId: string }> };
@@ -45,7 +45,7 @@ function fail(err: unknown) {
   return serverError((err as Error).message);
 }
 
-/** Without Kosten/Facturen a caller may pick the supplier but not enter what
+/** Without Kosten/Facturen: wijzigen a caller may pick the supplier but not enter what
  * the supplier charges — the material's defaults apply and their cost fields
  * are dropped rather than trusted (and never echoed back). */
 function allowedCosts<T extends { basis?: unknown; unitCost?: unknown; costOverride?: unknown }>(
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const { id, shortageId } = await params;
     const parsed = hireSchema.safeParse(await req.json());
     if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Ongeldige invoer");
-    const row = await subhireShortage(parseInt(id), parseInt(shortageId), allowedCosts(parsed.data, moneyVisible(access)));
+    const row = await subhireShortage(parseInt(id), parseInt(shortageId), allowedCosts(parsed.data, moneyWritable(access)));
     return NextResponse.json(wire(row, access), { status: 201 });
   } catch (err) {
     return fail(err);
@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const { id, shortageId } = await params;
     const parsed = patchSchema.safeParse(await req.json());
     if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Ongeldige invoer");
-    const row = await updateSubhire(parseInt(id), parseInt(shortageId), allowedCosts(parsed.data, moneyVisible(access)));
+    const row = await updateSubhire(parseInt(id), parseInt(shortageId), allowedCosts(parsed.data, moneyWritable(access)));
     return NextResponse.json(wire(row, access));
   } catch (err) {
     return fail(err);

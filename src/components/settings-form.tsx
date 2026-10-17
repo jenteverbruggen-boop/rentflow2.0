@@ -64,7 +64,10 @@ export function SettingsForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      queryClient.invalidateQueries({ queryKey: ["company-settings"] }); // print headers
+    },
   });
 
   return (

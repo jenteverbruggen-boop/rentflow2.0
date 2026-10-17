@@ -13,8 +13,9 @@ model User {
   password      String
   name          String
   // UI preference kept on the account, so light/dark follows the user to every
-  // device and survives logging out and in.
-  theme         String         @default("dark")
+  // device and survives logging out and in. null = never chosen on an account
+  // yet: the browser's own choice stands and is adopted on first load.
+  theme         String?
   roleId        Int
   personId      Int?           @unique
   createdAt     DateTime       @default(now())

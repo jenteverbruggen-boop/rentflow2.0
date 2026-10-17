@@ -59,7 +59,7 @@ function escapeText(value: string): string {
     .replace(/\\/g, "\\\\")
     .replace(/,/g, "\\,")
     .replace(/;/g, "\\;")
-    .replace(/\n/g, "\\n");
+    .replace(/\r\n|\r|\n/g, "\\n"); // a bare CR would end the content line
 }
 
 function formatUtc(date: Date): string {

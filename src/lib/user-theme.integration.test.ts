@@ -32,15 +32,15 @@ afterAll(async () => {
 });
 
 describe("account theme", () => {
-  it("a new account is dark, and the choice is remembered per account", async () => {
-    expect(await getUserTheme(alice)).toBe("dark");
+  it("a new account has no preference yet, and a choice is remembered per account", async () => {
+    expect(await getUserTheme(alice)).toBeNull();
     expect(await setUserTheme(alice, "light")).toBe("light");
     expect(await getUserTheme(alice)).toBe("light");
-    expect(await getUserTheme(bob)).toBe("dark"); // someone else's preference is untouched
+    expect(await getUserTheme(bob)).toBeNull(); // someone else's preference is untouched
   });
 
-  it("an unknown stored value reads as the default instead of breaking the UI", async () => {
+  it("an unknown stored value reads as 'no preference' instead of breaking the UI", async () => {
     await client.user.update({ where: { id: bob }, data: { theme: "neon" } });
-    expect(await getUserTheme(bob)).toBe("dark");
+    expect(await getUserTheme(bob)).toBeNull();
   });
 });

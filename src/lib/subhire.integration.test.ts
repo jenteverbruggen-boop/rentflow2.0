@@ -277,7 +277,7 @@ describe("inhuur in the figures (C3)", () => {
     const sold = 3 * 50 * days;
     expect(stats.revenueByMonth.find((m) => m.month === "2027-03")!.bookedMaterials).toBe(sold);
     expect(stats.topMaterials.find((m) => m.materialId === mat.id)!.revenue).toBe(sold);
-    expect(stats.subhire).toEqual({ revenue: sold, cost: 60, margin: sold - 60, rows: 1, unpricedRows: 0 });
+    expect(stats.subhire).toEqual({ revenue: sold, cost: 60, margin: sold - 60, rows: 1, unpricedRows: 0, componentCost: 0 });
     // Payback is about owned stock: a hired-in material (no units) never appears.
     const payback = await computePaybackStats(client);
     expect([...payback.best, ...payback.worst].some((p) => p.materialId === mat.id)).toBe(false);

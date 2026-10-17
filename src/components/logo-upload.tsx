@@ -28,6 +28,7 @@ export function LogoUpload() {
     onSuccess: () => {
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["settings"] });
+      queryClient.invalidateQueries({ queryKey: ["company-settings"] }); // print headers
     },
     onError: (e) => setError(e.message),
   });
@@ -37,6 +38,7 @@ export function LogoUpload() {
     onSuccess: () => {
       setPreviewUrl(null);
       queryClient.invalidateQueries({ queryKey: ["settings"] });
+      queryClient.invalidateQueries({ queryKey: ["company-settings"] }); // print headers
     },
   });
 

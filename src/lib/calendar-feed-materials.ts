@@ -71,7 +71,10 @@ export async function loadPeriodMaterialLines(
       select: { periodId: true, quantity: true, material: { select: MATERIAL_SELECT } },
     }),
     client.periodMaterialShortage.findMany({
-      where: { periodId: { in: periodIds }, bundleBookingId: null },
+      // Only hired-in shortages: those units will really be there. An open
+      // shortage is "wanted but not in stock" — listing it would tell the crew
+      // to expect material that may never arrive.
+      where: { periodId: { in: periodIds }, bundleBookingId: null, supplierId: { not: null } },
       select: { periodId: true, quantity: true, material: { select: MATERIAL_SELECT } },
     }),
   ]);

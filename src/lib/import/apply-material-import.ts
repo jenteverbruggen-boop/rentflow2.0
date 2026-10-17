@@ -1,5 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
+import { resolveSubhireSupplier } from "@/lib/import/subhire-supplier";
+import { resolveCategoryId } from "@/lib/import/category-resolve";
 import type { ParsedMaterialRow, MaterialParseError } from "@/lib/import/material-adapter";
 import { nextCode } from "@/lib/material-code";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
@@ -9,33 +11,6 @@ export interface ApplyMaterialImportResult {
   updated: number;
   unchanged: number;
   errors: MaterialParseError[];
-}
-
-/**
- * M1.4 — resolves (and, if missing, creates) the Category row a parsed
- * row's folder maps to. A row with no folder at all gets no category
- * relation — its raw `category` string still lands on the material for
- * display, same as manual entry today.
- */
-async function resolveCategoryId(
-  tx: PrismaClient,
-  categoryCache: Map<string, number>,
-  categoryName: string | null,
-  categoryPrefix: string | null,
-): Promise<number | null> {
-  if (!categoryName || !categoryPrefix) return null;
-  const cached = categoryCache.get(categoryName);
-  if (cached != null) return cached;
-  const existing = await tx.category.findUnique({ where: { name: categoryName } });
-  if (existing) {
-    categoryCache.set(categoryName, existing.id);
-    return existing.id;
-  }
-  const created = await tx.category.create({
-    data: { name: categoryName, prefix: categoryPrefix },
-  });
-  categoryCache.set(categoryName, created.id);
-  return created.id;
 }
 
 /**
@@ -70,13 +45,7 @@ export async function applyMaterialRow(
 
   // "Inhuur <leverancier>" folder → hired-in item from that supplier
   // (created on first sight). Rows without one leave these columns alone.
-  let subhire: { subhireOnly: true; defaultSupplierId: number } | null = null;
-  if (row.subhireSupplierName) {
-    const supplier =
-      (await tx.supplier.findFirst({ where: { name: row.subhireSupplierName } })) ??
-      (await tx.supplier.create({ data: { name: row.subhireSupplierName } }));
-    subhire = { subhireOnly: true, defaultSupplierId: supplier.id };
-  }
+  const subhire = row.subhireSupplierName ? await resolveSubhireSupplier(tx, row.subhireSupplierName) : null;
 
   const data = {
     name: row.name,

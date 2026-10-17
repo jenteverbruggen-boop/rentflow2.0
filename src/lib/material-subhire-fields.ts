@@ -5,7 +5,7 @@
 export function subhireFieldsData(body: Record<string, unknown>) {
   const supplier = body.defaultSupplierId;
   return {
-    ...(supplier !== undefined ? { defaultSupplierId: supplier === null ? null : Number(supplier) } : {}),
+    ...(supplier === null || Number.isInteger(supplier) ? { defaultSupplierId: supplier as number | null } : {}),
     ...(body.subhireCostBasis === "per_huur" || body.subhireCostBasis === "per_dag"
       ? { subhireCostBasis: body.subhireCostBasis }
       : {}),
@@ -24,4 +24,17 @@ export function subhireFieldsError(
   const supplierAfter =
     body.defaultSupplierId !== undefined ? (body.defaultSupplierId as number | null) : (current?.defaultSupplierId ?? null);
   return onlyAfter && supplierAfter == null ? "Een inhuur-materiaal heeft een standaardleverancier nodig" : null;
+}
+
+/** The named default supplier must exist and still be active — an archived one
+ * would make every booking of an inhuur-only material fail. */
+export async function supplierError(
+  client: { supplier: { findUnique: (a: { where: { id: number } }) => Promise<{ archived: boolean } | null> } },
+  body: Record<string, unknown>,
+): Promise<string | null> {
+  const id = body.defaultSupplierId;
+  if (id === undefined || id === null) return null;
+  if (!Number.isInteger(id)) return "Ongeldige leverancier";
+  const supplier = await client.supplier.findUnique({ where: { id: id as number } });
+  return !supplier || supplier.archived ? "Kies een leverancier die nog actief is" : null;
 }

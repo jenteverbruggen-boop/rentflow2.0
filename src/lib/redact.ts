@@ -19,6 +19,16 @@ export function moneyVisible(access: ResolvedAccess): boolean {
   return satisfies(held, "lezen");
 }
 
+/**
+ * May this caller *change* money (not just see it)? Read access is not enough:
+ * the rest of the app needs `Kosten/Facturen: wijzigen` for money writes, so
+ * supplier purchase prices follow the same rule.
+ */
+export function moneyWritable(access: ResolvedAccess): boolean {
+  if (access.scope === "own") return false;
+  return satisfies(access.permissions.kosten_facturen ?? "geen", "wijzigen");
+}
+
 // Whole record dropped entirely — a redacted PersonTravelCost with only
 // unitCost removed would still disclose that a travel arrangement exists,
 // itself commercial information (own-data-scoping-design.md:105's
@@ -90,16 +100,24 @@ const SCALAR_DENYLIST = new Set([
 // visible while dayPrice/basePrice next to it are hidden.
 const BOOLEAN_DENYLIST = new Set(["hasOverride"]);
 
-function redactValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(redactValue);
+// Hired-in material is commercial information beyond its price (who we rent
+// from, that we hire at all). Callers who merely lack Kosten/Facturen (a
+// planner) still need the supplier name to run the job; a scope-own freelancer
+// does not, and gets none of it — consistent with GET /api/suppliers being
+// closed to them.
+const OWN_SCOPE_HIDDEN = new Set(["supplier", "supplierId", "subhiredAt", "defaultSupplierId", "subhireOnly", "subhireCostBasis"]);
+
+function redactValue(value: unknown, own = false): unknown {
+  if (Array.isArray(value)) return value.map((v) => redactValue(v, own));
   if (value !== null && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
-      if (ARRAY_DENYLIST.has(key)) out[key] = [];
+      if (own && OWN_SCOPE_HIDDEN.has(key)) out[key] = key === "supplier" ? undefined : null;
+      else if (ARRAY_DENYLIST.has(key)) out[key] = [];
       else if (OBJECT_DENYLIST.has(key)) out[key] = undefined;
       else if (SCALAR_DENYLIST.has(key)) out[key] = null;
       else if (BOOLEAN_DENYLIST.has(key)) out[key] = false;
-      else out[key] = redactValue(v);
+      else out[key] = redactValue(v, own);
     }
     return out;
   }
@@ -117,7 +135,7 @@ function redactValue(value: unknown): unknown {
  */
 export function redactMoney<T>(value: T, access: ResolvedAccess): T {
   if (moneyVisible(access)) return value;
-  return redactValue(value) as T;
+  return redactValue(value, access.scope === "own") as T;
 }
 
 // findRejectedField/findRejectedMoneyWrite (the write-side guard, as

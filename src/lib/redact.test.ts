@@ -208,3 +208,34 @@ describe("moneyVisible", () => {
 
 // findRejectedField/findRejectedMoneyWrite (the write-side guard) have
 // their own test file: money-write-guard.test.ts.
+
+describe("redactMoney — hired-in material (C3)", () => {
+  const payload = () => ({
+    shortages: [
+      { id: 1, quantity: 3, supplierId: 7, supplier: { id: 7, name: "Funrent" }, subhiredAt: "2026-06-01", subhireUnitCost: 2, subhireCostOverride: 40,
+        material: { id: 1, name: "Bord", defaultSupplierId: 7, subhireOnly: true, subhireUnitCost: 2 } },
+    ],
+  });
+
+  it("a money-blind planner keeps the supplier (needed to run the job) but loses every price", () => {
+    const out = redactMoney(payload(), access("geen")).shortages[0];
+    expect(out.supplier).toEqual({ id: 7, name: "Funrent" });
+    expect(out.subhireUnitCost).toBeNull();
+    expect(out.subhireCostOverride).toBeNull();
+    expect(out.material.subhireUnitCost).toBeNull();
+  });
+
+  it("a scope-own freelancer gets no supplier information at all", () => {
+    const out = redactMoney(payload(), scopedAccess("verwijderen")).shortages[0];
+    expect(out.supplier).toBeUndefined();
+    expect(out.supplierId).toBeNull();
+    expect(out.subhiredAt).toBeNull();
+    expect(out.material.defaultSupplierId).toBeNull();
+    expect(out.material.subhireOnly).toBeNull();
+    expect(out.quantity).toBe(3); // the units themselves are still visible
+  });
+
+  it("someone who may see money sees everything", () => {
+    expect(redactMoney(payload(), access("lezen"))).toEqual(payload());
+  });
+});

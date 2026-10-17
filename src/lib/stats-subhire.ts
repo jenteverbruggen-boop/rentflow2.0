@@ -12,6 +12,9 @@ export interface SubhireStats {
   margin: number;
   rows: number;
   unpricedRows: number;
+  /** Supplier cost of hired-in *components of a set*. The set is billed as a
+   * whole, so these have no revenue of their own and stay out of the margin. */
+  componentCost: number;
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;
@@ -28,15 +31,20 @@ export function computeSubhireStats(periods: Period[]): SubhireStats {
   let cost = 0;
   let rows = 0;
   let unpricedRows = 0;
+  let componentCost = 0;
   for (const period of periods) {
     const days = periodDays(period);
     for (const row of (period.shortages ?? []).filter((s) => s.supplierId != null)) {
+      const total = subhireTotal(row, days);
+      if (row.bundleBookingId != null) {
+        componentCost += total ?? 0;
+        continue;
+      }
       rows += 1;
       revenue += shortageCost([row], days);
-      const total = subhireTotal(row, days);
       if (total == null) unpricedRows += 1;
       else cost += total;
     }
   }
-  return { revenue: round(revenue), cost: round(cost), margin: round(revenue - cost), rows, unpricedRows };
+  return { revenue: round(revenue), cost: round(cost), margin: round(revenue - cost), rows, unpricedRows, componentCost: round(componentCost) };
 }

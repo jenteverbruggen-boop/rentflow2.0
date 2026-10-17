@@ -15,6 +15,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const parsed = supplierSchema.safeParse(await req.json());
     if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? "Ongeldige invoer");
     if (!(await prisma.supplier.findUnique({ where: { id: parseInt(id) } }))) return notFound();
+    // Archiving a supplier that inhuur-only materials still default to would
+    // make those materials impossible to book.
+    if (parsed.data.archived === true && (await prisma.material.count({ where: { defaultSupplierId: parseInt(id), archived: false } })) > 0) {
+      return conflict("Deze leverancier is de standaardleverancier van een materiaal — kies eerst een andere");
+    }
     return NextResponse.json(await prisma.supplier.update({ where: { id: parseInt(id) }, data: parsed.data }));
   } catch (err) {
     return serverError((err as Error).message);

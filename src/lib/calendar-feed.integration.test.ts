@@ -303,8 +303,13 @@ describe("materials and address in the personal feed (C7)", () => {
         { periodId: period.id, stockItemId: stock[3].id, dayPriceSnapshot: 0, bundleBookingId: booking.id },
       ],
     });
+    const supplier = await client.supplier.create({ data: { name: "Funrent C7" } });
+    // Two tents hired in (they will be there), four still open (they may not).
     await client.periodMaterialShortage.create({
-      data: { periodId: period.id, materialId: tent.id, quantity: 2, dayPriceSnapshot: 80 },
+      data: { periodId: period.id, materialId: tent.id, quantity: 2, dayPriceSnapshot: 80, supplierId: supplier.id },
+    });
+    await client.periodMaterialShortage.create({
+      data: { periodId: period.id, materialId: tent.id, quantity: 4, dayPriceSnapshot: 75 },
     });
 
     // An already finished period (long before "now") with the same material.

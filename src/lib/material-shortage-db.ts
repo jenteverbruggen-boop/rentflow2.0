@@ -66,13 +66,18 @@ export async function fillShortages(
     filled += await client.$transaction(async (tx) => {
       const txClient = tx as unknown as PrismaClient;
       await lockMaterials(txClient, [row.materialId]);
+      // The row was read before the lock: it may have been hired in or shrunk
+      // since. Re-read it, or a stale copy would turn a supplier booking into
+      // owned units (and drop its cost record) or fill more than is missing.
+      const fresh = await txClient.periodMaterialShortage.findUnique({ where: { id: row.id } });
+      if (!fresh || fresh.supplierId != null) return 0;
       const free = await freeStockItemIds(
         txClient,
         row.materialId,
         row.period.startDate,
         row.period.endDate,
       );
-      const fillCount = Math.min(row.quantity, free.length);
+      const fillCount = Math.min(fresh.quantity, free.length);
       if (fillCount === 0) return 0;
 
       const chosen = free.slice(0, fillCount);
@@ -88,7 +93,7 @@ export async function fillShortages(
         })),
       });
 
-      const remainingQty = row.quantity - fillCount;
+      const remainingQty = fresh.quantity - fillCount;
       if (remainingQty <= 0) {
         await txClient.periodMaterialShortage.delete({ where: { id: row.id } });
       } else {

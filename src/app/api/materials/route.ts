@@ -11,7 +11,7 @@ import { redactMoney } from "@/lib/redact";
 import { findRejectedMoneyWrite, moneyFieldsToIgnore } from "@/lib/money-write-guard";
 import { serializeMaterialsList } from "@/lib/materials-list";
 import { materialMoneyData, serializeMaterialMoney } from "@/lib/material-money-fields";
-import { subhireFieldsData, subhireFieldsError } from "@/lib/material-subhire-fields";
+import { subhireFieldsData, subhireFieldsError, supplierError } from "@/lib/material-subhire-fields";
 
 const MATERIAL_MONEY_FIELDS = [
   "dayPrice",
@@ -85,6 +85,8 @@ export async function POST(req: NextRequest) {
     if (!name) return badRequest("naam is verplicht");
     const subhireError = subhireFieldsError(body);
     if (subhireError) return badRequest(subhireError);
+    const badSupplier = await supplierError(prisma, body);
+    if (badSupplier) return badRequest(badSupplier);
 
     let code: string | null = manualCode ?? null;
     if (!code && categoryId) {

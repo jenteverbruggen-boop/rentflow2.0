@@ -33,5 +33,11 @@ export async function deleteSupplier(id: number): Promise<void> {
     prisma.periodMaterialShortage.count({ where: { supplierId: id } }),
   ]);
   if (materials + shortages > 0) throw new SupplierInUseError();
-  await prisma.supplier.delete({ where: { id } });
+  try {
+    await prisma.supplier.delete({ where: { id } });
+  } catch (e: unknown) {
+    // A hire landed between the count and the delete (FK restrict).
+    if ((e as { code?: string })?.code === "P2003" || (e as { code?: string })?.code === "P2014") throw new SupplierInUseError();
+    throw e;
+  }
 }
