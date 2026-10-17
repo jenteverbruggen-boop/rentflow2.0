@@ -42,7 +42,7 @@ export function MaterialAvailableRow({
   // supplier); any other can be, by naming a supplier — also in a confirmed
   // project, where hiring in is the only way past the stock ceiling.
   const alwaysHired = !!m.material.subhireOnly && !m.material.isBundle;
-  const canHire = !m.material.isBundle && suppliers.length > 0;
+  const canHire = suppliers.length > 0;
   const hiring = over > 0 && !alwaysHired && supplier !== OPEN;
   const liftedCeiling = overbookable || alwaysHired || canHire;
   const isOverbooking = overbookable && over > 0 && !hiring && !alwaysHired;

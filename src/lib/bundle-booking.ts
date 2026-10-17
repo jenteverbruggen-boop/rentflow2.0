@@ -58,10 +58,11 @@ export async function bookBundleMaterial(args: BookBundleArgs): Promise<BookBund
       if (short > 0) {
         if (!args.allowOverbook && !comp.subhire) {
           const err = new Error(
-            `Onvoldoende voorraad voor component: ${comp.childId}`,
-          ) as Error & { code: string; childId: number };
+            `Onvoldoende voorraad voor ${comp.childName ?? `materiaal #${comp.childId}`}`,
+          ) as Error & { code: string; childId: number; shortfall: { requested: number; available: number } };
           err.code = "UNAVAIL";
           err.childId = comp.childId;
+          err.shortfall = { requested: needed, available: free.length };
           throw err;
         }
         shortfalls.set(comp.childId, short);

@@ -16,6 +16,8 @@ import { parseDateRange } from "@/lib/parse-date-range";
 import { redactMoney } from "@/lib/redact";
 import { setDayPrice } from "@/lib/set-price";
 
+const UNLIMITED = 999;
+
 export async function GET(req: NextRequest) {
   const access = await requireModule("planning", "lezen").catch(() => null);
   if (!access) return forbidden();
@@ -80,7 +82,8 @@ export async function GET(req: NextRequest) {
         let sharedComponents: string[] | undefined;
 
         if (m.isBundle) {
-          availableCount = await bundleAvailableCount(m.id, rangeArgs);
+          // Infinity = a set of inhuur-only components only: unlimited.
+          availableCount = Math.min(await bundleAvailableCount(m.id, rangeArgs), UNLIMITED);
           availableStockItemIds = [];
           const shared = m.components
             .filter((c) => (sharingMap.get(c.childId)?.length ?? 0) > 1)

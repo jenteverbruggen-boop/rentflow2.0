@@ -108,8 +108,10 @@ export async function POST(req: NextRequest, { params }: Params) {
           ),
         );
       } catch (e: unknown) {
-        const err = e as { code?: string; message?: string };
-        if (err.code === "UNAVAIL") return conflict(err.message ?? "Onvoldoende voorraad");
+        const err = e as { code?: string; message?: string; shortfall?: unknown };
+        if (err.code === "UNAVAIL") {
+          return NextResponse.json({ error: err.message ?? "Onvoldoende voorraad", shortfall: err.shortfall }, { status: 409 });
+        }
         if (err.code === "P2002") return conflict("Conflict bij gelijktijdige boeking — probeer opnieuw");
         return serverError(err.message ?? "Onbekende fout");
       }

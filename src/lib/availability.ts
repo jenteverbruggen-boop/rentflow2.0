@@ -53,8 +53,12 @@ export async function bundleAvailableCount(
   });
   if (components.length === 0) return 0;
 
+  // Inhuur-only components have no stock to run out of (they are always hired
+  // in), so they don't limit the set. When every component is like that the
+  // count is unlimited (Infinity) and the caller clamps it.
   let min = Infinity;
   for (const comp of components) {
+    if (comp.child.subhireOnly) continue;
     const allIds = comp.child.stockItems.map((s) => s.id);
     const booked = await client.periodStockItem.findMany({
       where: {
@@ -73,7 +77,7 @@ export async function bundleAvailableCount(
     const setsFromThis = Math.floor(availCount / comp.quantity);
     if (setsFromThis < min) min = setsFromThis;
   }
-  return min === Infinity ? 0 : min;
+  return min;
 }
 
 export async function checkPersonAvailability(
