@@ -142,6 +142,21 @@ describe("computeStats (K1.2 — real seeded data)", () => {
     expect(els?.bookedDays).toBe(1); // project C (concept) counts, project D (cancelled) does not
   });
 
+  it("a project with an unknown status is skipped, not counted as agreed", async () => {
+    const c = await client.client.create({ data: { name: "Onbekend" } });
+    const fred = await client.person.create({ data: { name: "Fred", dayPrice: 100 } });
+    await client.project.create({
+      data: {
+        name: "Vreemd", clientId: c.id, status: "mystery", startDate: new Date("2027-03-10"), endDate: new Date("2027-03-10"),
+        periods: { create: [{ name: "Dag", startDate: new Date("2027-03-10"), endDate: new Date("2027-03-10"),
+          people: { create: [{ personId: fred.id, dayPriceSnapshot: 100 }] } }] },
+      },
+    });
+    const stats = await computeStats({ from: new Date("2027-03-01"), to: new Date("2027-03-31") }, client);
+    expect(stats.revenueByMonth.find((m) => m.month === "2027-03")?.booked).toEqual({ agreed: 0, pending: 0 });
+    expect(stats.revenueByClient.find((r) => r.clientId === c.id)).toBeUndefined();
+  });
+
   it("topMaterials lists Tent with its booked revenue", async () => {
     const stats = await computeStats({ from: new Date("2026-06-01"), to: new Date("2026-06-30") }, client);
     const tent = stats.topMaterials.find((m) => m.materialId === ids.materialId);

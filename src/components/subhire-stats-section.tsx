@@ -29,9 +29,9 @@ export function SubhireStatsSection({ data }: { data: SubhireStatsEntry }) {
             </div>
           ))}
         </div>
-        {data.componentCost.agreed + data.componentCost.pending > 0 && (
+        {data.componentCost.agreed > 0 && (
           <p className="text-xs text-muted-foreground">
-            Waarvan {formatEUR(data.componentCost.agreed + data.componentCost.pending)} inkoop voor ingehuurde onderdelen van sets (hun omzet is het aandeel in de setprijs).
+            Waarvan {formatEUR(data.componentCost.agreed)} inkoop voor ingehuurde onderdelen van sets (hun omzet is het aandeel in de setprijs).
           </p>
         )}
         {data.unpricedRows > 0 && (

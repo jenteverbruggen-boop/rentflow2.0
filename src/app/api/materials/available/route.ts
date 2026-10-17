@@ -107,6 +107,7 @@ export async function GET(req: NextRequest) {
               category: m.category,
               notes: m.notes,
               dayPrice: effectivePrice,
+              priceBasis: m.priceBasis,
               basePrice,
               hasOverride: overrideMap.has(m.id),
               isBundle: m.isBundle,

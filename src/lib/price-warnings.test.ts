@@ -9,11 +9,13 @@ describe("price warnings (E3)", () => {
     expect(noSellingPrice({ dayPrice: 0, isBundle: true })).toBe(false);
   });
   it("flags inhuur-only items sold at or below their purchase price", () => {
-    const m = { isBundle: false, subhireOnly: true, subhireUnitCost: 5, dayPrice: 5 };
+    const m = { isBundle: false, subhireOnly: true, subhireUnitCost: 5, dayPrice: 5, priceBasis: "per_huur" as const, subhireCostBasis: "per_huur" as const };
     expect(sellAtOrBelowCost(m)).toBe(true);
     expect(sellAtOrBelowCost({ ...m, dayPrice: 6 })).toBe(false);
     expect(sellAtOrBelowCost({ ...m, dayPrice: 0 })).toBe(false);
     expect(sellAtOrBelowCost({ ...m, subhireUnitCost: null })).toBe(false);
     expect(sellAtOrBelowCost({ ...m, subhireOnly: false })).toBe(false);
+    // per day vs per rental is not comparable
+    expect(sellAtOrBelowCost({ ...m, priceBasis: "per_dag" })).toBe(false);
   });
 });

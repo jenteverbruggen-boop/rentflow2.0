@@ -9,7 +9,7 @@ import { aggregatePersonUtilisation } from "@/lib/stats-utilisation";
 import { computeTopMaterials } from "@/lib/stats-top-materials";
 import { computeSubhireStats } from "@/lib/stats-subhire";
 import { toNumber } from "@/lib/serialize";
-import { emptySplit, statusBucket, type BucketedPeriod } from "@/lib/stats-status";
+import { emptySplit, statusBucket, type BucketedPeriod, type StatsBucket } from "@/lib/stats-status";
 import type { Period } from "@/types";
 
 export interface DateRange {
@@ -41,9 +41,11 @@ export async function computeStats(range: DateRange, client: PrismaClient = defa
   // ever reads these via `new Date(x)` or an exact string-literal
   // comparison, both runtime-safe regardless of the exact TS shape.
   // Each period is tagged with its project's bucket: agreed vs still to confirm.
-  const periods = periodRows.map((r) => ({
+  // An unknown status has no bucket and is skipped, never counted as agreed.
+  const counted = periodRows.filter((r) => statusBucket(r.project.status) != null);
+  const periods = counted.map((r) => ({
     ...(serializeStatsPeriod(r) as unknown as Period),
-    bucket: statusBucket(r.project.status) ?? undefined,
+    bucket: statusBucket(r.project.status) as StatsBucket,
   })) as BucketedPeriod[];
 
   const invoiceRows = await client.invoice.findMany({
@@ -97,7 +99,7 @@ export async function computeStats(range: DateRange, client: PrismaClient = defa
   });
 
   const bookedByClient = aggregateBookedByClient(
-    periodRows.map((p, i) => ({
+    counted.map((p, i) => ({
       period: periods[i],
       clientId: p.project.clientId,
       clientName: p.project.clientRel?.name ?? null,
