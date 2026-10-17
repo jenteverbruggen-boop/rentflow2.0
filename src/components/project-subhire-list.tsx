@@ -6,12 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SubhireDialog, type SubhireTarget } from "@/components/subhire-dialog";
 import { useAuthMe } from "@/hooks/use-auth-me";
+import { useStockHints } from "@/hooks/use-stock-hints";
 import { useSubhire } from "@/hooks/use-subhire";
 import { canSeeMoney } from "@/lib/me-access";
 import { formatEUR, periodDays } from "@/lib/pricing";
 import { shortageCost, canOverbook } from "@/lib/material-shortage";
 import { subhireTotal } from "@/lib/subhire-cost";
-import type { Project } from "@/types";
+import type { Project, StockHint } from "@/types";
+
+const ownFree = (hint: StockHint | undefined, quantity: number) =>
+  hint?.kind === "hired" ? Math.min(hint.ownFreeNow, quantity) : 0;
 
 /** The material hired in for this project: what, from whom and (for a caller
  * who may see money) what it costs. Each row can be changed or undone — undone
@@ -20,7 +24,9 @@ import type { Project } from "@/types";
 export function ProjectSubhireList({ project }: { project: Project }) {
   const { data: me } = useAuthMe();
   const money = canSeeMoney(me);
-  const { undo } = useSubhire(project.id);
+  const { undo, toStock } = useSubhire(project.id);
+  const { data: hints } = useStockHints(project.id);
+  const [notice, setNotice] = useState<string | null>(null);
   const [editing, setEditing] = useState<SubhireTarget | null>(null);
 
   const rows = project.periods.flatMap((period) =>
@@ -48,6 +54,18 @@ export function ProjectSubhireList({ project }: { project: Project }) {
                 via {s.supplier?.name ?? "leverancier"}
                 {money && (total != null ? ` · inkoop ${formatEUR(total)}` : " · inkoopprijs onbekend")}
               </p>
+              {ownFree(hints?.get(s.id), s.quantity) > 0 && (
+                <p className="text-xs text-emerald-700 dark:text-emerald-500">
+                  {ownFree(hints?.get(s.id), s.quantity)} eigen unit(s) vrij ·{" "}
+                  <button type="button" className="underline underline-offset-2" disabled={toStock.isPending}
+                    onClick={() => toStock.mutate(
+                      { periodId: period.id, shortageId: s.id, quantity: ownFree(hints?.get(s.id), s.quantity) },
+                      { onSuccess: (r) => setNotice(`Vergeet ${r.supplierName} niet af te bellen (${r.converted}× ${s.material.name})`) },
+                    )}>
+                    Eigen voorraad gebruiken
+                  </button>
+                </p>
+              )}
             </div>
             <div className="flex gap-1">
               <Button size="sm" variant="ghost" className="h-7 px-2 text-xs"
@@ -72,6 +90,8 @@ export function ProjectSubhireList({ project }: { project: Project }) {
             {incomplete && " (nog niet alle prijzen ingevuld)"}
           </p>
         )}
+        {notice && <p className="px-2 text-xs text-amber-700 dark:text-amber-500" role="status">{notice}</p>}
+        {toStock.isError && <p className="px-2 text-xs text-destructive">{toStock.error.message}</p>}
         {undo.isError && <p className="px-2 text-xs text-destructive">{undo.error.message}</p>}
       </CardContent>
       <SubhireDialog projectId={project.id} target={editing} onClose={() => setEditing(null)} />

@@ -18,8 +18,8 @@ export function useSubhire(projectId: number) {
     queryClient.invalidateQueries({ queryKey: ["projects"] });
     queryClient.invalidateQueries({ queryKey: ["available"] });
   };
-  const call = async (periodId: number, shortageId: number, method: string, body?: unknown) => {
-    const res = await fetch(`/api/periods/${periodId}/shortages/${shortageId}/subhire`, {
+  const call = async (periodId: number, shortageId: number, method: string, body?: unknown, suffix = "") => {
+    const res = await fetch(`/api/periods/${periodId}/shortages/${shortageId}/subhire${suffix}`, {
       method,
       headers: { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -42,5 +42,11 @@ export function useSubhire(projectId: number) {
     mutationFn: (a: { periodId: number; shortageId: number }) => call(a.periodId, a.shortageId, "DELETE"),
     onSuccess: refresh,
   });
-  return { hire, update, undo };
+  /** Hired-in → own stock (the units are free in the warehouse). */
+  const toStock = useMutation({
+    mutationFn: async (a: { periodId: number; shortageId: number; quantity: number }) =>
+      (await call(a.periodId, a.shortageId, "POST", { quantity: a.quantity }, "/to-stock")) as { converted: number; supplierName: string },
+    onSuccess: refresh,
+  });
+  return { hire, update, undo, toStock };
 }

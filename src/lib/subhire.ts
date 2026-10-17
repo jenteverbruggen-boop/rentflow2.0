@@ -5,7 +5,7 @@ import { canOverbook } from "@/lib/material-shortage";
 import type { SubhireCostBasis } from "@/types";
 
 export type SubhireErrorCode =
-  | "NOT_FOUND" | "ALREADY_SUBHIRED" | "NOT_SUBHIRED" | "BAD_SUPPLIER" | "BAD_QUANTITY" | "PROJECT_LOCKED";
+  | "NOT_FOUND" | "ALREADY_SUBHIRED" | "NOT_SUBHIRED" | "BAD_SUPPLIER" | "BAD_QUANTITY" | "PROJECT_LOCKED" | "NOTHING_FREE";
 
 export class SubhireError extends Error {
   code: SubhireErrorCode;
