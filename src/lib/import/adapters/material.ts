@@ -70,6 +70,7 @@ export const materialAdapter: EntityAdapter<ParsedMaterialRow> = {
         isBundle: m.isBundle,
         archived: m.archived,
         notes: m.notes,
+        subhireUnitCost: toNumberOrNull(m.subhireUnitCost) ?? null,
       };
       // The pipeline only ever calls diffAgainstExisting with this map's
       // values — ExistingMaterial's shape is exactly what that needs,

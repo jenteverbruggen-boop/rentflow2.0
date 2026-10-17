@@ -85,4 +85,33 @@ describe("C3 — Inhuur folders in the real Rentman export", () => {
     expect(materials.filter((m) => m.subhireSupplierName).every((m) => m.stockItems.length === 0)).toBe(true);
     expect(materials.filter((m) => m.categoryName && !/^inhuur/i.test(m.categoryName)).every((m) => !m.subhireSupplierName)).toBe(true);
   });
+
+  it("their Rentman price is the supplier's purchase price: subhireUnitCost, selling price 0, margin ignored (E2)", () => {
+    const { materials } = parseMaterialRows(loadRows("Export_Equipment_normal.csv"), "rentman-equipment");
+    const hired = materials.filter((m) => m.subhireSupplierName);
+    expect(hired.every((m) => m.dayPrice === 0 && m.costPrice === null)).toBe(true);
+    expect(hired.some((m) => (m.subhireUnitCost ?? 0) > 0)).toBe(true);
+  });
+});
+
+describe("E2 — inhuur rows", () => {
+  const base = {
+    ID: "1", Code: "9998-001", "Name (in database)": "Bord", "Folder (Folder)": "9998-Inhuur Funrent",
+    "Rental-/Sales price": "0,38", "Margin price": "0,10", "Stock calculation method": "Non-serialized", "Current quantity": "0",
+  };
+  it("maps the price to subhireUnitCost", () => {
+    const { materials, errors } = parseMaterialRows([base], "rentman-equipment");
+    expect(errors).toEqual([]);
+    expect(materials[0]).toMatchObject({ dayPrice: 0, costPrice: null, subhireUnitCost: 0.38, subhireSupplierName: "Funrent" });
+  });
+  it("refuses an inhuur row with quantity > 0", () => {
+    const { materials, errors } = parseMaterialRows([{ ...base, "Current quantity": "4" }], "rentman-equipment");
+    expect(materials).toHaveLength(0);
+    expect(errors[0].reason).toMatch(/voorraad/);
+  });
+  it("leaves ordinary rows alone", () => {
+    const { materials } = parseMaterialRows([{ ...base, "Folder (Folder)": "0501-Tenten" }], "rentman-equipment");
+    expect(materials[0]).toMatchObject({ dayPrice: 0.38, costPrice: 0.1 });
+    expect(materials[0].subhireUnitCost).toBeUndefined();
+  });
 });

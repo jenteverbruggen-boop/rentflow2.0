@@ -157,4 +157,40 @@ describe("applyMaterialImport (M1.4)", () => {
     const supplier = await client.supplier.findFirstOrThrow({ where: { name: "Rent-men" } });
     expect(await client.material.findUnique({ where: { code: "0777-001" } })).toMatchObject({ subhireOnly: true, defaultSupplierId: supplier.id });
   });
+
+  it("E2: a new inhuur row lands as purchase price per rental, selling price 0", async () => {
+    await applyMaterialImport([row({
+      code: "9998-010", name: "Bord E2", categoryName: "Inhuur Funrent", categoryPrefix: "9998",
+      dayPrice: 0, stockItems: [], subhireSupplierName: "Funrent", subhireUnitCost: 0.38,
+    })], [], client);
+    const m = await client.material.findUnique({ where: { code: "9998-010" } });
+    expect(m).toMatchObject({ dayPrice: 0, subhireUnitCost: 0.38, subhireCostBasis: "per_huur", priceBasis: "per_huur", subhireOnly: true });
+  });
+
+  it("E2: a re-import never overwrites an entered selling price or purchase price, and fills an empty purchase price", async () => {
+    const inhuur = (cost: number | null) => row({
+      code: "9998-011", name: "Tafel E2", categoryName: "Inhuur Funrent", categoryPrefix: "9998",
+      dayPrice: 0, stockItems: [], subhireSupplierName: "Funrent", subhireUnitCost: cost,
+    });
+    await applyMaterialImport([inhuur(null)], [], client);
+    await client.material.update({ where: { code: "9998-011" }, data: { dayPrice: 7.5 } });
+    // Empty purchase price gets filled; the selling price stays.
+    expect(await applyMaterialImport([inhuur(2)], [], client)).toMatchObject({ updated: 1 });
+    expect(await client.material.findUnique({ where: { code: "9998-011" } })).toMatchObject({ dayPrice: 7.5, subhireUnitCost: 2 });
+    // A different price in the file is ignored now that one is set.
+    expect(await applyMaterialImport([inhuur(9)], [], client)).toMatchObject({ unchanged: 1 });
+    expect(await client.material.findUnique({ where: { code: "9998-011" } })).toMatchObject({ dayPrice: 7.5, subhireUnitCost: 2 });
+  });
+
+  it("E2: an existing material with own units is not turned inhuur-only (row error)", async () => {
+    await applyMaterialImport([row({ code: "0888-020", name: "Kruk", categoryName: "Zitmeubilair", categoryPrefix: "0888" })], [], client);
+    const result = await applyMaterialImport(
+      [row({ code: "0888-020", name: "Kruk", categoryName: "Zitmeubilair", categoryPrefix: "0888", subhireSupplierName: "Rent-men" })],
+      [],
+      client,
+    );
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].reason).toMatch(/eigen units/);
+    expect((await client.material.findUnique({ where: { code: "0888-020" } }))?.subhireOnly).toBe(false);
+  });
 });

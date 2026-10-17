@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { resolveSubhireSupplier } from "@/lib/import/subhire-supplier";
+import { assertNoOwnStock, updateExistingInhuur } from "@/lib/import/apply-inhuur-row";
 import { resolveCategoryId } from "@/lib/import/category-resolve";
 import type { ParsedMaterialRow, MaterialParseError } from "@/lib/import/material-adapter";
 import { nextCode } from "@/lib/material-code";
@@ -47,6 +48,8 @@ export async function applyMaterialRow(
   // (created on first sight). Rows without one leave these columns alone.
   const subhire = row.subhireSupplierName ? await resolveSubhireSupplier(tx, row.subhireSupplierName) : null;
 
+  if (subhire && existing) await assertNoOwnStock(tx, existing.id, row.name);
+
   const data = {
     name: row.name,
     category: row.categoryName,
@@ -59,24 +62,33 @@ export async function applyMaterialRow(
     archived: row.archived,
     notes: row.notes,
     ...(subhire ?? {}),
+    // Inhuur: the price from the file is the supplier's, billed per rental.
+    ...(subhire
+      ? { subhireUnitCost: row.subhireUnitCost ?? null, subhireCostBasis: "per_huur", priceBasis: "per_huur" }
+      : {}),
   };
 
   if (existing) {
-    // Postgres types dayPrice/costPrice/listPrice `Decimal`; SQLite (dev)
-    // types them `Float`. `Decimal !== number` never compiles as a plain
-    // `!==` against the Postgres client (CI's Decimal-drift guard,
-    // Y1.5) — coerce both sides through toNumber()/toNumberOrNull()
-    // rather than comparing raw values.
+    // Postgres types the prices `Decimal`, SQLite `Float`: coerce both sides
+    // through toNumber()/toNumberOrNull() (Y1.5 Decimal-drift guard).
+    // Inhuur rows (E2) never overwrite prices set in RentFlow: see apply-inhuur-row.ts.
+    const fillCost = subhire != null && existing.subhireUnitCost == null && row.subhireUnitCost != null;
+    const priceChanged =
+      !subhire && (toNumber(existing.dayPrice) !== data.dayPrice || toNumberOrNull(existing.costPrice) !== data.costPrice);
     const changed =
       existing.name !== data.name ||
-      toNumber(existing.dayPrice) !== data.dayPrice ||
-      toNumberOrNull(existing.costPrice) !== data.costPrice ||
+      priceChanged ||
+      fillCost ||
       toNumberOrNull(existing.listPrice) !== data.listPrice ||
       existing.isBundle !== data.isBundle ||
       existing.archived !== data.archived ||
       existing.notes !== data.notes ||
       (subhire != null && (!existing.subhireOnly || existing.defaultSupplierId !== subhire.defaultSupplierId));
     if (!changed) return "unchanged";
+    if (subhire) {
+      await updateExistingInhuur(tx, existing, data, subhire, row);
+      return "updated";
+    }
     await tx.material.update({ where: { id: existing.id }, data });
     return "updated";
   }

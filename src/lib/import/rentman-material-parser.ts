@@ -103,6 +103,17 @@ export function parseRentmanRows(rows: Record<string, string>[]): {
       }
     }
 
+    // E4 rule: an inhuur item has no stock of its own. Refuse the row rather
+    // than silently dropping the units.
+    if (subhireSupplierName && stockItems.length > 0) {
+      errors.push({
+        line: group.firstLine,
+        reason: `ID ${id}: inhuur-item "${name}" heeft voorraad (${stockItems.length}) — een inhuur-item heeft geen eigen units`,
+      });
+      continue;
+    }
+
+    const rentalPrice = parseNumber(first["Rental-/Sales price"]);
     materials.push({
       line: group.firstLine,
       externalId: id,
@@ -110,8 +121,12 @@ export function parseRentmanRows(rows: Record<string, string>[]): {
       name,
       categoryName,
       categoryPrefix,
-      dayPrice: parseNumber(first["Rental-/Sales price"]) ?? 0,
-      costPrice: parseNumber(first["Margin price"]),
+      // Inhuur: the Rentman price is the supplier's purchase price; the selling
+      // price stays 0 until someone enters it, and "Margin price" is
+      // meaningless without stock.
+      dayPrice: subhireSupplierName ? 0 : (rentalPrice ?? 0),
+      costPrice: subhireSupplierName ? null : parseNumber(first["Margin price"]),
+      ...(subhireSupplierName ? { subhireUnitCost: rentalPrice } : {}),
       listPrice: parseNumber(first["List price"]),
       isBundle,
       archived,

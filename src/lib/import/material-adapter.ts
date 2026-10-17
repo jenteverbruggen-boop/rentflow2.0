@@ -18,6 +18,9 @@ export interface ParsedMaterialRow {
   /** Rentman "Inhuur <leverancier>" folders: the item is hired in from this
    * supplier (named after the folder) and never stocked. */
   subhireSupplierName?: string | null;
+  /** For those items Rentman's "Rental-/Sales price" is what the supplier
+   * charges: it lands here (billed per rental), not on `dayPrice`. */
+  subhireUnitCost?: number | null;
 }
 
 export interface MaterialParseError {

@@ -12,7 +12,7 @@ import type { ImportEntity, ImportPreview } from "@/lib/import/pipeline-types";
  * surface does.
  */
 const MONEY_FIELDS_BY_ENTITY: Record<ImportEntity, string[]> = {
-  materials: ["dayPrice", "costPrice", "listPrice"],
+  materials: ["dayPrice", "costPrice", "listPrice", "subhireUnitCost"],
   people: ["dayPrice"],
   clients: [],
   locations: [],

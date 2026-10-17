@@ -32,6 +32,8 @@ export interface ExistingMaterial {
   isBundle: boolean;
   archived: boolean;
   notes: string | null;
+  /** Only read for inhuur rows. */
+  subhireUnitCost?: number | null;
 }
 
 const FIELDS: (keyof ExistingMaterial)[] = [
@@ -57,10 +59,17 @@ export function diffMaterialRow(parsed: ParsedMaterialRow, existing: ExistingMat
     archived: parsed.archived,
     notes: parsed.notes,
   };
+  // Inhuur rows (E2): a selling price entered in RentFlow is never overwritten
+  // and the margin price is ignored; only an empty purchase price gets filled.
+  const inhuur = !!parsed.subhireSupplierName;
   for (const field of FIELDS) {
+    if (inhuur && (field === "dayPrice" || field === "costPrice")) continue;
     if (candidate[field] !== existing[field]) {
       changes.push({ field, from: existing[field], to: candidate[field] });
     }
+  }
+  if (inhuur && existing.subhireUnitCost == null && parsed.subhireUnitCost != null) {
+    changes.push({ field: "subhireUnitCost", from: null, to: parsed.subhireUnitCost });
   }
   return changes;
 }
