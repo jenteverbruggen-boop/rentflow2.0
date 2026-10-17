@@ -1,12 +1,5 @@
 import type { ParsedMaterialRow, MaterialParseError } from "@/lib/import/material-adapter";
-
-function parseNumber(value: string | undefined): number | null {
-  const raw = (value ?? "").trim();
-  if (!raw) return null;
-  const normalized = raw.replace(/\./g, "").replace(",", ".");
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
-}
+import { parseNumber } from "@/lib/import/parse-number";
 
 function serialIdentifier(row: Record<string, string>): string | null {
   const candidates = [

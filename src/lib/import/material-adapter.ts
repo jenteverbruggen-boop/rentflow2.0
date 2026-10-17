@@ -1,5 +1,6 @@
 import type { SourceFormat } from "@/lib/import/format-detection";
 import { parseRentmanRows } from "@/lib/import/rentman-material-parser";
+import { parseNumber } from "@/lib/import/parse-number";
 
 export interface ParsedMaterialRow {
   line: number;
@@ -26,14 +27,6 @@ export interface ParsedMaterialRow {
 export interface MaterialParseError {
   line: number;
   reason: string;
-}
-
-function parseNumber(value: string | undefined): number | null {
-  const raw = (value ?? "").trim();
-  if (!raw) return null;
-  const normalized = raw.replace(/\./g, "").replace(",", ".");
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /** M1.1 — RentFlow's own round-trip layout (Q56): plain field names, no

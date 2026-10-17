@@ -72,6 +72,10 @@ describe("M1.6 — real export files, end to end", () => {
 
     const stockItemCount = await client.stockItem.count();
     expect(stockItemCount).toBe(1631);
+
+    // English-locale decimals ("0.38") must not turn into 38.
+    const borden = await client.material.findUnique({ where: { code: "9998-800" } });
+    expect(Number(borden?.subhireUnitCost)).toBe(0.38);
   });
 
   it("re-importing the normal file is idempotent — no duplicate materials or categories", async () => {
