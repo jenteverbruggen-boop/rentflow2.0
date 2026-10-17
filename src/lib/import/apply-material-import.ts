@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { resolveSubhireSupplier } from "@/lib/import/subhire-supplier";
-import { assertNoOwnStock, updateExistingInhuur } from "@/lib/import/apply-inhuur-row";
+import { hasOwnUnits, updateExistingInhuur, updateExistingOwnedInhuur } from "@/lib/import/apply-inhuur-row";
 import { resolveCategoryId } from "@/lib/import/category-resolve";
 import type { ParsedMaterialRow, MaterialParseError } from "@/lib/import/material-adapter";
 import { nextCode } from "@/lib/material-code";
@@ -48,22 +48,25 @@ export async function applyMaterialRow(
   // (created on first sight). Rows without one leave these columns alone.
   const subhire = row.subhireSupplierName ? await resolveSubhireSupplier(tx, row.subhireSupplierName) : null;
 
-  if (subhire && existing) await assertNoOwnStock(tx, existing.id, row.name);
+  // Own units (existing stock, or units in the file for a new material) make it a
+  // normal material that merely gets a default supplier.
+  const owned = subhire != null &&
+    hasOwnUnits(row, existing ? await tx.stockItem.count({ where: { materialId: existing.id } }) : null);
 
   const data = {
     name: row.name,
     category: row.categoryName,
     categoryId,
     code,
-    dayPrice: row.dayPrice,
+    dayPrice: owned && !existing ? 0 : row.dayPrice,
     costPrice: row.costPrice,
     listPrice: row.listPrice,
     isBundle: row.isBundle,
     archived: row.archived,
     notes: row.notes,
-    ...(subhire ?? {}),
+    ...(owned ? { defaultSupplierId: subhire.defaultSupplierId, subhireUnitCost: row.subhireUnitCost ?? null, subhireCostBasis: "per_huur" } : subhire ?? {}),
     // Inhuur: the price from the file is the supplier's, billed per rental.
-    ...(subhire
+    ...(subhire && !owned
       ? { subhireUnitCost: row.subhireUnitCost ?? null, subhireCostBasis: "per_huur", priceBasis: "per_huur" }
       : {}),
   };
@@ -83,8 +86,12 @@ export async function applyMaterialRow(
       existing.isBundle !== data.isBundle ||
       existing.archived !== data.archived ||
       existing.notes !== data.notes ||
-      (subhire != null && (!existing.subhireOnly || existing.defaultSupplierId !== subhire.defaultSupplierId));
+      (subhire != null && ((!owned && !existing.subhireOnly) || existing.defaultSupplierId !== subhire.defaultSupplierId));
     if (!changed) return "unchanged";
+    if (subhire && owned) {
+      await updateExistingOwnedInhuur(tx, existing, data, subhire.defaultSupplierId, row);
+      return "updated";
+    }
     if (subhire) {
       await updateExistingInhuur(tx, existing, data, subhire, row);
       return "updated";

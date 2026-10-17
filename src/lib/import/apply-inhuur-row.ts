@@ -2,15 +2,11 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import type { ParsedMaterialRow } from "@/lib/import/material-adapter";
 import { toNumber } from "@/lib/serialize";
 
-export const inhuurStockMessage = (name: string) =>
-  `"${name}" heeft eigen units — verwijder die eerst voor je het als inhuur-item importeert`;
-
-/** An inhuur row never gets own stock (E4): refuse when the material has
- * units already, instead of leaving both. */
-export async function assertNoOwnStock(tx: PrismaClient, materialId: number, name: string): Promise<void> {
-  if ((await tx.stockItem.count({ where: { materialId } })) > 0) {
-    throw new Error(inhuurStockMessage(name));
-  }
+/** An inhuur row on a material that has (or, when new, brings) own units is a
+ * normal material: only its default supplier and an empty purchase price follow
+ * the file. Preview and apply share this decision. */
+export function hasOwnUnits(row: ParsedMaterialRow, existingStockCount: number | null): boolean {
+  return !!row.subhireSupplierName && (existingStockCount == null ? row.stockItems.length > 0 : existingStockCount > 0);
 }
 
 type Existing = { id: number; dayPrice: unknown; subhireOnly: boolean; subhireUnitCost: unknown };
@@ -42,6 +38,31 @@ export async function updateExistingInhuur(
       ...(fillCost ? { subhireUnitCost: row.subhireUnitCost, subhireCostBasis: "per_huur" } : {}),
       // Without a selling price yet, bill per rental like every new inhuur item.
       ...(unpriced && !existing.subhireOnly ? { priceBasis: "per_huur" } : {}),
+    },
+  });
+}
+
+/**
+ * Re-import of an existing material that has own units but now sits in an
+ * "Inhuur <leverancier>" folder: it stays a normal material (not inhuur-only).
+ * The supplier becomes the default supplier, the purchase price is only filled
+ * when empty, dayPrice, costPrice and priceBasis are never touched.
+ */
+export async function updateExistingOwnedInhuur(
+  tx: PrismaClient,
+  existing: Pick<Existing, "id" | "subhireUnitCost">,
+  data: Data,
+  defaultSupplierId: number,
+  row: ParsedMaterialRow,
+): Promise<void> {
+  const fillCost = existing.subhireUnitCost == null && row.subhireUnitCost != null;
+  await tx.material.update({
+    where: { id: existing.id },
+    data: {
+      name: data.name, category: data.category, categoryId: data.categoryId, code: data.code,
+      listPrice: data.listPrice, isBundle: data.isBundle, archived: data.archived, notes: data.notes,
+      defaultSupplierId,
+      ...(fillCost ? { subhireUnitCost: row.subhireUnitCost, subhireCostBasis: "per_huur" } : {}),
     },
   });
 }

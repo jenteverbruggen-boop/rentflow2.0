@@ -1,5 +1,5 @@
 import type { ParsedMaterialRow, MaterialParseError } from "@/lib/import/material-adapter";
-import { inhuurStockMessage } from "@/lib/import/apply-inhuur-row";
+import { hasOwnUnits } from "@/lib/import/apply-inhuur-row";
 
 export interface ImportRowChange {
   field: string;
@@ -35,14 +35,13 @@ export interface ExistingMaterial {
   notes: string | null;
   /** Only read for inhuur rows. */
   subhireUnitCost?: number | null;
-  /** Own stock items; an inhuur row onto a material with units is refused on apply. */
+  /** Own stock items: an inhuur row onto a material with units keeps it a normal material. */
   stockCount?: number;
-}
-
-/** Same refusal as `assertNoOwnStock` on apply, so preview totals match. */
-export function inhuurStockConflict(parsed: ParsedMaterialRow, existing: ExistingMaterial): string | null {
-  if (!parsed.subhireSupplierName || !(existing.stockCount && existing.stockCount > 0)) return null;
-  return inhuurStockMessage(parsed.name);
+  /** Only read for inhuur rows. */
+  subhireOnly?: boolean;
+  defaultSupplierId?: number | null;
+  /** Name of the default supplier, compared with the file's "Inhuur <leverancier>" folder. */
+  defaultSupplierName?: string | null;
 }
 
 const FIELDS: (keyof ExistingMaterial)[] = [
@@ -71,6 +70,7 @@ export function diffMaterialRow(parsed: ParsedMaterialRow, existing: ExistingMat
   // Inhuur rows (E2): a selling price entered in RentFlow is never overwritten
   // and the margin price is ignored; only an empty purchase price gets filled.
   const inhuur = !!parsed.subhireSupplierName;
+  const owned = hasOwnUnits(parsed, existing.stockCount ?? 0);
   for (const field of FIELDS) {
     if (inhuur && (field === "dayPrice" || field === "costPrice")) continue;
     if (candidate[field] !== existing[field]) {
@@ -79,6 +79,13 @@ export function diffMaterialRow(parsed: ParsedMaterialRow, existing: ExistingMat
   }
   if (inhuur && existing.subhireUnitCost == null && parsed.subhireUnitCost != null) {
     changes.push({ field: "subhireUnitCost", from: null, to: parsed.subhireUnitCost });
+  }
+  // Same condition as apply: supplier differs, or (no own units) not yet inhuur-only.
+  if (inhuur && existing.defaultSupplierName !== undefined) {
+    const supplierDiffers = existing.defaultSupplierName !== parsed.subhireSupplierName;
+    if (supplierDiffers || (!owned && existing.subhireOnly === false)) {
+      changes.push({ field: "defaultSupplier", from: existing.defaultSupplierName, to: parsed.subhireSupplierName });
+    }
   }
   return changes;
 }
@@ -102,11 +109,6 @@ export function buildMaterialPreview(
     const existing = parsed.code ? existingByCode.get(parsed.code) : undefined;
     if (!existing) {
       rows.push({ line: parsed.line, classification: "new", matchKey: parsed.code, summary });
-      continue;
-    }
-    const conflict = inhuurStockConflict(parsed, existing);
-    if (conflict) {
-      rows.push({ line: parsed.line, classification: "errored", matchKey: parsed.code, summary, reason: conflict });
       continue;
     }
     const changes = diffMaterialRow(parsed, existing);

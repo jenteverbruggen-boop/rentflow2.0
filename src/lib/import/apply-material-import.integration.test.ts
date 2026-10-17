@@ -183,24 +183,41 @@ describe("applyMaterialImport (M1.4)", () => {
     expect(await client.material.findUnique({ where: { code: "9998-011" } })).toMatchObject({ dayPrice: 7.5, subhireUnitCost: 2 });
   });
 
-  it("E2: an existing material with own units is not turned inhuur-only (row error)", async () => {
-    await applyMaterialImport([row({ code: "0888-020", name: "Kruk", categoryName: "Zitmeubilair", categoryPrefix: "0888" })], [], client);
-    const result = await applyMaterialImport(
-      [row({ code: "0888-020", name: "Kruk", categoryName: "Zitmeubilair", categoryPrefix: "0888", subhireSupplierName: "Rent-men" })],
-      [],
-      client,
-    );
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].reason).toMatch(/eigen units/);
-    expect((await client.material.findUnique({ where: { code: "0888-020" } }))?.subhireOnly).toBe(false);
+  it("an existing material with own units stays normal: default supplier set, purchase price filled only when empty, prices untouched", async () => {
+    const base = { code: "0888-020", name: "Kruk", categoryName: "Zitmeubilair", categoryPrefix: "0888" };
+    await applyMaterialImport([row({ ...base, dayPrice: 4 })], [], client);
+    const inhuur = (cost: number) => row({ ...base, dayPrice: 0, stockItems: [], subhireSupplierName: "Rent-men", subhireUnitCost: cost });
+    const result = await applyMaterialImport([inhuur(1.5)], [], client);
+    expect(result).toMatchObject({ updated: 1, errors: [] });
+    const m = await client.material.findUniqueOrThrow({ where: { code: "0888-020" }, include: { defaultSupplier: true, stockItems: true } });
+    expect(m).toMatchObject({ subhireOnly: false, dayPrice: 4, priceBasis: "per_dag", subhireUnitCost: 1.5 });
+    expect(m.defaultSupplier?.name).toBe("Rent-men");
+    expect(m.stockItems).toHaveLength(2);
+    // A different price in the file no longer changes anything.
+    expect(await applyMaterialImport([inhuur(9)], [], client)).toMatchObject({ unchanged: 1 });
+    expect((await client.material.findUniqueOrThrow({ where: { code: "0888-020" } })).subhireUnitCost).toBe(1.5);
   });
 
-  it("preview agrees with apply: an inhuur row onto a material with units is errored", async () => {
-    await applyMaterialImport([row({ code: "0888-021", name: "Bank", categoryName: "Zitmeubilair", categoryPrefix: "0888" })], [], client);
-    const inhuur = row({ code: "0888-021", name: "Bank", categoryName: "Zitmeubilair", categoryPrefix: "0888", subhireSupplierName: "Rent-men" });
-    const existing = (await materialAdapter.fetchExisting(client, ["0888-021"])).get("0888-021") as ParsedMaterialRow;
-    expect(materialAdapter.diffAgainstExisting(inhuur, existing)).toMatchObject({ classification: "errored", reason: expect.stringMatching(/eigen units/) });
-    const applied = await applyMaterialImport([inhuur], [], client);
-    expect(applied.errors[0].reason).toMatch(/eigen units/);
+  it("a new inhuur row with units becomes a normal material with stock, supplier and purchase price", async () => {
+    const result = await applyMaterialImport([row({
+      code: "0888-030", name: "Bierbank", categoryName: "Zitmeubilair", categoryPrefix: "0888",
+      dayPrice: 0, subhireSupplierName: "Rent-men", subhireUnitCost: 2.5,
+    })], [], client);
+    expect(result).toMatchObject({ created: 1, errors: [] });
+    const m = await client.material.findUniqueOrThrow({ where: { code: "0888-030" }, include: { stockItems: true, defaultSupplier: true } });
+    expect(m).toMatchObject({ subhireOnly: false, dayPrice: 0, priceBasis: "per_dag", subhireUnitCost: 2.5 });
+    expect(m.stockItems).toHaveLength(2);
+    expect(m.defaultSupplier?.name).toBe("Rent-men");
+  });
+
+  it("preview agrees with apply for an inhuur row onto a material with units", async () => {
+    const base = { code: "0888-021", name: "Bank", categoryName: "Zitmeubilair", categoryPrefix: "0888" };
+    await applyMaterialImport([row({ ...base, dayPrice: 3 })], [], client);
+    const inhuur = row({ ...base, dayPrice: 0, stockItems: [], subhireSupplierName: "Rent-men", subhireUnitCost: 1 });
+    const diff = async () => materialAdapter.diffAgainstExisting(inhuur, (await materialAdapter.fetchExisting(client, ["0888-021"])).get("0888-021") as ParsedMaterialRow);
+    expect(await diff()).toMatchObject({ classification: "updated" });
+    expect(await applyMaterialImport([inhuur], [], client)).toMatchObject({ updated: 1, errors: [] });
+    expect(await diff()).toMatchObject({ classification: "unchanged" });
+    expect(await applyMaterialImport([inhuur], [], client)).toMatchObject({ unchanged: 1 });
   });
 });

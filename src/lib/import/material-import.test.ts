@@ -104,10 +104,11 @@ describe("E2 — inhuur rows", () => {
     expect(errors).toEqual([]);
     expect(materials[0]).toMatchObject({ dayPrice: 0, costPrice: null, subhireUnitCost: 0.38, subhireSupplierName: "Funrent" });
   });
-  it("refuses an inhuur row with quantity > 0", () => {
+  it("an inhuur row with quantity > 0 is a normal row with units, price kept as purchase price", () => {
     const { materials, errors } = parseMaterialRows([{ ...base, "Current quantity": "4" }], "rentman-equipment");
-    expect(materials).toHaveLength(0);
-    expect(errors[0].reason).toMatch(/voorraad/);
+    expect(errors).toEqual([]);
+    expect(materials[0].stockItems).toHaveLength(4);
+    expect(materials[0]).toMatchObject({ dayPrice: 0, costPrice: 0.1, subhireUnitCost: 0.38, subhireSupplierName: "Funrent" });
   });
   it("leaves ordinary rows alone", () => {
     const { materials } = parseMaterialRows([{ ...base, "Folder (Folder)": "0501-Tenten" }], "rentman-equipment");
