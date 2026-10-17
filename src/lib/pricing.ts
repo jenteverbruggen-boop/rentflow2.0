@@ -15,6 +15,13 @@ export function periodDays(
   return Math.max(1, days);
 }
 
+/** How many multiples of the unit price a material line bills: once for a
+ * per-rental price, otherwise once per day. Every material `lineCost` call
+ * passes this instead of the raw day count. */
+export function billedUnits(basis: string | null | undefined, days: number): number {
+  return basis === "per_huur" ? 1 : days;
+}
+
 export function lineCost(
   snapshot: number | null,
   days: number,
@@ -35,7 +42,7 @@ export function lineCost(
 }
 
 export function materialLineCost(line: PeriodStockItem, days: number): number {
-  const rental = lineCost(line.dayPriceSnapshot, days, line);
+  const rental = lineCost(line.dayPriceSnapshot, billedUnits(line.priceBasisSnapshot, days), line);
   const setup = toNumber(line.setupCostSnapshot);
   return Math.round((rental + setup) * 100) / 100;
 }

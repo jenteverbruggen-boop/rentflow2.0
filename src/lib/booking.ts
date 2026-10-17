@@ -2,6 +2,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { createOrIncrementShortage } from "@/lib/shortage-row";
 import type { ShortageSubhire } from "@/lib/subhire-defaults";
+import type { PriceBasis } from "@/types";
 
 export async function freeStockItemIds(
   client: PrismaClient,
@@ -49,6 +50,8 @@ interface BookFlatArgs {
   from: Date;
   to: Date;
   dayPriceSnapshot: number;
+  /** What the client pays: per day (default) or per rental; snapshotted. */
+  priceBasis?: PriceBasis;
   setupCostSnapshot: number;
   discountPct?: number | null;
   discountAmount?: number | null;
@@ -90,6 +93,7 @@ export async function bookFlatMaterial(args: BookFlatArgs): Promise<BookFlatResu
             periodId: args.periodId,
             stockItemId,
             dayPriceSnapshot: args.dayPriceSnapshot,
+            priceBasisSnapshot: args.priceBasis ?? "per_dag",
             setupCostSnapshot: args.setupCostSnapshot,
             discountPct: args.discountPct ?? null,
             discountAmount: args.discountAmount ?? null,
@@ -108,6 +112,7 @@ export async function bookFlatMaterial(args: BookFlatArgs): Promise<BookFlatResu
         materialId: args.materialId,
         quantity: shortfall,
         dayPriceSnapshot: args.dayPriceSnapshot,
+        priceBasis: args.priceBasis,
         setupCostSnapshot: args.setupCostSnapshot,
         discountPct: args.discountPct,
         discountAmount: args.discountAmount,

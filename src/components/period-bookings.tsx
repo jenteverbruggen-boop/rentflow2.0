@@ -14,6 +14,7 @@ import { formatEUR, periodDays } from "@/lib/pricing";
 import { OverbookBadge } from "@/components/overbook-badge";
 import { groupMaterialAssignments, materialGroupCost } from "@/lib/grouping";
 import type { Period, Project } from "@/types";
+import { basisSuffix } from "@/lib/price-basis";
 
 interface Props {
   period: Period;
@@ -83,13 +84,14 @@ export function PeriodBookings({ period, project }: Props) {
                         resnapshotUrl={`/api/periods/${period.id}/materials/${g.assignments[0].id}`}
                         projectId={project.id}
                         kind="material"
+                        basis={g.priceBasis}
                         entityId={g.material.id}
                         entityName={g.material.name}
                         invalidateKey={projectKey}
                       />
                     ) : (
                       <span className="text-xs text-muted-foreground tabular-nums">
-                        {formatEUR(g.dayPriceSnapshot)}/d
+                        {formatEUR(g.dayPriceSnapshot)}{basisSuffix(g.priceBasis)}
                       </span>
                     )}
                     <span className="text-xs text-muted-foreground tabular-nums">

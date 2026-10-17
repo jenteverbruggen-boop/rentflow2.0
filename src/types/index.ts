@@ -169,6 +169,8 @@ export interface Material {
   subhireUnitCost?: number | null;
   subhireCostBasis?: SubhireCostBasis;
   subhireOnly?: boolean;
+  /** E1 — per day (default) or once per rental. */
+  priceBasis?: PriceBasis;
   components?: MaterialComponent[];
   stockItems?: StockItem[];
   totalStock?: number;
@@ -246,6 +248,9 @@ export interface StockItemAssignment {
  * set booking (`bundleBookingId` set). See src/lib/material-shortage.ts. */
 export type SubhireCostBasis = "per_huur" | "per_dag";
 
+/** What the client pays for a material: per day or once per rental. */
+export type PriceBasis = "per_dag" | "per_huur";
+
 export interface Supplier {
   id: number;
   name: string;
@@ -270,6 +275,7 @@ export interface PeriodMaterialShortage {
   setupCostSnapshot: number;
   discountPct: number | null;
   discountAmount: number | null;
+  priceBasisSnapshot?: PriceBasis;
   /** C3 — set once the missing units are hired in; the row is then resolved
    * (no longer open) but stays billed to the client. */
   supplierId?: number | null;
@@ -290,6 +296,8 @@ export interface PeriodStockItem {
   discountPct: number | null;
   discountAmount: number | null;
   bundleBookingId: number | null;
+  /** Basis the price was booked on (absent = per day). */
+  priceBasisSnapshot?: PriceBasis;
   /** Packing-list checklist — set when an operator ticks a unit as
    * loaded/unloaded; `null` means "not yet". `returnedAt` is only ever
    * meaningful once `shippedAt` is set (checked server-side). */

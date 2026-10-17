@@ -8,6 +8,7 @@ import { noSellingPrice } from "@/lib/price-warnings";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useState } from "react";
 import type { MaterialAvailability } from "@/types";
+import { basisSuffix } from "@/lib/price-basis";
 
 const OPEN = "__open__";
 
@@ -62,7 +63,7 @@ export function MaterialAvailableRow({
         <p className="text-[10px] text-muted-foreground truncate">
           {m.availableCount}{" "}
           {m.material.isBundle ? "set(s) vrij" : `/${m.totalStock} vrij`} ·{" "}
-          {formatEUR(m.material.dayPrice)}/d
+          {formatEUR(m.material.dayPrice)}{basisSuffix(m.material.priceBasis)}
         </p>
         {noSellingPrice(m.material) && (
           <p className="text-[10px] text-amber-700 dark:text-amber-500 truncate">

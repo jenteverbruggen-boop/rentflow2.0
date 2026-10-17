@@ -55,6 +55,7 @@ function makeGroup(
     overbookedSetup: 0,
     shortageIds: [],
     subhireIds: [],
+    priceBasis: "per_dag",
   };
 }
 
@@ -101,7 +102,7 @@ describe("canOverbook", () => {
 describe("mergeShortagesIntoGroups", () => {
   it("folds a shortage into the group with the same key (material/price/discount)", () => {
     const material = makeMaterial(1, "Glas");
-    const key = "1|50|x|x";
+    const key = "1|50|per_dag|x|x";
     const groups = [makeGroup(key, material, 10)];
     const shortages = [makeShortage(1, 1, material, 40, { dayPriceSnapshot: 50 })];
 
@@ -128,7 +129,7 @@ describe("mergeShortagesIntoGroups", () => {
 
   it("a different price/discount does not merge into an existing group", () => {
     const material = makeMaterial(1, "Glas");
-    const groups = [makeGroup("1|50|x|x", material, 10)];
+    const groups = [makeGroup("1|50|per_dag|x|x", material, 10)];
     const shortages = [makeShortage(2, 1, material, 5, { dayPriceSnapshot: 60 })];
 
     const merged = mergeShortagesIntoGroups(groups, shortages);
@@ -151,7 +152,7 @@ describe("mergeShortagesIntoGroups", () => {
 
   it("does not mutate its inputs", () => {
     const material = makeMaterial(1, "Glas");
-    const groups = [makeGroup("1|50|x|x", material, 10)];
+    const groups = [makeGroup("1|50|per_dag|x|x", material, 10)];
     const shortages = [makeShortage(1, 1, material, 40)];
 
     mergeShortagesIntoGroups(groups, shortages);

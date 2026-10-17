@@ -3,8 +3,9 @@ import type {
   PeriodBundleBooking,
   PeriodMaterialShortage,
   PeriodStockItem,
+  PriceBasis,
 } from "@/types";
-import { lineCost } from "@/lib/pricing";
+import { billedUnits, lineCost } from "@/lib/pricing";
 import { toNumber } from "@/lib/serialize";
 import { mergeShortagesIntoGroups } from "@/lib/material-shortage";
 
@@ -13,6 +14,8 @@ export interface MaterialGroup {
   material: Material;
   units: number;
   dayPriceSnapshot: number | null;
+  /** Basis the price was booked on; part of the group key. */
+  priceBasis: PriceBasis;
   discountPct: number | null;
   discountAmount: number | null;
   assignments: PeriodStockItem[];
@@ -47,6 +50,7 @@ function groupKey(a: PeriodStockItem): string {
   return [
     a.stockItem.materialId,
     a.dayPriceSnapshot,
+    a.priceBasisSnapshot ?? "per_dag",
     a.discountPct ?? "x",
     a.discountAmount ?? "x",
   ].join("|");
@@ -69,6 +73,7 @@ export function groupMaterialAssignments(
         material: a.stockItem.material,
         units: 1,
         dayPriceSnapshot: a.dayPriceSnapshot,
+        priceBasis: a.priceBasisSnapshot ?? "per_dag",
         discountPct: a.discountPct,
         discountAmount: a.discountAmount,
         assignments: [a],
@@ -140,7 +145,7 @@ export function groupMaterialAssignmentsNested(
  * that duplication was the actual €1500 bug (Y1.4).
  */
 export function materialGroupCost(group: MaterialGroup, days: number): number {
-  const perUnit = lineCost(group.dayPriceSnapshot, days, group);
+  const perUnit = lineCost(group.dayPriceSnapshot, billedUnits(group.priceBasis, days), group);
   const setup = group.assignments.reduce(
     (s, a) => s + toNumber(a.setupCostSnapshot),
     0,

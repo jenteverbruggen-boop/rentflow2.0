@@ -259,6 +259,9 @@ model Material {
   subhireUnitCost      Float?
   subhireCostBasis     String                         @default("per_huur")
   subhireOnly          Boolean                        @default(false)
+  // E1 — what the client pays: per day (default) or once per rental. Snapshotted
+  // on every booking row as `priceBasisSnapshot`.
+  priceBasis           String                         @default("per_dag")
   defaultSupplier      Supplier?                      @relation(fields: [defaultSupplierId], references: [id], onDelete: SetNull)
   categoryRel          Category?                      @relation(fields: [categoryId], references: [id])
   stockItems           StockItem[]
@@ -297,19 +300,20 @@ model PersonDocument {
 }
 
 model PeriodStockItem {
-  id                Int                  @id @default(autoincrement())
-  periodId          Int
-  stockItemId       Int
-  dayPriceSnapshot  Float
-  setupCostSnapshot Float                @default(0)
-  discountPct       Float?
-  discountAmount    Float?
-  bundleBookingId   Int?
-  shippedAt         DateTime?
-  returnedAt        DateTime?
-  period            Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  stockItem         StockItem            @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
-  bundleBooking     PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
+  id                 Int                  @id @default(autoincrement())
+  periodId           Int
+  stockItemId        Int
+  dayPriceSnapshot   Float
+  setupCostSnapshot  Float                @default(0)
+  discountPct        Float?
+  discountAmount     Float?
+  bundleBookingId    Int?
+  priceBasisSnapshot String               @default("per_dag")
+  shippedAt          DateTime?
+  returnedAt         DateTime?
+  period             Period               @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  stockItem          StockItem            @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+  bundleBooking      PeriodBundleBooking? @relation(fields: [bundleBookingId], references: [id], onDelete: Cascade)
 
   @@unique([periodId, stockItemId])
 }
@@ -367,6 +371,7 @@ model PeriodMaterialShortage {
   setupCostSnapshot   Float                @default(0)
   discountPct         Float?
   discountAmount      Float?
+  priceBasisSnapshot  String               @default("per_dag")
   // C3 — a shortage resolved by hiring the units in (`supplierId` set) is no
   // longer open: it stops blocking confirmation/invoicing and stays billed to
   // the client as normal material. Purchase cost: `subhireUnitCost` per unit

@@ -8,6 +8,7 @@ import { toNumber } from "@/lib/serialize";
 import { materialGroupCost, type MaterialGroup } from "@/lib/grouping";
 import type { Project } from "@/types";
 import { Package } from "lucide-react";
+import { basisSuffix, calcText } from "@/lib/price-basis";
 
 interface MaterialGroupRowProps {
   group: MaterialGroup;
@@ -48,7 +49,7 @@ export function MaterialGroupCostRow({ group, days, periodId, project }: Materia
         )}
       </td>
       <td className="py-2 pr-4 text-xs text-muted-foreground tabular-nums whitespace-nowrap align-middle">
-        {group.units} × {days} × {formatEUR(group.dayPriceSnapshot)}
+        {calcText(group.units, days, group.priceBasis, formatEUR(group.dayPriceSnapshot))}
         {setup > 0 && ` + ${formatEUR(setup)} op-/afbouw`}
       </td>
       <td className="py-2 pr-3 align-middle">
@@ -80,13 +81,14 @@ export function MaterialGroupCostRow({ group, days, periodId, project }: Materia
             resnapshotUrl={`/api/periods/${periodId}/materials/${group.assignments[0].id}`}
             projectId={project.id}
             kind="material"
+            basis={group.priceBasis}
             entityId={group.material.id}
             entityName={group.material.name}
             invalidateKey={["project", String(project.id)]}
           />
         ) : (
           <span className="text-xs text-muted-foreground tabular-nums">
-            {formatEUR(group.dayPriceSnapshot)}/d
+            {formatEUR(group.dayPriceSnapshot)}{basisSuffix(group.priceBasis)}
           </span>
         )}
       </td>

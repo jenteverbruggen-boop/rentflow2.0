@@ -10,6 +10,8 @@ export function subhireFieldsData(body: Record<string, unknown>) {
       ? { subhireCostBasis: body.subhireCostBasis }
       : {}),
     ...(body.subhireOnly !== undefined ? { subhireOnly: Boolean(body.subhireOnly) } : {}),
+    // What the client pays: per day (default) or once per rental.
+    ...(body.priceBasis === "per_huur" || body.priceBasis === "per_dag" ? { priceBasis: body.priceBasis } : {}),
   };
 }
 

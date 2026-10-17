@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { formatEUR } from "@/lib/pricing";
+import { basisSuffix } from "@/lib/price-basis";
 
 interface Props {
   snapshot: number | null;
@@ -22,6 +23,8 @@ interface Props {
   entityId: number;
   entityName: string;
   invalidateKey: readonly unknown[];
+  /** Material lines only: the price basis the line was booked on. */
+  basis?: string;
 }
 
 function parsePrice(raw: string): number {
@@ -38,7 +41,9 @@ export function LinePricePopover({
   entityId,
   entityName,
   invalidateKey,
+  basis,
 }: Props) {
+  const suffix = kind === "material" ? basisSuffix(basis) : "/d";
   const queryClient = useQueryClient();
   // Redacted for this caller (no Kosten/Facturen access, N2.1). Hooks
   // still run unconditionally below (Rules of Hooks) — the placeholder
@@ -135,16 +140,16 @@ export function LinePricePopover({
         <div>
           <p className="text-xs font-semibold">{entityName}</p>
           <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
-            <p>Standaardprijs: {formatEUR(basePrice)}/d</p>
+            <p>Standaardprijs: {formatEUR(basePrice)}{suffix}</p>
             <p>
               Projectprijs:{" "}
               {override != null ? (
-                <span className="font-medium text-foreground">{formatEUR(override)}/d</span>
+                <span className="font-medium text-foreground">{formatEUR(override)}{suffix}</span>
               ) : (
                 <span>volgt standaard</span>
               )}
             </p>
-            <p>Snapshot van deze regel: {formatEUR(snapshot)}/d</p>
+            <p>Snapshot van deze regel: {formatEUR(snapshot)}{suffix}</p>
           </div>
         </div>
 

@@ -16,6 +16,7 @@ export type EditableMaterialField =
   | "subhireUnitCost"
   | "subhireCostBasis"
   | "subhireOnly"
+  | "priceBasis"
   | "defaultSupplierId";
 
 const NULLABLE_NUMBER_FIELDS = new Set<EditableMaterialField>([
@@ -67,6 +68,7 @@ export function useMaterialUpdate(material: Material | null) {
         defaultSupplierId: material.defaultSupplierId,
         subhireCostBasis: material.subhireCostBasis,
         subhireOnly: material.subhireOnly,
+        priceBasis: material.priceBasis,
         [field]: coerce(field, rawValue),
       }),
     });

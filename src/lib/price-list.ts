@@ -20,6 +20,7 @@ export interface PriceListMaterial {
   categoryId: number | null;
   categoryName: string | null;
   isBundle: boolean;
+  priceBasis?: string;
   dayPrice: unknown;
   setupCost: unknown;
   bundlePriceOverride: unknown;
@@ -37,6 +38,8 @@ export interface PriceListRow {
   code: string | null;
   name: string;
   isSet: boolean;
+  /** Per rental instead of per day. Sets are always per day. */
+  perRental: boolean;
   dayPrice: number;
   setupCost: number | null;
 }
@@ -80,7 +83,7 @@ export function buildMaterialSections(
     if (opts.hideZero && day <= 0) continue;
     const setup = toNumberOrNull(m.setupCost);
     const row: PriceListRow = {
-      code: m.code, name: m.name, isSet: m.isBundle, dayPrice: priceOf(day),
+      code: m.code, name: m.name, isSet: m.isBundle, perRental: !m.isBundle && m.priceBasis === "per_huur", dayPrice: priceOf(day),
       setupCost: setup != null && setup > 0 ? priceOf(setup) : null,
     };
     const title = categoryTitle(m);

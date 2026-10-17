@@ -40,6 +40,7 @@ export async function takeOwnStockForHire(
         periodId: row.periodId,
         stockItemId,
         dayPriceSnapshot: row.dayPriceSnapshot,
+        priceBasisSnapshot: row.priceBasisSnapshot,
         setupCostSnapshot: row.setupCostSnapshot,
         discountPct: row.discountPct,
         discountAmount: row.discountAmount,

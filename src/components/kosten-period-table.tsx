@@ -5,6 +5,7 @@ import { formatEUR, periodDays, personLineCost, periodTotal } from "@/lib/pricin
 import { groupMaterialAssignments, materialGroupCost } from "@/lib/grouping";
 import { toNumber } from "@/lib/serialize";
 import type { Period } from "@/types";
+import { calcText } from "@/lib/price-basis";
 
 interface Props {
   period: Period;
@@ -92,7 +93,7 @@ export function KostenPeriodTable({ period }: Props) {
                 )}
               </td>
               <td className="py-2 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
-                {g.units} × {days} × {formatEUR(g.dayPriceSnapshot)}
+                {calcText(g.units, days, g.priceBasis, formatEUR(g.dayPriceSnapshot))}
               </td>
               <td className="py-2 text-xs text-muted-foreground">
                 {discountLabel(g.discountPct, g.discountAmount)}

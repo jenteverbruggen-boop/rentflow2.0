@@ -11,7 +11,7 @@ export function PriceListDocument({ list }: { list: LoadedPriceList }) {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Prijslijst{list.clientName ? ` — ${list.clientName}` : ""}</h1>
-        <p className="text-muted-foreground">Prijzen per dag, {vatLabel}</p>
+        <p className="text-muted-foreground">Prijzen per dag (of per huur waar vermeld), {vatLabel}</p>
       </div>
 
       {list.sections.length === 0 && <p className="text-muted-foreground">Geen materialen voor deze selectie.</p>}
@@ -24,7 +24,7 @@ export function PriceListDocument({ list }: { list: LoadedPriceList }) {
               <tr className="text-left text-xs text-muted-foreground">
                 <th className="w-28 py-1 font-medium">Code</th>
                 <th className="py-1 font-medium">Omschrijving</th>
-                <th className="w-28 py-1 text-right font-medium">Per dag</th>
+                <th className="w-28 py-1 text-right font-medium">Prijs</th>
                 {hasSetup && <th className="w-28 py-1 text-right font-medium">Op-/afbouw</th>}
               </tr>
             </thead>
@@ -33,7 +33,7 @@ export function PriceListDocument({ list }: { list: LoadedPriceList }) {
                 <tr key={`${r.code}-${r.name}`} className="border-t">
                   <td className="py-1 text-xs text-muted-foreground">{r.code}</td>
                   <td className="py-1">{r.name}{r.isSet && <span className="text-xs text-muted-foreground"> (set)</span>}</td>
-                  <td className="py-1 text-right tabular-nums">{formatEUR(r.dayPrice)}</td>
+                  <td className="py-1 text-right tabular-nums">{formatEUR(r.dayPrice)}{r.perRental ? <span className="text-xs text-muted-foreground"> /huur</span> : null}</td>
                   {hasSetup && <td className="py-1 text-right tabular-nums">{r.setupCost != null ? formatEUR(r.setupCost) : ""}</td>}
                 </tr>
               ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import { InlineEditField } from "@/components/inline-edit-field";
+import { PriceBasisSelect } from "@/components/price-basis-select";
 import { formatEUR } from "@/lib/pricing";
 import type { EditableMaterialField } from "@/hooks/use-material-update";
 import type { Material } from "@/types";
@@ -33,12 +34,16 @@ export function MaterialSummaryGrid({ material, onSave }: MaterialSummaryGridPro
   return (
     <div className="grid grid-cols-2 gap-3 text-sm">
       <InlineEditField
-        label="Dagprijs"
+        label={material.priceBasis === "per_huur" ? "Prijs (per huur)" : "Prijs (per dag)"}
         value={material.dayPrice}
         displayValue={formatEUR(material.dayPrice)}
         type="number"
         onSave={(v) => onSave("dayPrice", v)}
       />
+      <div className="space-y-1 rounded-md border border-border p-3">
+        <p className="text-xs text-muted-foreground">Prijs gerekend per</p>
+        <PriceBasisSelect value={material.priceBasis ?? "per_dag"} onChange={(v) => onSave("priceBasis", v)} />
+      </div>
       <div className="rounded-md border border-border p-3">
         <p className="text-xs text-muted-foreground">Totale voorraad</p>
         <p className="font-medium">{material.totalStock ?? 0} units</p>

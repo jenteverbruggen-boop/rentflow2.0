@@ -11,6 +11,7 @@ import { moneyWritable } from "@/lib/redact";
 import { resolveBookingHires } from "@/lib/booking-hire";
 import type { SubhireRequest } from "@/lib/subhire-defaults";
 import { toNumber } from "@/lib/serialize";
+import type { PriceBasis } from "@/types";
 import { redactMoney } from "@/lib/redact";
 import { setDayPrice } from "@/lib/set-price";
 import {
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       const result = await bookFlatMaterial({
         periodId, materialId: material.id, materialName: material.name, quantity: qty,
         from: period.startDate, to: period.endDate,
-        dayPriceSnapshot: snapshotPrice, setupCostSnapshot: setupSnapshot,
+        dayPriceSnapshot: snapshotPrice, priceBasis: material.priceBasis as PriceBasis, setupCostSnapshot: setupSnapshot,
         discountPct: discountPct != null ? toNumber(discountPct) : null,
         discountAmount: discountAmount != null ? toNumber(discountAmount) : null,
         allowOverbook: wantsOverbook,

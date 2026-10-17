@@ -32,6 +32,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         current.stockItem.materialId
       );
       data.dayPriceSnapshot = price.amount;
+      // The basis travels with the price: a re-snapshot takes both from the material.
+      const material = await prisma.material.findUnique({ where: { id: current.stockItem.materialId }, select: { priceBasis: true } });
+      if (material) data.priceBasisSnapshot = material.priceBasis;
     }
     if (discountPct !== undefined) data.discountPct = discountPct != null ? toNumber(discountPct) : null;
     if (discountAmount !== undefined) data.discountAmount = discountAmount != null ? toNumber(discountAmount) : null;

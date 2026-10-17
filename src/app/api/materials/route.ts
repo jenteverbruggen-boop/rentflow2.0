@@ -123,6 +123,8 @@ export async function POST(req: NextRequest) {
         code,
         notes,
         ...materialMoneyData(body, ignore),
+        // An inhuur-only item is priced per rental unless said otherwise.
+        ...(body.subhireOnly === true && body.priceBasis === undefined ? { priceBasis: "per_huur" } : {}),
         ...subhireFieldsData(body),
       },
       include: { categoryRel: true },

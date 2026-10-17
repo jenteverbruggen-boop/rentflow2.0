@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { ShortageSubhire } from "@/lib/subhire-defaults";
+import type { PriceBasis } from "@/types";
 
 interface ShortageRowArgs {
   periodId: number;
@@ -7,6 +8,7 @@ interface ShortageRowArgs {
   quantity: number;
   bundleBookingId?: number | null;
   dayPriceSnapshot: number;
+  priceBasis?: PriceBasis;
   setupCostSnapshot?: number;
   discountPct?: number | null;
   discountAmount?: number | null;
@@ -30,6 +32,7 @@ export async function createOrIncrementShortage(
   const bundleBookingId = args.bundleBookingId ?? null;
   const discountPct = args.discountPct ?? null;
   const discountAmount = args.discountAmount ?? null;
+  const priceBasisSnapshot = args.priceBasis ?? "per_dag";
 
   // A fixed supplier total belongs to exactly one booking: merging two such
   // rows would keep one total for twice the units.
@@ -39,6 +42,7 @@ export async function createOrIncrementShortage(
       materialId: args.materialId,
       bundleBookingId,
       dayPriceSnapshot: args.dayPriceSnapshot,
+      priceBasisSnapshot,
       discountPct,
       discountAmount,
       // Open units only fold into open rows, hired-in units only into a row
@@ -68,6 +72,7 @@ export async function createOrIncrementShortage(
         bundleBookingId,
         quantity: args.quantity,
         dayPriceSnapshot: args.dayPriceSnapshot,
+        priceBasisSnapshot,
         setupCostSnapshot: args.setupCostSnapshot ?? 0,
         discountPct,
         discountAmount,

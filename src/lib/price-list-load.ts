@@ -17,7 +17,7 @@ export async function loadPriceList(
     client.material.findMany({
       where: { archived: false },
       select: {
-        name: true, code: true, category: true, categoryId: true, isBundle: true,
+        name: true, code: true, category: true, categoryId: true, isBundle: true, priceBasis: true,
         dayPrice: true, setupCost: true, bundlePriceOverride: true,
         categoryRel: { select: { name: true } },
         components: { select: { quantity: true, child: { select: { dayPrice: true } } } },

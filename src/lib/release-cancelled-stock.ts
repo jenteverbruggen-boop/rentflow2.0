@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { lockMaterials } from "@/lib/booking";
 import { createOrIncrementShortage } from "@/lib/shortage-row";
-import type { ProjectReleaseSummary } from "@/types";
+import type { PriceBasis, ProjectReleaseSummary } from "@/types";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
 export type ReleaseSummary = ProjectReleaseSummary;
@@ -41,7 +41,7 @@ export async function releaseProjectStock(projectId: number, tx: PrismaClient): 
 
   const groups = new Map<string, { first: (typeof free)[number]; quantity: number }>();
   for (const i of free) {
-    const snap = { price: toNumber(i.dayPriceSnapshot), setup: toNumber(i.setupCostSnapshot), pct: toNumberOrNull(i.discountPct), amt: toNumberOrNull(i.discountAmount) };
+    const snap = { price: toNumber(i.dayPriceSnapshot), basis: i.priceBasisSnapshot, setup: toNumber(i.setupCostSnapshot), pct: toNumberOrNull(i.discountPct), amt: toNumberOrNull(i.discountAmount) };
     const key = JSON.stringify([i.periodId, i.stockItem.materialId, i.bundleBookingId, snap]);
     const g = groups.get(key);
     if (g) g.quantity += 1;
@@ -54,6 +54,7 @@ export async function releaseProjectStock(projectId: number, tx: PrismaClient): 
       quantity,
       bundleBookingId: first.bundleBookingId,
       dayPriceSnapshot: toNumber(first.dayPriceSnapshot),
+      priceBasis: first.priceBasisSnapshot as PriceBasis,
       setupCostSnapshot: toNumber(first.setupCostSnapshot),
       discountPct: toNumberOrNull(first.discountPct),
       discountAmount: toNumberOrNull(first.discountAmount),

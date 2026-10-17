@@ -15,7 +15,8 @@ import { useCategories } from "@/hooks/use-categories";
 import { useAuthMe } from "@/hooks/use-auth-me";
 import { canWriteMoney } from "@/lib/me-access";
 import { MaterialFormSubhire, EMPTY_SUBHIRE, subhirePayload, type SubhireFormState } from "@/components/material-form-subhire";
-import type { Material } from "@/types";
+import { PriceBasisSelect } from "@/components/price-basis-select";
+import type { Material, PriceBasis } from "@/types";
 
 const schema = z.object({
   name: z.string().min(1, "Naam is verplicht"),
@@ -44,6 +45,8 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
   });
   const [catId, setCatId] = useState<number | null>(null);
   const [subhire, setSubhire] = useState<SubhireFormState>(EMPTY_SUBHIRE);
+  // null = not chosen: per day, or per rental for an inhuur-only item.
+  const [basis, setBasis] = useState<PriceBasis | null>(null);
   const { data: me } = useAuthMe();
   const subhireInvalid = !defaultValues && subhire.only && subhire.supplierId === "";
   const { categories, createCategory } = useCategories();
@@ -55,6 +58,7 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
     } else {
       setCatId(null);
       setSubhire(EMPTY_SUBHIRE);
+      setBasis(null);
       form.reset({ name: "", categoryId: null, dayPrice: 0, setupCost: 0, initialStock: 1, notes: "" });
     }
   }, [defaultValues, form]);
@@ -67,6 +71,7 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
           <form onSubmit={form.handleSubmit((v) => onSubmit({
             ...v,
             categoryId: catId,
+            ...(defaultValues ? {} : { priceBasis: basis ?? (subhire.only ? "per_huur" : "per_dag") }),
             // An inhuur-only item has no stock of its own.
             ...(subhire.only ? { initialStock: 0 } : {}),
             ...(defaultValues ? {} : subhirePayload(subhire, canWriteMoney(me))),
@@ -80,8 +85,14 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
                 onCreate={createCategory} placeholder="Selecteer categorie..." createLabel="+ Nieuwe categorie" />
             </div>
             <FormField control={form.control} name="dayPrice" render={({ field }) => (
-              <FormItem><FormLabel>Dagprijs (€)</FormLabel><FormControl><Input type="number" step="0.01" min={0} {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Prijs (€)</FormLabel><FormControl><Input type="number" step="0.01" min={0} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
+            {!defaultValues && (
+              <div className="space-y-2">
+                <Label>Prijs gerekend per</Label>
+                <PriceBasisSelect value={basis ?? (subhire.only ? "per_huur" : "per_dag")} onChange={setBasis} />
+              </div>
+            )}
             <FormField control={form.control} name="setupCost" render={({ field }) => (
               <FormItem><FormLabel>Op-/afbouwkosten (€, per unit — optioneel)</FormLabel><FormControl><Input type="number" step="0.01" min={0} {...field} /></FormControl><FormMessage /></FormItem>
             )} />

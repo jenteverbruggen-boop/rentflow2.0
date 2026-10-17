@@ -5,7 +5,7 @@ import type {
   InvoiceLineUnit,
   DepositType,
 } from "@/types";
-import { periodDays, lineCost, projectCostSummary } from "@/lib/pricing";
+import { periodDays, lineCost, billedUnits, projectCostSummary } from "@/lib/pricing";
 import { groupMaterialAssignments } from "@/lib/grouping";
 import { toNumber } from "@/lib/serialize";
 import { personAndTravelLines } from "@/lib/invoice-lines-people";
@@ -106,7 +106,7 @@ function groupedLines(periods: Period[], vatRate: number): DraftInvoiceLine[] {
     // Overbooked units (shortages) are billed like owned ones.
     const flat = period.materials.filter((m) => !m.bundleBookingId);
     for (const g of groupMaterialAssignments(flat, period.shortages ?? [])) {
-      const unitPrice = lineCost(g.dayPriceSnapshot, days, g);
+      const unitPrice = lineCost(g.dayPriceSnapshot, billedUnits(g.priceBasis, days), g);
       push({
         section: period.name, kind: "material", description: g.material.name,
         quantity: g.units, unit: "stuk", unitPrice, vatRate,

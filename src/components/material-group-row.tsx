@@ -1,7 +1,7 @@
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OverbookBadge } from "@/components/overbook-badge";
-import { formatEUR, lineCost } from "@/lib/pricing";
+import { billedUnits, formatEUR, lineCost } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import type { MaterialGroup } from "@/lib/grouping";
 
@@ -15,7 +15,7 @@ interface Props {
 /** One assigned material-group row, extracted from
  * material-assigned-pane.tsx (Y3.6, split further to stay ≤150 lines). */
 export function MaterialGroupRow({ group: g, days, onRemoveOne, onRemoveAll }: Props) {
-  const perUnit = lineCost(g.dayPriceSnapshot, days, g);
+  const perUnit = lineCost(g.dayPriceSnapshot, billedUnits(g.priceBasis, days), g);
   return (
     <div
       className={cn(

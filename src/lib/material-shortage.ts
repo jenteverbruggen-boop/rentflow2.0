@@ -1,6 +1,6 @@
 import type { PeriodMaterialShortage } from "@/types";
 import type { MaterialGroup } from "@/lib/grouping";
-import { lineCost } from "@/lib/pricing";
+import { billedUnits, lineCost } from "@/lib/pricing";
 import { toNumber } from "@/lib/serialize";
 
 /** Overboeken — statuses in which a period is allowed to want more units
@@ -15,6 +15,7 @@ function shortageGroupKey(s: PeriodMaterialShortage): string {
   return [
     s.materialId,
     s.dayPriceSnapshot,
+    s.priceBasisSnapshot ?? "per_dag",
     s.discountPct ?? "x",
     s.discountAmount ?? "x",
   ].join("|");
@@ -67,6 +68,7 @@ export function mergeShortagesIntoGroups(
         material: s.material,
         units: s.quantity,
         dayPriceSnapshot: s.dayPriceSnapshot,
+        priceBasis: s.priceBasisSnapshot ?? "per_dag",
         discountPct: s.discountPct,
         discountAmount: s.discountAmount,
         assignments: [],
@@ -97,7 +99,7 @@ export function shortageCost(
   const total = shortages
     .filter((s) => s.bundleBookingId == null)
     .reduce((acc, s) => {
-      const rental = lineCost(s.dayPriceSnapshot, days, s) * s.quantity;
+      const rental = lineCost(s.dayPriceSnapshot, billedUnits(s.priceBasisSnapshot, days), s) * s.quantity;
       const setup = toNumber(s.setupCostSnapshot) * s.quantity;
       return acc + rental + setup;
     }, 0);
