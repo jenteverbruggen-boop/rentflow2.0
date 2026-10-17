@@ -14,6 +14,11 @@ import type { ExportColumn } from "@/lib/export/xlsx-writer";
  * disguise. One flattened row per booking, `kind` distinguishing
  * person/material/bundle bookings sharing the same sheet.
  */
+/** Dutch label for the unit price: charged per day or once per rental. */
+function basisLabel(basis: string | null | undefined): string {
+  return basis === "per_huur" ? "per huur" : "per dag";
+}
+
 export function bookingsExportColumns(access: ResolvedAccess): ExportColumn[] {
   const base: ExportColumn[] = [
     { key: "projectId", header: "projectId", type: "number" },
@@ -28,6 +33,7 @@ export function bookingsExportColumns(access: ResolvedAccess): ExportColumn[] {
   return [
     ...base,
     { key: "unitPrice", header: "unitPrice", type: "number" },
+    { key: "priceBasis", header: "priceBasis", type: "string" },
     { key: "discountPct", header: "discountPct", type: "number" },
     { key: "discountAmount", header: "discountAmount", type: "number" },
   ];
@@ -45,7 +51,7 @@ export async function fetchBookingsExportRows(
       project: { select: { id: true, name: true } },
       people: { include: { person: { select: { name: true } } } },
       materials: { include: { stockItem: { include: { material: { select: { name: true } } } } } },
-      bundleBookings: { include: { material: { select: { name: true } } } },
+      bundleBookings: { include: { material: { select: { name: true, priceBasis: true } } } },
     },
     orderBy: { startDate: "desc" },
   });
@@ -60,6 +66,7 @@ export async function fetchBookingsExportRows(
         entityName: pp.person.name,
         quantity: 1,
         unitPrice: toNumber(pp.dayPriceSnapshot),
+        priceBasis: basisLabel("per_dag"),
         discountPct: toNumberOrNull(pp.discountPct),
         discountAmount: toNumberOrNull(pp.discountAmount),
       });
@@ -74,6 +81,7 @@ export async function fetchBookingsExportRows(
         entityName: m.stockItem.material.name,
         quantity: 1,
         unitPrice: toNumber(m.dayPriceSnapshot),
+        priceBasis: basisLabel(m.priceBasisSnapshot),
         discountPct: toNumberOrNull(m.discountPct),
         discountAmount: toNumberOrNull(m.discountAmount),
       });
@@ -85,6 +93,7 @@ export async function fetchBookingsExportRows(
         entityName: b.material.name,
         quantity: b.quantity,
         unitPrice: toNumber(b.dayPriceSnapshot),
+        priceBasis: basisLabel(b.material.priceBasis),
         discountPct: null,
         discountAmount: null,
       });

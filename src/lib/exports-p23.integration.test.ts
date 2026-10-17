@@ -94,6 +94,18 @@ describe("bookings export (P2.3)", () => {
   it("omits money columns without Kosten/Facturen access", () => {
     const cols = bookingsExportColumns({ id: 1, personId: null, scope: "all", permissions: { kosten_facturen: "geen" } });
     expect(cols.map((c) => c.key)).not.toContain("unitPrice");
+    expect(cols.map((c) => c.key)).not.toContain("priceBasis");
+  });
+
+  it("puts a per dag / per huur column right after the unit price", () => {
+    const keys = bookingsExportColumns({ id: 1, personId: null, scope: "all", permissions: { kosten_facturen: "lezen" } }).map((c) => c.key);
+    expect(keys[keys.indexOf("unitPrice") + 1]).toBe("priceBasis");
+  });
+
+  it("labels a person booking as per dag", async () => {
+    const access: ResolvedAccess = { id: 1, personId: ids.alice, scope: "own", permissions: { kosten_facturen: "lezen" } };
+    const rows = await fetchBookingsExportRows(access, client);
+    expect(rows[0].priceBasis).toBe("per dag");
   });
 });
 
