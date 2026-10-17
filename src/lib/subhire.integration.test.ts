@@ -183,6 +183,12 @@ describe("billing and suppliers", () => {
     expect(toNumber(line.unitPrice)).toBe(12); // €4 × 3 days
   });
 
+  it("a cancelled project is exempt from the shortage gate for invoices", async () => {
+    const { projectId } = await setup(2);
+    await client.project.update({ where: { id: projectId }, data: { status: "geannuleerd" } });
+    await expect(createDraftInvoice({ projectId, invoiceRole: "standalone" }, client)).resolves.toMatchObject({ projectId });
+  });
+
   it("a supplier in use can't be deleted, an unused one can", async () => {
     await expect(deleteSupplier(supplierId)).rejects.toBeInstanceOf(SupplierInUseError);
     const spare = await client.supplier.create({ data: { name: "Spare" } });

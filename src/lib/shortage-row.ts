@@ -43,6 +43,7 @@ export async function createOrIncrementShortage(
       bundleBookingId,
       dayPriceSnapshot: args.dayPriceSnapshot,
       priceBasisSnapshot,
+      setupCostSnapshot: args.setupCostSnapshot ?? 0,
       discountPct,
       discountAmount,
       // Open units only fold into open rows, hired-in units only into a row

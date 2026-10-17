@@ -108,7 +108,7 @@ export async function undoSubhire(periodId: number, shortageId: number, client: 
       where: {
         id: { not: row.id }, periodId: row.periodId, materialId: row.materialId,
         bundleBookingId: row.bundleBookingId, dayPriceSnapshot: row.dayPriceSnapshot,
-        priceBasisSnapshot: row.priceBasisSnapshot,
+        priceBasisSnapshot: row.priceBasisSnapshot, setupCostSnapshot: row.setupCostSnapshot,
         discountPct: row.discountPct, discountAmount: row.discountAmount, supplierId: null,
       },
     });

@@ -13,8 +13,11 @@ export class InvoiceBlockedError extends Error {
  * phantom lines. Applies to regenerate and finalize as well as create — a
  * shortage can appear on a project after its draft was made. Quotes are
  * exempt (they exist precisely to price an overbooked concept project).
+ * So are cancelled projects: cancelling releases their owned units as open
+ * shortages on purpose, and what was agreed must still be billable.
  */
 export async function assertInvoiceable(projectId: number, client: PrismaClient): Promise<void> {
+  if (await isCancelledProject(projectId, client)) return;
   try {
     await assertNoShortages(projectId, client);
   } catch (e: unknown) {
@@ -23,4 +26,10 @@ export async function assertInvoiceable(projectId: number, client: PrismaClient)
     }
     throw e;
   }
+}
+
+/** A cancelled project is exempt from the shortage gate for invoices. */
+export async function isCancelledProject(projectId: number, client: PrismaClient): Promise<boolean> {
+  const project = await client.project.findUnique({ where: { id: projectId }, select: { status: true } });
+  return project?.status === "geannuleerd";
 }

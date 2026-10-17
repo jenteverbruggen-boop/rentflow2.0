@@ -94,6 +94,15 @@ describe("releaseProjectStock (B1)", () => {
     expect(after?.totals).toEqual(before?.totals);
   });
 
+  it("keeps groups that differ only in setup cost separate", async () => {
+    const { projectId, periodId } = await project();
+    await bookFlatMaterial({ periodId, materialId: chairId, quantity: 1, from, to, dayPriceSnapshot: 2, setupCostSnapshot: 0, client });
+    await bookFlatMaterial({ periodId, materialId: chairId, quantity: 1, from, to, dayPriceSnapshot: 2, setupCostSnapshot: 5, client });
+    await release(projectId);
+    const rows = await client.periodMaterialShortage.findMany({ where: { periodId, materialId: chairId }, orderBy: { setupCostSnapshot: "asc" } });
+    expect(rows.map((r) => [r.quantity, Number(r.setupCostSnapshot)])).toEqual([[1, 0], [1, 5]]);
+  });
+
   it("frees the stock for another project at once", async () => {
     const { projectId, periodId } = await project();
     await bookFlatMaterial({ periodId, materialId: flatId, quantity: 4, from, to, dayPriceSnapshot: 10, setupCostSnapshot: 0, client });
