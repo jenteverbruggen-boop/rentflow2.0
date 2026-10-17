@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireModule, forbidden, conflict, serverError } from "@/lib/api-auth";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
+import type { PrismaClient } from "@/generated/prisma/client";
+import { lockMaterials } from "@/lib/booking";
 import { redactMoney } from "@/lib/redact";
 
 type Params = { params: Promise<{ id: string }> };
@@ -75,16 +77,20 @@ export async function POST(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const materialId = parseInt(id);
     const { identifier, notes } = await req.json();
-    const material = await prisma.material.findUnique({ where: { id: materialId }, select: { subhireOnly: true } });
-    if (material?.subhireOnly) return conflict("Een inhuur-materiaal heeft geen eigen voorraad");
-    const last = await prisma.stockItem.findFirst({
-      where: { materialId },
-      orderBy: { unitNumber: "desc" },
+    // Check and write under the material lock: a concurrent subhireOnly toggle
+    // (material PUT) takes the same lock, so both cannot slip through.
+    const item = await prisma.$transaction(async (rawTx) => {
+      const tx = rawTx as unknown as PrismaClient;
+      await lockMaterials(tx, [materialId]);
+      const material = await tx.material.findUnique({ where: { id: materialId }, select: { subhireOnly: true } });
+      if (material?.subhireOnly) return null;
+      const last = await tx.stockItem.findFirst({ where: { materialId }, orderBy: { unitNumber: "desc" } });
+      const unitNumber = (last?.unitNumber ?? 0) + 1;
+      return tx.stockItem.create({
+        data: { materialId, unitNumber, identifier: identifier || null, notes: notes || null },
+      });
     });
-    const unitNumber = (last?.unitNumber ?? 0) + 1;
-    const item = await prisma.stockItem.create({
-      data: { materialId, unitNumber, identifier: identifier || null, notes: notes || null },
-    });
+    if (!item) return conflict("Een inhuur-materiaal heeft geen eigen voorraad");
     return NextResponse.json(item);
   } catch (err) {
     return serverError((err as Error).message);

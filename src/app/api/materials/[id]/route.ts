@@ -8,6 +8,8 @@ import {
   conflict,
   serverError,
 } from "@/lib/api-auth";
+import type { PrismaClient } from "@/generated/prisma/client";
+import { lockMaterials } from "@/lib/booking";
 import { redactMoney } from "@/lib/redact";
 import { findRejectedMoneyWrite, moneyFieldsToIgnore } from "@/lib/money-write-guard";
 import { materialMoneyData, serializeMaterialMoney } from "@/lib/material-money-fields";
@@ -63,56 +65,62 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const { name, category, categoryId, code, notes, isBundle, archived } = body;
     if (!name) return badRequest("naam is verplicht");
 
-    // Compared against the persisted row, not just checked for presence
-    // (money-write-guard.ts's findRejectedMoneyWrite doc comment) —
-    // useMaterialUpdate always resubmits every money field on every save,
-    // so a presence-only check would block a caller without Kosten/
-    // Facturen: wijzigen from saving any material edit at all.
-    const currentMaterial = await prisma.material.findUnique({
-      where: { id: parseInt(id) },
-      select: {
-        dayPrice: true,
-        setupCost: true,
-        bundlePriceOverride: true,
-        costPrice: true,
-        listPrice: true,
-        revenueBefore: true,
-        subhireUnitCost: true,
-        priceBasis: true,
-        defaultSupplierId: true,
-        subhireOnly: true,
-        isBundle: true,
-        _count: { select: { stockItems: true } },
-      },
-    });
-    const subhireError = subhireFieldsError(
-      body,
-      currentMaterial && { ...currentMaterial, stockCount: currentMaterial._count.stockItems },
-    );
-    if (subhireError) return badRequest(subhireError);
-    const badSupplier = await supplierError(prisma, body);
-    if (badSupplier) return badRequest(badSupplier);
-    if (findRejectedMoneyWrite(body, access, currentMaterial)) return forbidden();
-
-    // Money-blind caller: useMaterialUpdate's redacted-to-0/null echo
-    // must never overwrite the persisted price — materialMoneyData omits
-    // the key entirely so Prisma leaves that column untouched
-    // (moneyFieldsToIgnore's doc comment in money-write-guard.ts).
-    const ignore = moneyFieldsToIgnore(access, MATERIAL_MONEY_FIELDS);
-    // B3 — once categoryId is set, the legacy `category` string must
-    // stop drifting from it (display code reads categoryRel?.name ?? category
-    // everywhere, so a stale string here is invisible but wrong at rest).
-    let resolvedCategoryName: string | null | undefined;
-    if (categoryId != null) {
-      const categoryRow = await prisma.category.findUnique({
-        where: { id: categoryId },
-        select: { name: true },
-      });
-      resolvedCategoryName = categoryRow?.name;
-    }
+    const materialId = parseInt(id);
     try {
-      const material = await prisma.material.update({
-        where: { id: parseInt(id) },
+      return await prisma.$transaction(async (rawTx) => {
+        const tx = rawTx as unknown as PrismaClient;
+        // Inhuur-only vs own stock is check-and-write under the material lock,
+        // the same lock the stock-item add takes.
+        await lockMaterials(tx, [materialId]);
+        // Compared against the persisted row, not just checked for presence
+        // (money-write-guard.ts's findRejectedMoneyWrite doc comment) —
+        // useMaterialUpdate always resubmits every money field on every save,
+        // so a presence-only check would block a caller without Kosten/
+        // Facturen: wijzigen from saving any material edit at all.
+        const currentMaterial = await tx.material.findUnique({
+          where: { id: materialId },
+          select: {
+            dayPrice: true,
+            setupCost: true,
+            bundlePriceOverride: true,
+            costPrice: true,
+            listPrice: true,
+            revenueBefore: true,
+            subhireUnitCost: true,
+            priceBasis: true,
+            defaultSupplierId: true,
+            subhireOnly: true,
+            isBundle: true,
+            _count: { select: { stockItems: true } },
+          },
+      });
+      const subhireError = subhireFieldsError(
+        body,
+        currentMaterial && { ...currentMaterial, stockCount: currentMaterial._count.stockItems },
+      );
+      if (subhireError) return badRequest(subhireError);
+      const badSupplier = await supplierError(tx, body);
+      if (badSupplier) return badRequest(badSupplier);
+      if (findRejectedMoneyWrite(body, access, currentMaterial)) return forbidden();
+
+      // Money-blind caller: useMaterialUpdate's redacted-to-0/null echo
+      // must never overwrite the persisted price — materialMoneyData omits
+      // the key entirely so Prisma leaves that column untouched
+      // (moneyFieldsToIgnore's doc comment in money-write-guard.ts).
+      const ignore = moneyFieldsToIgnore(access, MATERIAL_MONEY_FIELDS);
+      // B3 — once categoryId is set, the legacy `category` string must
+      // stop drifting from it (display code reads categoryRel?.name ?? category
+      // everywhere, so a stale string here is invisible but wrong at rest).
+      let resolvedCategoryName: string | null | undefined;
+      if (categoryId != null) {
+        const categoryRow = await tx.category.findUnique({
+          where: { id: categoryId },
+          select: { name: true },
+        });
+        resolvedCategoryName = categoryRow?.name;
+      }
+      const material = await tx.material.update({
+        where: { id: materialId },
         data: {
           name,
           category: resolveLegacyCategoryName(categoryId, category, resolvedCategoryName),
@@ -129,6 +137,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       return NextResponse.json(
         redactMoney({ ...material, ...serializeMaterialMoney(material) }, access),
       );
+      });
     } catch (e: unknown) {
       if ((e as { code?: string })?.code === "P2002")
         return conflict("Code bestaat al");
