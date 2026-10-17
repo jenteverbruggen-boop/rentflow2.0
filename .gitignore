@@ -30,3 +30,6 @@ tsconfig.tsbuildinfo
 # OS artefacts
 .DS_Store
 Thumbs.db
+
+# QA suite output (screenshots, sqlite db, auth state, server log)
+qa/.out/

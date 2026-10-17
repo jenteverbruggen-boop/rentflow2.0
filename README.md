@@ -145,6 +145,7 @@ npm run dev
 | `npm run db:dev:seed` | Seed the SQLite dev DB with demo users, projects, periods, stock items |
 | `npm run db:dev:studio` | Open Prisma Studio against the local SQLite DB |
 | `npm run db:dev:generate` | Regenerate the Prisma client from the dev schema |
+| `npm run qa` | Playwright click-through on a fresh seeded QA build (port 3100, own SQLite DB; see `qa/README.md`) |
 | `npm run test:postgres` | Runs only `invoice-numbering.postgres.test.ts` — the invoice-numbering concurrency test, which needs a real Postgres (`docker compose up -d db`) and skips itself under the default SQLite `npm test` |
 
 ---

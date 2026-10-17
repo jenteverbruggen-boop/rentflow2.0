@@ -11,6 +11,7 @@ npm run dev              # Start dev server (Turbopack)
 npm run build            # Production build
 npx tsc --noEmit         # Type-check — must pass with zero errors
 npm run lint             # ESLint
+npm run qa   # Playwright click-through on a fresh QA build (port 3100)
 
 # SQLite dev database (no Docker needed for local dev)
 npm run db:dev:migrate   # Push schema changes to SQLite dev DB (prisma db push)
