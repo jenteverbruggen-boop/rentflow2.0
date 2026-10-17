@@ -12,6 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { EntityCombobox } from "@/components/entity-combobox";
 import { useCategories } from "@/hooks/use-categories";
+import { useAuthMe } from "@/hooks/use-auth-me";
+import { canWriteMoney } from "@/lib/me-access";
+import { MaterialFormSubhire, EMPTY_SUBHIRE, subhirePayload, type SubhireFormState } from "@/components/material-form-subhire";
 import type { Material } from "@/types";
 
 const schema = z.object({
@@ -40,6 +43,9 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
     defaultValues: { name: "", categoryId: null, dayPrice: 0, setupCost: 0, initialStock: 1, notes: "" },
   });
   const [catId, setCatId] = useState<number | null>(null);
+  const [subhire, setSubhire] = useState<SubhireFormState>(EMPTY_SUBHIRE);
+  const { data: me } = useAuthMe();
+  const subhireInvalid = !defaultValues && subhire.only && subhire.supplierId === "";
   const { categories, createCategory } = useCategories();
 
   useEffect(() => {
@@ -48,6 +54,7 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
       form.reset({ name: defaultValues.name, categoryId: defaultValues.categoryId ?? null, dayPrice: defaultValues.dayPrice ?? 0, setupCost: defaultValues.setupCost ?? 0, notes: defaultValues.notes ?? "" });
     } else {
       setCatId(null);
+      setSubhire(EMPTY_SUBHIRE);
       form.reset({ name: "", categoryId: null, dayPrice: 0, setupCost: 0, initialStock: 1, notes: "" });
     }
   }, [defaultValues, form]);
@@ -57,7 +64,13 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
       <DialogContent className="max-w-md" aria-describedby={undefined}>
         <DialogHeader><DialogTitle>{defaultValues ? "Materiaal bewerken" : "Nieuw materiaal"}</DialogTitle></DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit((v) => onSubmit({ ...v, categoryId: catId }))} className="space-y-4">
+          <form onSubmit={form.handleSubmit((v) => onSubmit({
+            ...v,
+            categoryId: catId,
+            // An inhuur-only item has no stock of its own.
+            ...(subhire.only ? { initialStock: 0 } : {}),
+            ...(defaultValues ? {} : subhirePayload(subhire, canWriteMoney(me))),
+          }))} className="space-y-4">
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem><FormLabel>Naam *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
@@ -72,7 +85,8 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
             <FormField control={form.control} name="setupCost" render={({ field }) => (
               <FormItem><FormLabel>Op-/afbouwkosten (€, per unit — optioneel)</FormLabel><FormControl><Input type="number" step="0.01" min={0} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            {!defaultValues && (
+            {!defaultValues && <MaterialFormSubhire value={subhire} onChange={setSubhire} />}
+            {!defaultValues && !subhire.only && (
               <FormField control={form.control} name="initialStock" render={({ field }) => (
                 <FormItem><FormLabel>Aantal units bij start</FormLabel><FormControl><Input type="number" min={0} {...field} /></FormControl><FormMessage /></FormItem>
               )} />
@@ -84,7 +98,7 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
               <p className="text-sm text-destructive" role="alert">{error}</p>
             )}
             <div className="flex gap-3 pt-2">
-              <Button type="submit" className="flex-1" disabled={isPending}>{isPending ? "Bezig..." : defaultValues ? "Opslaan" : "Aanmaken"}</Button>
+              <Button type="submit" className="flex-1" disabled={isPending || subhireInvalid}>{isPending ? "Bezig..." : defaultValues ? "Opslaan" : "Aanmaken"}</Button>
               <Button type="button" variant="secondary" className="flex-1" onClick={() => onOpenChange(false)}>Annuleren</Button>
             </div>
           </form>

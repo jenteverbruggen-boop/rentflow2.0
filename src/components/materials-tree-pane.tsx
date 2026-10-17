@@ -14,7 +14,8 @@ import { InlineIcon } from "@/components/inline-icon";
 export type { MaterialSort, MaterialTypeFilter };
 
 function stockLabel(m: Material): React.ReactNode {
-  if (!m.isBundle) return `Voorraad: ${m.totalStock ?? 0}`;
+  if (m.subhireOnly) return "Enkel inhuur";
+  if (!m.isBundle) return `Voorraad: ${m.totalStock ?? 0}${m.defaultSupplierId != null ? " · inhuur bij tekort" : ""}`;
   const sets = m.bundleStock?.completeSets ?? 0;
   const warn = m.bundleStock?.hasIncomplete;
   const shared = m.bundleStock?.components.some((c) => c.sharedWith && c.sharedWith.length > 0);

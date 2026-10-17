@@ -5,12 +5,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 
 export type MaterialSort = "name-asc" | "name-desc" | "stock-desc";
-export type MaterialTypeFilter = "all" | "sets" | "loose";
+export type MaterialTypeFilter = "all" | "sets" | "loose" | "subhire";
 
 const TYPE_OPTIONS: { value: MaterialTypeFilter; label: string }[] = [
   { value: "all", label: "Alle" },
   { value: "sets", label: "Sets" },
   { value: "loose", label: "Losse" },
+  { value: "subhire", label: "Inhuur" },
 ];
 
 interface MaterialsFilterBarProps {

@@ -36,6 +36,8 @@ export function useMaterialFilters({
       if (category !== "all" && catName !== category) return false;
       if (typeFilter === "sets" && !m.isBundle) return false;
       if (typeFilter === "loose" && m.isBundle) return false;
+      // "Inhuur": items always hired in, or with a supplier to fall back on.
+      if (typeFilter === "subhire" && !(m.subhireOnly || m.defaultSupplierId != null)) return false;
       if (!q) return true;
       return (
         m.name.toLowerCase().includes(q) ||
