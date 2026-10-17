@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setProjectMaterialPrice, clearProjectMaterialPrice } from "@/lib/project-material-price";
 import { requireModule, forbidden, badRequest, serverError } from "@/lib/api-auth";
-import { toNumber, toNumberOrNull } from "@/lib/serialize";
+import { toNumber } from "@/lib/serialize";
+import { serializeMaterialMoney } from "@/lib/material-money-fields";
 
 type Params = { params: Promise<{ id: string; materialId: string }> };
 
@@ -21,12 +22,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
     return NextResponse.json({
       ...override,
       dayPrice: toNumber(override.dayPrice),
-      material: {
-        ...override.material,
-        dayPrice: toNumber(override.material.dayPrice),
-        setupCost: toNumberOrNull(override.material.setupCost),
-        bundlePriceOverride: toNumberOrNull(override.material.bundlePriceOverride),
-      },
+      // Every money column, not just the three the UI reads: a raw Decimal
+      // reaches the wire as a string in production (CLAUDE.md money rule).
+      material: { ...override.material, ...serializeMaterialMoney(override.material) },
     });
   } catch (err) {
     return serverError((err as Error).message);
