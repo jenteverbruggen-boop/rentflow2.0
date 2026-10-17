@@ -392,6 +392,20 @@ export interface ProjectPersonPrice {
   person: Person;
 }
 
+/** Another project that holds units of a material in an open line's period.
+ * `projectId`/`name` are absent for a scope-own caller. */
+export interface StockHolder {
+  projectId?: number;
+  name?: string;
+  status: string;
+  units: number;
+}
+
+/** GET /api/projects/:id/stock-hints — one entry per shortage row. */
+export type StockHint =
+  | { shortageId: number; kind: "open"; freeNow: number; holders: StockHolder[]; more: number }
+  | { shortageId: number; kind: "hired"; ownFreeNow: number };
+
 /** Returned by PUT /api/projects/:id when the project was just cancelled. */
 export interface ProjectReleaseSummary {
   released: number;
