@@ -1,6 +1,6 @@
 import type { EntityAdapter, BlockingReference } from "@/lib/import/pipeline-types";
 import { parseMaterialRows, type ParsedMaterialRow } from "@/lib/import/material-adapter";
-import { diffMaterialRow, type ExistingMaterial } from "@/lib/import/material-preview";
+import { diffMaterialRow, inhuurStockConflict, type ExistingMaterial } from "@/lib/import/material-preview";
 import { applyMaterialRow } from "@/lib/import/apply-material-import";
 import { toNumberOrNull } from "@/lib/serialize";
 
@@ -35,6 +35,8 @@ export const materialAdapter: EntityAdapter<ParsedMaterialRow> = {
 
   diffAgainstExisting(row, existing) {
     if (!existing) return { classification: "new" };
+    const conflict = inhuurStockConflict(row, existing as unknown as ExistingMaterial);
+    if (conflict) return { classification: "errored", reason: conflict };
     const changes = diffMaterialRow(row, existing as unknown as ExistingMaterial);
     return { classification: changes.length > 0 ? "updated" : "unchanged", changes: changes.length > 0 ? changes : undefined };
   },
@@ -60,6 +62,8 @@ export const materialAdapter: EntityAdapter<ParsedMaterialRow> = {
   async fetchExisting(client, keys) {
     const materials = await client.material.findMany({ where: { code: { in: keys as string[] } } });
     const map = new Map<string | number, ParsedMaterialRow>();
+    const grouped = await client.stockItem.groupBy({ by: ["materialId"], where: { materialId: { in: materials.map((m) => m.id) } }, _count: true });
+    const stockCounts = new Map(grouped.map((g) => [g.materialId, g._count as number]));
     for (const m of materials) {
       const existing: ExistingMaterial = {
         code: m.code!,
@@ -71,6 +75,7 @@ export const materialAdapter: EntityAdapter<ParsedMaterialRow> = {
         archived: m.archived,
         notes: m.notes,
         subhireUnitCost: toNumberOrNull(m.subhireUnitCost) ?? null,
+        stockCount: stockCounts.get(m.id) ?? 0,
       };
       // The pipeline only ever calls diffAgainstExisting with this map's
       // values — ExistingMaterial's shape is exactly what that needs,

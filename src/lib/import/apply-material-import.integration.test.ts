@@ -10,6 +10,7 @@ import fs from "fs";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@/generated/prisma/client";
 import { applyMaterialImport } from "@/lib/import/apply-material-import";
+import { materialAdapter } from "@/lib/import/adapters/material";
 import type { ParsedMaterialRow } from "@/lib/import/material-adapter";
 
 const DB_PATH = path.join(os.tmpdir(), `apply-material-import-${process.pid}.db`);
@@ -192,5 +193,14 @@ describe("applyMaterialImport (M1.4)", () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0].reason).toMatch(/eigen units/);
     expect((await client.material.findUnique({ where: { code: "0888-020" } }))?.subhireOnly).toBe(false);
+  });
+
+  it("preview agrees with apply: an inhuur row onto a material with units is errored", async () => {
+    await applyMaterialImport([row({ code: "0888-021", name: "Bank", categoryName: "Zitmeubilair", categoryPrefix: "0888" })], [], client);
+    const inhuur = row({ code: "0888-021", name: "Bank", categoryName: "Zitmeubilair", categoryPrefix: "0888", subhireSupplierName: "Rent-men" });
+    const existing = (await materialAdapter.fetchExisting(client, ["0888-021"])).get("0888-021") as ParsedMaterialRow;
+    expect(materialAdapter.diffAgainstExisting(inhuur, existing)).toMatchObject({ classification: "errored", reason: expect.stringMatching(/eigen units/) });
+    const applied = await applyMaterialImport([inhuur], [], client);
+    expect(applied.errors[0].reason).toMatch(/eigen units/);
   });
 });

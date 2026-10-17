@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
 
     const codes = materials.map((m) => m.code).filter((c): c is string => !!c);
     const existing = await prisma.material.findMany({ where: { code: { in: codes } } });
+    const grouped = await prisma.stockItem.groupBy({ by: ["materialId"], where: { materialId: { in: existing.map((m) => m.id) } }, _count: true });
+    const stockCounts = new Map(grouped.map((g) => [g.materialId, g._count as number]));
     const existingByCode = new Map<string, ExistingMaterial>(
       existing.map((m) => [
         m.code!,
@@ -56,6 +58,8 @@ export async function POST(req: NextRequest) {
           isBundle: m.isBundle,
           archived: m.archived,
           notes: m.notes,
+          subhireUnitCost: toNumberOrNull(m.subhireUnitCost) ?? null,
+          stockCount: stockCounts.get(m.id) ?? 0,
         },
       ]),
     );

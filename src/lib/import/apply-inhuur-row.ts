@@ -2,11 +2,14 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import type { ParsedMaterialRow } from "@/lib/import/material-adapter";
 import { toNumber } from "@/lib/serialize";
 
+export const inhuurStockMessage = (name: string) =>
+  `"${name}" heeft eigen units — verwijder die eerst voor je het als inhuur-item importeert`;
+
 /** An inhuur row never gets own stock (E4): refuse when the material has
  * units already, instead of leaving both. */
 export async function assertNoOwnStock(tx: PrismaClient, materialId: number, name: string): Promise<void> {
   if ((await tx.stockItem.count({ where: { materialId } })) > 0) {
-    throw new Error(`"${name}" heeft eigen units — verwijder die eerst voor je het als inhuur-item importeert`);
+    throw new Error(inhuurStockMessage(name));
   }
 }
 

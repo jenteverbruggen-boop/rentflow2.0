@@ -1,4 +1,5 @@
 import type { ParsedMaterialRow, MaterialParseError } from "@/lib/import/material-adapter";
+import { inhuurStockMessage } from "@/lib/import/apply-inhuur-row";
 
 export interface ImportRowChange {
   field: string;
@@ -34,6 +35,14 @@ export interface ExistingMaterial {
   notes: string | null;
   /** Only read for inhuur rows. */
   subhireUnitCost?: number | null;
+  /** Own stock items; an inhuur row onto a material with units is refused on apply. */
+  stockCount?: number;
+}
+
+/** Same refusal as `assertNoOwnStock` on apply, so preview totals match. */
+export function inhuurStockConflict(parsed: ParsedMaterialRow, existing: ExistingMaterial): string | null {
+  if (!parsed.subhireSupplierName || !(existing.stockCount && existing.stockCount > 0)) return null;
+  return inhuurStockMessage(parsed.name);
 }
 
 const FIELDS: (keyof ExistingMaterial)[] = [
@@ -93,6 +102,11 @@ export function buildMaterialPreview(
     const existing = parsed.code ? existingByCode.get(parsed.code) : undefined;
     if (!existing) {
       rows.push({ line: parsed.line, classification: "new", matchKey: parsed.code, summary });
+      continue;
+    }
+    const conflict = inhuurStockConflict(parsed, existing);
+    if (conflict) {
+      rows.push({ line: parsed.line, classification: "errored", matchKey: parsed.code, summary, reason: conflict });
       continue;
     }
     const changes = diffMaterialRow(parsed, existing);

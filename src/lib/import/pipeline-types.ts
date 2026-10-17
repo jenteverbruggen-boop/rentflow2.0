@@ -88,7 +88,7 @@ export interface EntityAdapter<T> {
   matchKey(row: T): string | number | null;
   summarize(row: T): string;
   /** `null` classification input for a brand-new match key. */
-  diffAgainstExisting(row: T, existing: T | null): { classification: ImportRowClassification; changes?: ImportRowChange[]; matchField?: string };
+  diffAgainstExisting(row: T, existing: T | null): { classification: ImportRowClassification; changes?: ImportRowChange[]; matchField?: string; reason?: string };
   applyRow(tx: PrismaClient, row: T, ctx: Record<string, unknown>): Promise<"created" | "updated" | "unchanged">;
   /** A fresh mutable context object handed to every `applyRow` call in
    * one import — materials use it for a category-id cache and the
