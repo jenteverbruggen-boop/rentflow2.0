@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { MaterialGroup } from "@/lib/grouping";
+import { nextUnitToRemove } from "@/lib/next-unit-to-remove";
+import { useShortageMutations } from "@/hooks/use-shortage-mutations";
 
 interface Args {
   periodId: number;
@@ -79,36 +81,21 @@ export function useMaterialSplitMutations({
     onSuccess: invalidate,
   });
 
-  /** Overboeken — `quantity: 0` (or `decrement` down to 0) deletes the row
-   * server-side. */
-  const setShortageQuantity = useMutation({
-    mutationFn: (args: { shortageId: number } & ({ quantity: number } | { decrement: number })) =>
-      fetch(`/api/periods/${periodId}/shortages/${args.shortageId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify("decrement" in args ? { decrement: args.decrement } : { quantity: args.quantity }),
-      }),
-    onSuccess: invalidate,
-  });
+  const { setShortageQuantity, removeHired } = useShortageMutations({ periodId, invalidate, onWarnings });
 
-  /** Takes an overbooked (phantom) unit away before ever touching a real
-   * assignment — the phantom units are the ones blocking confirmation. */
+  /** Takes an open (overbooked) unit away first — those block confirmation —
+   * then a hired-in unit, then a real assignment. */
   const removeOneFromGroup = (group: MaterialGroup) => {
-    if (group.overbookedUnits > 0 && group.shortageIds.length > 0) {
-      // One unit, not the row: a row can hold several overbooked units.
-      setShortageQuantity.mutate({
-        shortageId: group.shortageIds[group.shortageIds.length - 1],
-        decrement: 1,
-      });
-      return;
-    }
-    const last = group.assignments[group.assignments.length - 1];
-    if (last) removeOne.mutate(last.id);
+    const next = nextUnitToRemove(group);
+    if (!next) return;
+    if (next.kind === "open") setShortageQuantity.mutate({ shortageId: next.shortageId, decrement: 1 });
+    else if (next.kind === "hired") removeHired.mutate({ shortageId: next.shortageId, count: 1 });
+    else removeOne.mutate(next.assignmentId);
   };
 
   const removeAllInGroup = (group: MaterialGroup) => {
-    for (const id of group.shortageIds)
-      setShortageQuantity.mutate({ shortageId: id, quantity: 0 });
+    for (const id of group.shortageIds) setShortageQuantity.mutate({ shortageId: id, quantity: 0 });
+    for (const id of group.subhireIds) removeHired.mutate({ shortageId: id, count: "all" });
     for (const a of group.assignments) removeOne.mutate(a.id);
   };
 
@@ -117,6 +104,7 @@ export function useMaterialSplitMutations({
     removeOne,
     removeBundle,
     setShortageQuantity,
+    removeHired,
     removeOneFromGroup,
     removeAllInGroup,
   };

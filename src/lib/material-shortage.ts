@@ -38,6 +38,7 @@ export function mergeShortagesIntoGroups(
     subhiredUnits: g.subhiredUnits ?? 0,
     overbookedSetup: g.overbookedSetup ?? 0,
     shortageIds: [...(g.shortageIds ?? [])],
+    subhireIds: [...(g.subhireIds ?? [])],
   }));
   const byKey = new Map(result.map((g) => [g.key, g]));
 
@@ -47,14 +48,16 @@ export function mergeShortagesIntoGroups(
     const existing = byKey.get(key);
     const setupAdd = toNumber(s.setupCostSnapshot) * s.quantity;
     // Hired-in rows bill like owned units but are not "overboekt" any more,
-    // and their ids stay out of `shortageIds` — the min-button must never
-    // decrement a supplier booking.
+    // and their ids stay out of `shortageIds` (kept in `subhireIds`) — the
+    // overbook endpoint must never decrement a supplier booking.
     const hiredIn = s.supplierId != null;
     if (existing) {
       existing.units += s.quantity;
       existing.overbookedSetup += setupAdd;
-      if (hiredIn) existing.subhiredUnits += s.quantity;
-      else {
+      if (hiredIn) {
+        existing.subhiredUnits += s.quantity;
+        existing.subhireIds.push(s.id);
+      } else {
         existing.overbookedUnits += s.quantity;
         existing.shortageIds.push(s.id);
       }
@@ -71,6 +74,7 @@ export function mergeShortagesIntoGroups(
         subhiredUnits: hiredIn ? s.quantity : 0,
         overbookedSetup: setupAdd,
         shortageIds: hiredIn ? [] : [s.id],
+        subhireIds: hiredIn ? [s.id] : [],
       };
       byKey.set(key, synthesized);
       result.push(synthesized);

@@ -54,6 +54,7 @@ function makeGroup(
     subhiredUnits: 0,
     overbookedSetup: 0,
     shortageIds: [],
+    subhireIds: [],
   };
 }
 

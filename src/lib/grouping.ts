@@ -27,6 +27,9 @@ export interface MaterialGroup {
    * in materialGroupCost). 0 for a group built without shortages. */
   overbookedSetup: number;
   shortageIds: number[];
+  /** Ids of the hired-in rows folded into this group (removed through the
+   * subhire/remove endpoint, never the overbook one). */
+  subhireIds: number[];
 }
 
 export interface NestedCategoryGroup {
@@ -73,6 +76,7 @@ export function groupMaterialAssignments(
         subhiredUnits: 0,
         overbookedSetup: 0,
         shortageIds: [],
+        subhireIds: [],
       });
     }
   }

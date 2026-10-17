@@ -125,7 +125,7 @@ export async function undoSubhire(periodId: number, shortageId: number, client: 
     // project and its invoicing. There, replace the supplier or remove the line.
     const period = await txClient.period.findUnique({ where: { id: periodId }, select: { project: { select: { status: true } } } });
     if (period && !canOverbook(period.project.status)) {
-      throw new SubhireError("PROJECT_LOCKED", "In een bevestigd project kan je een inhuur niet terugzetten naar overboekt — wijzig de leverancier of verwijder de lijn");
+      throw new SubhireError("PROJECT_LOCKED", "In een bevestigd project kan je een inhuur niet terugzetten naar overboekt — wijzig de leverancier of verwijder de inhuur met de min- of prullenbakknop");
     }
 
     const open = await txClient.periodMaterialShortage.findFirst({
