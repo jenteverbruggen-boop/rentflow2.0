@@ -3,6 +3,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { OverbookLine } from "@/components/overbook-line";
+import { useStockHints } from "@/hooks/use-stock-hints";
+import { freeForLine } from "@/lib/holders-label";
 import { projectShortageLines } from "@/lib/project-shortages";
 import type { Project } from "@/types";
 import { TriangleAlert } from "lucide-react";
@@ -31,6 +34,7 @@ export function ProjectOverbookAlert({ project }: Props) {
   const lines = projectShortageLines(project);
   const anyPeriodId = lines[0]?.periodId;
   const [hiring, setHiring] = useState<SubhireTarget | null>(null);
+  const { data: hints } = useStockHints(project.id, lines.length > 0);
 
   const fill = useMutation({
     mutationFn: async () => {
@@ -65,6 +69,8 @@ export function ProjectOverbookAlert({ project }: Props) {
   }
 
   const total = lines.reduce((s, l) => s + l.quantity, 0);
+  // Until the hints have loaded the button stays usable, as before.
+  const canAssign = !hints || lines.some((l) => freeForLine(hints.get(l.id), l.quantity) > 0);
 
   return (
     <Alert className="border-amber-500/40">
@@ -75,22 +81,16 @@ export function ProjectOverbookAlert({ project }: Props) {
               <InlineIcon icon={TriangleAlert} /> {total} unit(s) overboekt — niet in voorraad
             </p>
             {lines.map((l) => (
-              <p key={l.id} className="flex flex-wrap items-center gap-2 text-xs">
-                <span>
-                  {l.periodName} · {l.materialName} · {l.quantity} overboekt
-                  {l.isBundleComponent && " (onderdeel van een set)"}
-                </span>
-                <Button
-                  size="sm" variant="outline" className="h-6 px-2 text-xs"
-                  onClick={() => setHiring({
-                    mode: "hire", periodId: l.periodId, shortageId: l.id, materialName: l.materialName,
-                    quantity: l.quantity, supplierId: l.defaultSupplierId, basis: l.subhireCostBasis,
-                    unitCost: l.subhireUnitCost, costOverride: null,
-                  })}
-                >
-                  Inhuren
-                </Button>
-              </p>
+              <OverbookLine
+                key={l.id}
+                line={l}
+                hint={hints?.get(l.id)}
+                onHire={() => setHiring({
+                  mode: "hire", periodId: l.periodId, shortageId: l.id, materialName: l.materialName,
+                  quantity: l.quantity, supplierId: l.defaultSupplierId, basis: l.subhireCostBasis,
+                  unitCost: l.subhireUnitCost, costOverride: null,
+                })}
+              />
             ))}
             <p className="text-xs">
               Het project kan pas naar bevestigd/actief/afgerond als dit is
@@ -111,7 +111,8 @@ export function ProjectOverbookAlert({ project }: Props) {
           <Button
             size="sm"
             variant="outline"
-            disabled={fill.isPending || anyPeriodId == null}
+            disabled={fill.isPending || anyPeriodId == null || !canAssign}
+            title={canAssign ? undefined : "Er is geen eigen unit vrij om toe te wijzen"}
             onClick={() => fill.mutate()}
           >
             {fill.isPending ? "Bezig…" : "Toewijzen"}
