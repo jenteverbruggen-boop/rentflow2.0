@@ -11,7 +11,7 @@ import type { Project, Person, Material } from "@/types";
 import { CalendarDays, FolderKanban, Package, Receipt, Users, Wallet } from "lucide-react";
 
 interface StatsResponse {
-  revenueByMonth: { booked: number; invoiced: number }[];
+  revenueByMonth: { booked: { agreed: number; pending: number }; invoiced: number }[];
 }
 
 async function get<T>(url: string): Promise<T> {
@@ -90,11 +90,12 @@ export default function DashboardPage() {
     queryFn: () => get<StatsResponse>(`/api/stats?from=${year}-01-01&to=${year}-12-31`),
     enabled: canSeeCijfers,
   });
-  const bookedYtd = statsQuery.data?.revenueByMonth.reduce((s, m) => s + m.booked, 0) ?? 0;
+  const bookedYtd = statsQuery.data?.revenueByMonth.reduce((s, m) => s + m.booked.agreed, 0) ?? 0;
+  const pendingYtd = statsQuery.data?.revenueByMonth.reduce((s, m) => s + m.booked.pending, 0) ?? 0;
   const invoicedYtd = statsQuery.data?.revenueByMonth.reduce((s, m) => s + m.invoiced, 0) ?? 0;
   const moneyTiles = canSeeCijfers
     ? [
-        { label: `Omzet ${year} (geboekt)`, value: formatEUR(bookedYtd), icon: Wallet, href: "/cijfers" },
+        { label: `Omzet ${year} (afgesproken)`, value: formatEUR(bookedYtd), note: `+ ${formatEUR(pendingYtd)} nog te bevestigen`, icon: Wallet, href: "/cijfers" },
         { label: `Omzet ${year} (gefactureerd)`, value: formatEUR(invoicedYtd), icon: Receipt, href: "/cijfers" },
       ]
     : [];
@@ -107,7 +108,7 @@ export default function DashboardPage() {
         tiles.length > 0 && (
           <div key={i} className={i === 0 ? "grid grid-cols-3 gap-2 sm:gap-4" : "grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4"}>
             {tiles.map((s) => (
-              <DashboardStatTile key={s.label} label={s.label} value={s.value} icon={s.icon} href={s.href} />
+              <DashboardStatTile key={s.label} label={s.label} value={s.value} icon={s.icon} href={s.href} note={"note" in s ? s.note : undefined} />
             ))}
           </div>
         ),

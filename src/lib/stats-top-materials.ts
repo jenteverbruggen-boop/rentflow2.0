@@ -1,12 +1,13 @@
 import { groupMaterialAssignments, materialGroupCost } from "@/lib/grouping";
 import { periodDays } from "@/lib/pricing";
-import type { Period } from "@/types";
+import { addToSplit, bucketOf, emptySplit, roundSplit, type BucketedPeriod, type Split } from "@/lib/stats-status";
 
 export interface TopMaterialEntry {
   materialId: number;
   name: string;
   code: string | null;
-  revenue: number;
+  /** Booked revenue per bucket; the ranking uses `agreed`. */
+  revenue: Split;
 }
 
 /**
@@ -21,7 +22,7 @@ export interface TopMaterialEntry {
  * applied consistently to every stats ranking). Returns the top 10,
  * highest revenue first.
  */
-export function computeTopMaterials(periods: Period[]): TopMaterialEntry[] {
+export function computeTopMaterials(periods: BucketedPeriod[]): TopMaterialEntry[] {
   const revenueByMaterial = new Map<number, TopMaterialEntry>();
 
   for (const period of periods) {
@@ -29,21 +30,19 @@ export function computeTopMaterials(periods: Period[]): TopMaterialEntry[] {
     for (const group of groupMaterialAssignments(period.materials, period.shortages ?? [])) {
       if (group.material.archived) continue;
       const revenue = materialGroupCost(group, days);
-      const existing = revenueByMaterial.get(group.material.id);
-      if (existing) existing.revenue += revenue;
-      else {
-        revenueByMaterial.set(group.material.id, {
-          materialId: group.material.id,
-          name: group.material.name,
-          code: group.material.code,
-          revenue,
-        });
-      }
+      const entry = revenueByMaterial.get(group.material.id) ?? {
+        materialId: group.material.id,
+        name: group.material.name,
+        code: group.material.code,
+        revenue: emptySplit(),
+      };
+      addToSplit(entry.revenue, bucketOf(period), revenue);
+      revenueByMaterial.set(group.material.id, entry);
     }
   }
 
   return [...revenueByMaterial.values()]
-    .map((m) => ({ ...m, revenue: Math.round(m.revenue * 100) / 100 }))
-    .sort((a, b) => b.revenue - a.revenue)
+    .map((m) => ({ ...m, revenue: roundSplit(m.revenue) }))
+    .sort((a, b) => b.revenue.agreed - a.revenue.agreed || b.revenue.pending - a.revenue.pending)
     .slice(0, 10);
 }

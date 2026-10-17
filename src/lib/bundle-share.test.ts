@@ -50,15 +50,15 @@ function periodWith(shortages: PeriodMaterialShortage[], materials: PeriodStockI
 describe("hired set components in margin and payback (D2)", () => {
   it("2 of 4 chairs hired: revenue is half the chairs' share, cost counts in full", () => {
     const stats = computeSubhireStats([periodWith([hired(2)])]);
-    expect(stats.revenue).toBeCloseTo(((40 * 8) / 11) / 2, 1);
-    expect(stats.cost).toBe(2);
-    expect(stats.margin).toBeCloseTo(stats.revenue - 2, 2);
-    expect(stats.componentCost).toBe(2);
+    expect(stats.revenue.agreed).toBeCloseTo(((40 * 8) / 11) / 2, 1);
+    expect(stats.cost).toEqual({ agreed: 2, pending: 0 });
+    expect(stats.margin.agreed).toBeCloseTo(stats.revenue.agreed - 2, 2);
+    expect(stats.componentCost).toEqual({ agreed: 2, pending: 0 });
     expect(stats.rows).toBe(1);
   });
 
   it("all hired units' shares plus the owned remainder add up to the set line", () => {
-    const hiredShare = computeSubhireStats([periodWith([hired(2)])]).revenue;
+    const hiredShare = computeSubhireStats([periodWith([hired(2)])]).revenue.agreed;
     const chairsShare = componentShare(booking, weights, 2, DAYS);
     expect(hiredShare + chairsShare / 2).toBeCloseTo(chairsShare, 1);
   });

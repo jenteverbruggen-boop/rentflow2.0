@@ -7,10 +7,12 @@ interface Props {
   value: string | number;
   icon: LucideIcon;
   href: string;
+  /** Small line under the value. */
+  note?: string;
 }
 
 /** Compact on phones (three count tiles share a row), roomier from sm. */
-export function DashboardStatTile({ label, value, icon: Icon, href }: Props) {
+export function DashboardStatTile({ label, value, icon: Icon, href, note }: Props) {
   return (
     <Link href={href} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl">
       <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
@@ -20,6 +22,7 @@ export function DashboardStatTile({ label, value, icon: Icon, href }: Props) {
         </CardHeader>
         <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
           <div className="text-xl sm:text-3xl font-bold tabular-nums truncate">{value}</div>
+          {note && <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{note}</p>}
         </CardContent>
       </Card>
     </Link>

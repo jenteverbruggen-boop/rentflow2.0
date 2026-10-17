@@ -23,12 +23,22 @@ describe("aggregateBookedByClient (K1.1)", () => {
       { period: makePeriod(50), clientId: 1, clientName: "Acme" },
       { period: makePeriod(200), clientId: 2, clientName: "Other" },
     ]);
-    expect(byClient.get(1)).toEqual({ name: "Acme", booked: 150 });
-    expect(byClient.get(2)).toEqual({ name: "Other", booked: 200 });
+    expect(byClient.get(1)).toEqual({ name: "Acme", booked: { agreed: 150, pending: 0 } });
+    expect(byClient.get(2)).toEqual({ name: "Other", booked: { agreed: 200, pending: 0 } });
   });
 
   it("skips periods on a project with no client", () => {
     const byClient = aggregateBookedByClient([{ period: makePeriod(100), clientId: null, clientName: null }]);
     expect(byClient.size).toBe(0);
+  });
+});
+
+describe("aggregateBookedByClient buckets (D1)", () => {
+  it("keeps a client's agreed and pending revenue apart", () => {
+    const byClient = aggregateBookedByClient([
+      { period: { ...makePeriod(100), bucket: "afgesproken" }, clientId: 1, clientName: "Acme" },
+      { period: { ...makePeriod(30), bucket: "teBevestigen" }, clientId: 1, clientName: "Acme" },
+    ]);
+    expect(byClient.get(1)?.booked).toEqual({ agreed: 100, pending: 30 });
   });
 });

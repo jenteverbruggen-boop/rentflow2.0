@@ -1,18 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
+import type { Split } from "@/lib/stats-status";
 
 export interface RevenueMonthEntry {
   month: string;
-  bookedPeople: number;
-  bookedMaterials: number;
-  bookedTravel: number;
-  booked: number;
+  /** Booked figures per bucket: agreed (bevestigd/actief/afgerond) and
+   * still to confirm (concept). Cancelled projects are left out. */
+  bookedPeople: Split;
+  bookedMaterials: Split;
+  bookedTravel: Split;
+  booked: Split;
   invoiced: number;
 }
 
 export interface RevenueClientEntry {
   clientId: number;
   name: string;
-  booked: number;
+  booked: Split;
   invoiced: number;
 }
 
@@ -27,7 +30,8 @@ export interface TopMaterialEntry {
   materialId: number;
   name: string;
   code: string | null;
-  revenue: number;
+  /** Ranked on `agreed`. */
+  revenue: Split;
 }
 
 export interface PaybackEntry {
@@ -40,12 +44,12 @@ export interface PaybackEntry {
 }
 
 export interface SubhireStatsEntry {
-  revenue: number;
-  cost: number;
-  margin: number;
+  revenue: Split;
+  cost: Split;
+  margin: Split;
   rows: number;
   unpricedRows: number;
-  componentCost: number;
+  componentCost: Split;
 }
 
 export interface StatsResponse {

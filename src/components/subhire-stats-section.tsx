@@ -23,14 +23,15 @@ export function SubhireStatsSection({ data }: { data: SubhireStatsEntry }) {
           {figures.map((f) => (
             <div key={f.label} className="rounded-md border p-3">
               <p className="text-xs text-muted-foreground">{f.label}</p>
-              <p className="text-xl font-semibold tabular-nums">{formatEUR(f.value)}</p>
-              <p className="text-[11px] text-muted-foreground">{f.note}</p>
+              <p className="text-xl font-semibold tabular-nums">{formatEUR(f.value.agreed)}</p>
+              <p className="text-[11px] text-muted-foreground">afgesproken · {f.note}</p>
+              <p className="text-xs tabular-nums text-muted-foreground">+ {formatEUR(f.value.pending)} nog te bevestigen</p>
             </div>
           ))}
         </div>
-        {data.componentCost > 0 && (
+        {data.componentCost.agreed + data.componentCost.pending > 0 && (
           <p className="text-xs text-muted-foreground">
-            Waarvan {formatEUR(data.componentCost)} inkoop voor ingehuurde onderdelen van sets (hun omzet is het aandeel in de setprijs).
+            Waarvan {formatEUR(data.componentCost.agreed + data.componentCost.pending)} inkoop voor ingehuurde onderdelen van sets (hun omzet is het aandeel in de setprijs).
           </p>
         )}
         {data.unpricedRows > 0 && (

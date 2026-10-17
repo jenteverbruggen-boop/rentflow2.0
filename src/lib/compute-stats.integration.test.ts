@@ -36,7 +36,7 @@ beforeAll(async () => {
   // Project A: one period entirely inside June, one booked person + one flat material.
   const projectA = await client.project.create({
     data: {
-      name: "Project A", clientId: clientA.id,
+      name: "Project A", clientId: clientA.id, status: "bevestigd",
       startDate: new Date("2026-06-01"), endDate: new Date("2026-06-02"),
       periods: {
         create: [{
@@ -61,6 +61,18 @@ beforeAll(async () => {
     },
   });
   ids.projectB = projectB.id;
+
+  // D1: a concept project (still to confirm) and a cancelled one (left out everywhere).
+  const other = await client.person.create({ data: { name: "Els", dayPrice: 100 } });
+  for (const [name, status, price] of [["Project C", "concept", 100], ["Project D", "geannuleerd", 1000]] as const) {
+    await client.project.create({
+      data: {
+        name, clientId: clientA.id, status, startDate: new Date("2026-06-10"), endDate: new Date("2026-06-10"),
+        periods: { create: [{ name: "Dag", startDate: new Date("2026-06-10"), endDate: new Date("2026-06-10"),
+          people: { create: [{ personId: other.id, dayPriceSnapshot: price }] } }] },
+      },
+    });
+  }
 
   // An invoice for client A, invoiced in July for the June booking —
   // proving the booked/invoiced series deliberately disagree.
@@ -89,8 +101,8 @@ describe("computeStats (K1.2 — real seeded data)", () => {
   it("attributes booked revenue to June for project A's fully-in-June period", async () => {
     const stats = await computeStats({ from: new Date("2026-06-01"), to: new Date("2026-06-30") }, client);
     const june = stats.revenueByMonth.find((m) => m.month === "2026-06")!;
-    expect(june.bookedPeople).toBe(400); // 2 days x 200
-    expect(june.bookedMaterials).toBe(100); // 2 days x 50
+    expect(june.bookedPeople).toEqual({ agreed: 400, pending: 100 }); // A: 2 days x 200; C (concept): 100; D (cancelled) left out
+    expect(june.bookedMaterials).toEqual({ agreed: 100, pending: 0 }); // 2 days x 50
   });
 
   it("splits project B's period pro-rata across May and June", async () => {
@@ -112,10 +124,10 @@ describe("computeStats (K1.2 — real seeded data)", () => {
     const stats = await computeStats({ from: new Date("2026-05-01"), to: new Date("2026-07-31") }, client);
     const clientA = stats.revenueByClient.find((c) => c.clientId === ids.clientA)!;
     expect(clientA.name).toBe("Client A");
-    expect(clientA.booked).toBe(500); // 400 people + 100 material
+    expect(clientA.booked).toEqual({ agreed: 500, pending: 100 }); // 400 people + 100 material; concept project C; cancelled D left out
     expect(clientA.invoiced).toBe(900);
     const clientB = stats.revenueByClient.find((c) => c.clientId === ids.clientB);
-    expect(clientB?.booked).toBe(0); // no people/materials booked on project B
+    expect(clientB?.booked).toEqual({ agreed: 0, pending: 0 }); // no people/materials booked on project B
   });
 
   it("personUtilisation reports Jan's booked days", async () => {
@@ -124,10 +136,16 @@ describe("computeStats (K1.2 — real seeded data)", () => {
     expect(jan?.bookedDays).toBe(2);
   });
 
+  it("a cancelled project is left out of the utilisation too (D1)", async () => {
+    const stats = await computeStats({ from: new Date("2026-06-01"), to: new Date("2026-06-30") }, client);
+    const els = stats.personUtilisation.find((p) => p.name === "Els");
+    expect(els?.bookedDays).toBe(1); // project C (concept) counts, project D (cancelled) does not
+  });
+
   it("topMaterials lists Tent with its booked revenue", async () => {
     const stats = await computeStats({ from: new Date("2026-06-01"), to: new Date("2026-06-30") }, client);
     const tent = stats.topMaterials.find((m) => m.materialId === ids.materialId);
-    expect(tent?.revenue).toBe(100);
+    expect(tent?.revenue).toEqual({ agreed: 100, pending: 0 });
   });
 
   it("an invoice's own invoiced figure equals the sum of its own lines (K1.2's explicit requirement)", async () => {

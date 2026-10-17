@@ -9,6 +9,7 @@ import { aggregatePersonUtilisation } from "@/lib/stats-utilisation";
 import { computeTopMaterials } from "@/lib/stats-top-materials";
 import { computeSubhireStats } from "@/lib/stats-subhire";
 import { toNumber } from "@/lib/serialize";
+import { emptySplit, statusBucket, type BucketedPeriod } from "@/lib/stats-status";
 import type { Period } from "@/types";
 
 export interface DateRange {
@@ -26,7 +27,11 @@ export interface DateRange {
  */
 export async function computeStats(range: DateRange, client: PrismaClient = defaultPrisma) {
   const periodRows = await client.period.findMany({
-    where: { AND: [{ startDate: { lt: range.to } }, { endDate: { gt: range.from } }] },
+    // Cancelled projects are left out of every booked figure (D1).
+    where: {
+      AND: [{ startDate: { lt: range.to } }, { endDate: { gt: range.from } }],
+      project: { status: { not: "geannuleerd" } },
+    },
     include: { ...statsPeriodInclude, project: { include: { clientRel: true } } },
   });
   // serializeStatsPeriod converts Decimal money fields to numbers but
@@ -35,7 +40,11 @@ export async function computeStats(range: DateRange, client: PrismaClient = defa
   // un-narrowed to the "dag"|"uur" union — every consumer below only
   // ever reads these via `new Date(x)` or an exact string-literal
   // comparison, both runtime-safe regardless of the exact TS shape.
-  const periods = periodRows.map(serializeStatsPeriod) as unknown as Period[];
+  // Each period is tagged with its project's bucket: agreed vs still to confirm.
+  const periods = periodRows.map((r) => ({
+    ...(serializeStatsPeriod(r) as unknown as Period),
+    bucket: statusBucket(r.project.status) ?? undefined,
+  })) as BucketedPeriod[];
 
   const invoiceRows = await client.invoice.findMany({
     where: {
@@ -79,10 +88,10 @@ export async function computeStats(range: DateRange, client: PrismaClient = defa
     const booked = bookedByMonth.get(month);
     return {
       month,
-      bookedPeople: booked?.bookedPeople ?? 0,
-      bookedMaterials: booked?.bookedMaterials ?? 0,
-      bookedTravel: booked?.bookedTravel ?? 0,
-      booked: booked?.booked ?? 0,
+      bookedPeople: booked?.bookedPeople ?? emptySplit(),
+      bookedMaterials: booked?.bookedMaterials ?? emptySplit(),
+      bookedTravel: booked?.bookedTravel ?? emptySplit(),
+      booked: booked?.booked ?? emptySplit(),
       invoiced: invoicedByMonth.get(month) ?? 0,
     };
   });
@@ -99,7 +108,7 @@ export async function computeStats(range: DateRange, client: PrismaClient = defa
   const revenueByClient = [...clientIds].map((clientId) => ({
     clientId,
     name: bookedByClient.get(clientId)?.name || clientNames.get(clientId) || "",
-    booked: bookedByClient.get(clientId)?.booked ?? 0,
+    booked: bookedByClient.get(clientId)?.booked ?? emptySplit(),
     invoiced: invoicedByClient.get(clientId) ?? 0,
   }));
 

@@ -12,12 +12,14 @@ import {
 } from "@/components/ui/chart";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { formatEUR } from "@/lib/pricing";
+import { pendingHatchDefs } from "@/components/pending-hatch";
 import type { RevenueMonthEntry } from "@/hooks/use-stats";
 
 const chartConfig = {
-  bookedPeople: { label: "Personeel", color: "var(--chart-1)" },
-  bookedMaterials: { label: "Materiaal", color: "var(--chart-2)" },
-  bookedTravel: { label: "Reis", color: "var(--chart-3)" },
+  people: { label: "Personeel (afgesproken)", color: "var(--chart-1)" },
+  materials: { label: "Materiaal (afgesproken)", color: "var(--chart-2)" },
+  travel: { label: "Reis (afgesproken)", color: "var(--chart-3)" },
+  pending: { label: "Nog te bevestigen", color: "var(--muted-foreground)" },
   invoiced: { label: "Gefactureerd", color: "var(--chart-4)" },
 } satisfies ChartConfig;
 
@@ -28,6 +30,15 @@ const chartConfig = {
  * (K1) — the legend note says so explicitly rather than letting the
  * chart imply they should line up. */
 export function RevenueByMonthSection({ data }: { data: RevenueMonthEntry[] }) {
+  // Agreed per category (solid) with the concept total hatched on top.
+  const chartData = data.map((m) => ({
+    month: m.month,
+    people: m.bookedPeople.agreed,
+    materials: m.bookedMaterials.agreed,
+    travel: m.bookedTravel.agreed,
+    pending: m.booked.pending,
+    invoiced: m.invoiced,
+  }));
   return (
     <Card>
       <CardHeader>
@@ -40,18 +51,22 @@ export function RevenueByMonthSection({ data }: { data: RevenueMonthEntry[] }) {
           <>
             <p className="text-xs text-muted-foreground">
               Geboekt (staven) is toegewezen aan de periode; gefactureerd (lijn) aan de
-              factuurdatum — deze twee lopen bewust niet gelijk.
+              factuurdatum — deze twee lopen bewust niet gelijk. Afgesproken = bevestigd,
+              actief of afgerond; nog te bevestigen = concept (gearceerd). Geannuleerde
+              projecten tellen niet mee.
             </p>
             <ChartContainer config={chartConfig} className="aspect-auto h-64 w-full">
-              <ComposedChart data={data} accessibilityLayer>
+              <ComposedChart data={chartData} accessibilityLayer>
+                {pendingHatchDefs}
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="month" tickLine={false} axisLine={false} />
                 <YAxis tickLine={false} axisLine={false} width={48} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="bookedPeople" stackId="booked" fill="var(--color-bookedPeople)" />
-                <Bar dataKey="bookedMaterials" stackId="booked" fill="var(--color-bookedMaterials)" />
-                <Bar dataKey="bookedTravel" stackId="booked" fill="var(--color-bookedTravel)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="people" stackId="booked" fill="var(--color-people)" />
+                <Bar dataKey="materials" stackId="booked" fill="var(--color-materials)" />
+                <Bar dataKey="travel" stackId="booked" fill="var(--color-travel)" />
+                <Bar dataKey="pending" stackId="booked" fill="url(#pending-hatch)" stroke="var(--color-pending)" radius={[4, 4, 0, 0]} />
                 <Line dataKey="invoiced" stroke="var(--color-invoiced)" strokeWidth={2} dot={{ r: 4 }} />
               </ComposedChart>
             </ChartContainer>
@@ -63,7 +78,8 @@ export function RevenueByMonthSection({ data }: { data: RevenueMonthEntry[] }) {
                     <TableHead className="text-right">Personeel</TableHead>
                     <TableHead className="text-right">Materiaal</TableHead>
                     <TableHead className="text-right">Reis</TableHead>
-                    <TableHead className="text-right">Geboekt</TableHead>
+                    <TableHead className="text-right">Afgesproken</TableHead>
+                    <TableHead className="text-right">Nog te bevestigen</TableHead>
                     <TableHead className="text-right">Gefactureerd</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -71,10 +87,11 @@ export function RevenueByMonthSection({ data }: { data: RevenueMonthEntry[] }) {
                   {data.map((m) => (
                     <TableRow key={m.month}>
                       <TableCell>{m.month}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatEUR(m.bookedPeople)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatEUR(m.bookedMaterials)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatEUR(m.bookedTravel)}</TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">{formatEUR(m.booked)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatEUR(m.bookedPeople.agreed)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatEUR(m.bookedMaterials.agreed)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatEUR(m.bookedTravel.agreed)}</TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">{formatEUR(m.booked.agreed)}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">{formatEUR(m.booked.pending)}</TableCell>
                       <TableCell className="text-right tabular-nums">{formatEUR(m.invoiced)}</TableCell>
                     </TableRow>
                   ))}

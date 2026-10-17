@@ -5,15 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { formatEUR } from "@/lib/pricing";
+import { pendingHatchDefs } from "@/components/pending-hatch";
 import type { TopMaterialEntry } from "@/hooks/use-stats";
 
 const chartConfig = {
-  revenue: { label: "Omzet", color: "var(--chart-2)" },
+  agreed: { label: "Afgesproken", color: "var(--chart-2)" },
+  pending: { label: "Nog te bevestigen", color: "var(--muted-foreground)" },
 } satisfies ChartConfig;
 
-/** K2.3 — top 10 materials by booked revenue in the range (already
- * excludes archived materials, M1.3 — computed server-side). */
+/** K2.3 — top 10 materials by agreed revenue in the range, with what is still
+ * to be confirmed next to it (already excludes archived materials, M1.3 —
+ * computed server-side). */
 export function TopMaterialsSection({ data }: { data: TopMaterialEntry[] }) {
+  const chartData = data.map((m) => ({ name: m.name, agreed: m.revenue.agreed, pending: m.revenue.pending }));
   return (
     <Card>
       <CardHeader>
@@ -25,12 +29,14 @@ export function TopMaterialsSection({ data }: { data: TopMaterialEntry[] }) {
         ) : (
           <>
             <ChartContainer config={chartConfig} className="aspect-auto h-64 w-full">
-              <BarChart data={data} layout="vertical" accessibilityLayer>
+              <BarChart data={chartData} layout="vertical" accessibilityLayer>
+                {pendingHatchDefs}
                 <CartesianGrid horizontal={false} />
                 <XAxis type="number" tickLine={false} axisLine={false} />
                 <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={100} />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="agreed" stackId="rev" fill="var(--color-agreed)" />
+                <Bar dataKey="pending" stackId="rev" fill="url(#pending-hatch)" stroke="var(--color-pending)" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ChartContainer>
             <div className="overflow-x-auto rounded-lg border">
@@ -39,7 +45,8 @@ export function TopMaterialsSection({ data }: { data: TopMaterialEntry[] }) {
                   <TableRow>
                     <TableHead>Materiaal</TableHead>
                     <TableHead>Code</TableHead>
-                    <TableHead className="text-right">Omzet</TableHead>
+                    <TableHead className="text-right">Afgesproken</TableHead>
+                    <TableHead className="text-right">Nog te bevestigen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -47,7 +54,8 @@ export function TopMaterialsSection({ data }: { data: TopMaterialEntry[] }) {
                     <TableRow key={m.materialId}>
                       <TableCell className="max-w-40 truncate">{m.name}</TableCell>
                       <TableCell className="text-muted-foreground text-xs">{m.code ?? "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatEUR(m.revenue)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatEUR(m.revenue.agreed)}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">{formatEUR(m.revenue.pending)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
