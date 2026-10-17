@@ -7,7 +7,6 @@ import {
   badRequest,
   serverError,
 } from "@/lib/api-auth";
-import { nextCode } from "@/lib/material-code";
 import { redactMoney } from "@/lib/redact";
 import { findRejectedMoneyWrite, moneyFieldsToIgnore } from "@/lib/money-write-guard";
 import { serializeMaterialsList } from "@/lib/materials-list";
