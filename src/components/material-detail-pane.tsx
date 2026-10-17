@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -34,6 +35,7 @@ export function MaterialDetailPane({
   onManageUnits,
 }: MaterialDetailPaneProps) {
   const saveField = useMaterialUpdate(material);
+  const [bundleError, setBundleError] = useState<string | null>(null);
 
   const { data: stockItems = [] } = useQuery({
     queryKey: ["material", material?.id, "stock-items"],
@@ -55,11 +57,16 @@ export function MaterialDetailPane({
     <Card className="h-full">
       <MaterialDetailHeader
         material={material}
-        onToggleBundle={() => saveField("isBundle", String(!material.isBundle))}
+        onToggleBundle={() =>
+          saveField("isBundle", String(!material.isBundle)).then(
+            () => setBundleError(null),
+            (e: Error) => setBundleError(e.message),
+          )}
         onManageUnits={onManageUnits}
       />
 
       <CardContent className="space-y-4">
+        {bundleError && <p className="text-xs text-destructive" role="alert">{bundleError}</p>}
         <MaterialSummaryGrid material={material} onSave={saveField} />
         <MaterialPriceWarnings material={material} />
 

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SubhireSupplierSelect } from "@/components/subhire-supplier-select";
-import { costsForSupplierChange } from "@/lib/subhire-supplier-change";
+import { costsForPick } from "@/lib/subhire-supplier-change";
 import { useAuthMe } from "@/hooks/use-auth-me";
 import { useSuppliers } from "@/hooks/use-suppliers";
 import { useSubhire } from "@/hooks/use-subhire";
@@ -66,15 +66,14 @@ export function SubhireDialog({ projectId, target, onClose }: Props) {
   const mutation = target.mode === "hire" ? hire : update;
   const costs = money ? { basis, unitCost: num(unitCost), costOverride: num(override) } : {};
 
-  /** Edit mode: a price belongs to one supplier, so a change prefills the
-   * material default (its default supplier) or clears the price. */
+  /** A price belongs to one supplier: see `costsForPick`. */
   function changeSupplier(value: string) {
     setSupplierId(value);
-    if (target?.mode !== "edit" || Number(value) === target.supplierId) return;
-    const next = costsForSupplierChange(Number(value), target.defaults ?? {}, { basis });
+    if (!target) return;
+    const next = costsForPick(Number(value), target);
     setBasis(next.basis);
     setUnitCost(next.unitCost == null ? "" : String(next.unitCost));
-    setOverride("");
+    setOverride(next.costOverride == null ? "" : String(next.costOverride));
   }
 
   function submit() {

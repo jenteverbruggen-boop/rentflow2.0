@@ -49,7 +49,10 @@ export function useMaterialSplitMutations({
         // the stock moved under us — name the numbers rather than the bare
         // "Onvoldoende voorraad".
         if (res.status === 409 && data.shortfall) {
+          // The server's own message wins when it has one: for a set it names
+          // the component that ran short.
           throw new Error(
+            data.error ??
             `Niet genoeg vrij — gevraagd: ${data.shortfall.requested}, beschikbaar: ${data.shortfall.available}`,
           );
         }
@@ -81,7 +84,7 @@ export function useMaterialSplitMutations({
     onSuccess: invalidate,
   });
 
-  const { setShortageQuantity, removeHired } = useShortageMutations({ periodId, invalidate, onWarnings });
+  const { setShortageQuantity, removeHired } = useShortageMutations({ periodId, invalidate, onWarnings, onError });
 
   /** Takes an open (overbooked) unit away first — those block confirmation —
    * then a hired-in unit, then a real assignment. */

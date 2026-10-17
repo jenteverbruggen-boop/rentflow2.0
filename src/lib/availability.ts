@@ -49,7 +49,7 @@ export async function bundleAvailableCount(
 ): Promise<number> {
   const components = await client.materialComponent.findMany({
     where: { parentId: bundleMaterialId },
-    include: { child: { include: { stockItems: { select: { id: true } } } } },
+    include: { child: { include: { stockItems: { select: { id: true } }, defaultSupplier: { select: { archived: true } } } } },
   });
   if (components.length === 0) return 0;
 
@@ -58,7 +58,8 @@ export async function bundleAvailableCount(
   // count is unlimited (Infinity) and the caller clamps it.
   let min = Infinity;
   for (const comp of components) {
-    if (comp.child.subhireOnly) continue;
+    // Only when a usable supplier exists; otherwise it counts its real stock (0).
+    if (comp.child.subhireOnly && comp.child.defaultSupplier && !comp.child.defaultSupplier.archived) continue;
     const allIds = comp.child.stockItems.map((s) => s.id);
     const booked = await client.periodStockItem.findMany({
       where: {

@@ -1,14 +1,21 @@
+import { useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 
 interface Args {
   periodId: number;
   invalidate: () => void;
   onWarnings: (warnings: string[]) => void;
+  onError: (error: string) => void;
 }
 
 /** Overboeken + inhuur row mutations of a period (open shortage and hired-in
  * rows), split out of useMaterialSplitMutations to stay under 150 lines. */
-export function useShortageMutations({ periodId, invalidate, onWarnings }: Args) {
+export function useShortageMutations({ periodId, invalidate, onWarnings, onError }: Args) {
+  // Trashing a group can remove hired rows from several suppliers at once:
+  // collect every supplier of this batch into one warning.
+  const inflight = useRef(0);
+  const suppliers = useRef(new Set<string>());
+
   /** `quantity: 0` (or `decrement` down to 0) deletes the row server-side. */
   const setShortageQuantity = useMutation({
     mutationFn: (args: { shortageId: number } & ({ quantity: number } | { decrement: number })) =>
@@ -32,9 +39,19 @@ export function useShortageMutations({ periodId, invalidate, onWarnings }: Args)
       if (!res.ok) throw new Error((data as { error?: string } | null)?.error ?? "Verwijderen mislukt");
       return data as { supplierName: string; removed: number };
     },
+    onMutate: () => {
+      if (inflight.current === 0) suppliers.current.clear();
+      inflight.current += 1;
+    },
     onSuccess: (data) => {
-      onWarnings([`Vergeet ${data.supplierName} niet af te bellen`]);
+      suppliers.current.add(data.supplierName);
+      onWarnings([`Vergeet ${[...suppliers.current].join(", ")} niet af te bellen`]);
+      onError("");
       invalidate();
+    },
+    onError: (err) => onError((err as Error).message),
+    onSettled: () => {
+      inflight.current -= 1;
     },
   });
 

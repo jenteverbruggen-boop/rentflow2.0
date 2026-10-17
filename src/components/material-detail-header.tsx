@@ -37,7 +37,7 @@ export function MaterialDetailHeader({
           >
             {material.isBundle ? <><InlineIcon icon={Gift} /> Set</> : "Markeer als set"}
           </Button>
-          {!material.isBundle && (
+          {!material.isBundle && !material.subhireOnly && (
             <Button size="sm" variant="outline" onClick={onManageUnits}>
               Beheer units
             </Button>

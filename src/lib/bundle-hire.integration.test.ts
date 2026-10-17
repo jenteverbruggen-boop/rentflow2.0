@@ -64,6 +64,16 @@ describe("sets with an inhuur-only component (A2)", () => {
     expect(await bundleAvailableCount(setId, { from, to }, client)).toBe(2);
   });
 
+  it("an inhuur-only component without a usable supplier counts its real stock (0)", async () => {
+    const archived = (await client.supplier.create({ data: { name: "Weg", archived: true } })).id;
+    const orphan = (await client.material.create({ data: { name: "Wees", dayPrice: 1, subhireOnly: true, defaultSupplierId: archived } })).id;
+    const set2 = (await client.material.create({ data: { name: "Set 2", isBundle: true } })).id;
+    await client.materialComponent.createMany({
+      data: [{ parentId: set2, childId: tableId, quantity: 1 }, { parentId: set2, childId: orphan, quantity: 1 }],
+    });
+    expect(await bundleAvailableCount(set2, { from, to }, client)).toBe(0);
+  });
+
   it("is bookable: the plates are hired in", async () => {
     const periodId = await newPeriod();
     await bookBundleMaterial({ periodId, materialId: setId, quantity: 2, from, to, dayPriceSnapshot: 5, components: comps(null), client });

@@ -8,6 +8,7 @@ import { noSellingPrice } from "@/lib/price-warnings";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useState } from "react";
 import type { MaterialAvailability } from "@/types";
+import { UNLIMITED_AVAILABLE } from "@/lib/availability-limits";
 import { basisSuffix } from "@/lib/price-basis";
 
 const OPEN = "__open__";
@@ -61,8 +62,9 @@ export function MaterialAvailableRow({
           )}
         </div>
         <p className="text-[10px] text-muted-foreground truncate">
-          {m.availableCount}{" "}
-          {m.material.isBundle ? "set(s) vrij" : `/${m.totalStock} vrij`} ·{" "}
+          {m.material.isBundle && m.availableCount >= UNLIMITED_AVAILABLE
+            ? "onbeperkt"
+            : <>{m.availableCount} {m.material.isBundle ? "set(s) vrij" : `/${m.totalStock} vrij`}</>} ·{" "}
           {formatEUR(m.material.dayPrice)}{basisSuffix(m.material.priceBasis)}
         </p>
         {noSellingPrice(m.material) && (

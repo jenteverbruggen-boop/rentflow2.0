@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { UNLIMITED_AVAILABLE } from "@/lib/availability-limits";
 import { prisma } from "@/lib/prisma";
 import {
   requireModule,
@@ -16,7 +17,7 @@ import { parseDateRange } from "@/lib/parse-date-range";
 import { redactMoney } from "@/lib/redact";
 import { setDayPrice } from "@/lib/set-price";
 
-const UNLIMITED = 999;
+const UNLIMITED = UNLIMITED_AVAILABLE;
 
 export async function GET(req: NextRequest) {
   const access = await requireModule("planning", "lezen").catch(() => null);
