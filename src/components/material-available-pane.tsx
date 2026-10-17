@@ -1,4 +1,7 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AdhocSubhireDialog } from "@/components/adhoc-subhire-dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MaterialAvailableRow } from "@/components/material-available-row";
@@ -21,6 +24,8 @@ interface Props {
   addPending: boolean;
   overbookable: boolean;
   suppliers: { id: number; name: string }[];
+  periodId: number;
+  projectId: number;
 }
 
 /** "Beschikbaar" pane, extracted from material-split-editor.tsx (Y3.6) —
@@ -37,7 +42,10 @@ export function MaterialAvailablePane({
   addPending,
   overbookable,
   suppliers,
+  periodId,
+  projectId,
 }: Props) {
+  const [adhocOpen, setAdhocOpen] = useState(false);
   return (
     <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
       <div className="bg-muted/60 px-3 py-2.5 border-b border-border md:hidden">
@@ -51,6 +59,13 @@ export function MaterialAvailablePane({
           placeholder="Zoeken op naam of categorie..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
+        />
+        <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAdhocOpen(true)}>
+          <Plus className="h-3.5 w-3.5" /> Inhuur-item
+        </Button>
+        <AdhocSubhireDialog
+          periodId={periodId} projectId={projectId} open={adhocOpen} onOpenChange={setAdhocOpen}
+          onUseExisting={(materialId, quantity) => onAdd({ materialId, quantity, allowOverbook: false })}
         />
         <ScrollArea className="h-[400px] pr-2">
           <div className="space-y-2">

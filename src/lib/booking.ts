@@ -73,58 +73,60 @@ interface BookFlatResult {
 
 export async function bookFlatMaterial(args: BookFlatArgs): Promise<BookFlatResult> {
   const client = args.client ?? defaultPrisma;
-  const result = await client.$transaction(async (tx) => {
-    const txClient = tx as unknown as PrismaClient;
-    await lockMaterials(txClient, [args.materialId]);
-    const free = await freeStockItemIds(txClient, args.materialId, args.from, args.to);
-    const shortfall = args.quantity - free.length;
-    if (shortfall > 0 && !args.allowOverbook && !args.subhire) {
-      const err = new Error(
-        `Niet genoeg vrij. Gevraagd: ${args.quantity}, beschikbaar: ${free.length}`,
-      ) as Error & { code: string };
-      err.code = "UNAVAIL";
-      throw err;
-    }
-    const chosen = free.slice(0, Math.min(args.quantity, free.length));
-    const created = await Promise.all(
-      chosen.map((stockItemId) =>
-        txClient.periodStockItem.create({
-          data: {
-            periodId: args.periodId,
-            stockItemId,
-            dayPriceSnapshot: args.dayPriceSnapshot,
-            priceBasisSnapshot: args.priceBasis ?? "per_dag",
-            setupCostSnapshot: args.setupCostSnapshot,
-            discountPct: args.discountPct ?? null,
-            discountAmount: args.discountAmount ?? null,
-          },
-          include: {
-            stockItem: { include: { material: { include: { categoryRel: true } } } },
-          },
-        }),
-      ),
+  return client.$transaction((tx) => bookFlatMaterialTx(tx as unknown as PrismaClient, args));
+}
+
+/** The booking itself, for a caller that already runs inside a transaction
+ * (it must not open a second one) — e.g. creating an ad-hoc inhuur item. */
+export async function bookFlatMaterialTx(txClient: PrismaClient, args: BookFlatArgs): Promise<BookFlatResult> {
+  await lockMaterials(txClient, [args.materialId]);
+  const free = await freeStockItemIds(txClient, args.materialId, args.from, args.to);
+  const shortfall = args.quantity - free.length;
+  if (shortfall > 0 && !args.allowOverbook && !args.subhire) {
+    const err = new Error(
+      `Niet genoeg vrij. Gevraagd: ${args.quantity}, beschikbaar: ${free.length}`,
+    ) as Error & { code: string };
+    err.code = "UNAVAIL";
+    throw err;
+  }
+  const chosen = free.slice(0, Math.min(args.quantity, free.length));
+  const created = await Promise.all(
+    chosen.map((stockItemId) =>
+      txClient.periodStockItem.create({
+        data: {
+          periodId: args.periodId,
+          stockItemId,
+          dayPriceSnapshot: args.dayPriceSnapshot,
+          priceBasisSnapshot: args.priceBasis ?? "per_dag",
+          setupCostSnapshot: args.setupCostSnapshot,
+          discountPct: args.discountPct ?? null,
+          discountAmount: args.discountAmount ?? null,
+        },
+        include: {
+          stockItem: { include: { material: { include: { categoryRel: true } } } },
+        },
+      }),
+    ),
+  );
+
+  const warnings: string[] = [];
+  if (shortfall > 0) {
+    await createOrIncrementShortage(txClient, {
+      periodId: args.periodId,
+      materialId: args.materialId,
+      quantity: shortfall,
+      dayPriceSnapshot: args.dayPriceSnapshot,
+      priceBasis: args.priceBasis,
+      setupCostSnapshot: args.setupCostSnapshot,
+      discountPct: args.discountPct,
+      discountAmount: args.discountAmount,
+      subhire: args.subhire,
+    });
+    const name = args.materialName ?? `materiaal #${args.materialId}`;
+    warnings.push(
+      args.subhire ? `${shortfall}× ${name} ingehuurd — niet in eigen voorraad` : `${shortfall}× ${name} overboekt — niet in voorraad`,
     );
+  }
 
-    const warnings: string[] = [];
-    if (shortfall > 0) {
-      await createOrIncrementShortage(txClient, {
-        periodId: args.periodId,
-        materialId: args.materialId,
-        quantity: shortfall,
-        dayPriceSnapshot: args.dayPriceSnapshot,
-        priceBasis: args.priceBasis,
-        setupCostSnapshot: args.setupCostSnapshot,
-        discountPct: args.discountPct,
-        discountAmount: args.discountAmount,
-        subhire: args.subhire,
-      });
-      const name = args.materialName ?? `materiaal #${args.materialId}`;
-      warnings.push(
-        args.subhire ? `${shortfall}× ${name} ingehuurd — niet in eigen voorraad` : `${shortfall}× ${name} overboekt — niet in voorraad`,
-      );
-    }
-
-    return { assignments: created, warnings };
-  });
-  return result;
+  return { assignments: created, warnings };
 }

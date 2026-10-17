@@ -45,8 +45,7 @@ export function MaterialSplitEditor({
     projectId: project.id,
   };
   const mats = useMaterialAvailability(range);
-  // Hiring in needs the supplier list; a caller without materials access just
-  // gets none (the endpoint refuses them) and the picker behaves as before.
+  // Hiring in needs the supplier list (none for a caller without materials access).
   const suppliers = (useSuppliers(false).query.data ?? []).filter((s) => !s.archived);
   const days = periodDays(period);
   const shortages = useMemo(() => period.shortages ?? [], [period.shortages]);
@@ -126,6 +125,8 @@ export function MaterialSplitEditor({
             addPending={add.isPending}
             overbookable={overbookable}
             suppliers={suppliers}
+            periodId={period.id}
+            projectId={project.id}
           />
           <MaterialAssignedPane
             periodName={period.name}
