@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { SubhireSupplierSelect } from "@/components/subhire-supplier-select";
+import { costsForSupplierChange } from "@/lib/subhire-supplier-change";
 import { useAuthMe } from "@/hooks/use-auth-me";
 import { useSuppliers } from "@/hooks/use-suppliers";
 import { useSubhire } from "@/hooks/use-subhire";
@@ -20,6 +22,9 @@ export interface SubhireTarget {
   /** Units on this row (hire: how many can be hired in). */
   quantity: number;
   supplierId: number | null;
+  supplierName?: string;
+  /** The material's own hire defaults, to prefill on a supplier change. */
+  defaults?: { defaultSupplierId?: number | null; subhireUnitCost?: number | null; subhireCostBasis?: SubhireCostBasis };
   basis: SubhireCostBasis;
   unitCost: number | null;
   costOverride: number | null;
@@ -61,6 +66,17 @@ export function SubhireDialog({ projectId, target, onClose }: Props) {
   const mutation = target.mode === "hire" ? hire : update;
   const costs = money ? { basis, unitCost: num(unitCost), costOverride: num(override) } : {};
 
+  /** Edit mode: a price belongs to one supplier, so a change prefills the
+   * material default (its default supplier) or clears the price. */
+  function changeSupplier(value: string) {
+    setSupplierId(value);
+    if (target?.mode !== "edit" || Number(value) === target.supplierId) return;
+    const next = costsForSupplierChange(Number(value), target.defaults ?? {}, { basis });
+    setBasis(next.basis);
+    setUnitCost(next.unitCost == null ? "" : String(next.unitCost));
+    setOverride("");
+  }
+
   function submit() {
     if (!target) return;
     const base = { periodId: target.periodId, shortageId: target.shortageId };
@@ -79,16 +95,12 @@ export function SubhireDialog({ projectId, target, onClose }: Props) {
           <DialogTitle>{target.mode === "hire" ? "Inhuren" : "Inhuur wijzigen"} — {target.materialName}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Leverancier</Label>
-            <Select value={supplierId} onValueChange={setSupplierId}>
-              <SelectTrigger><SelectValue placeholder="Kies een leverancier" /></SelectTrigger>
-              <SelectContent>
-                {(query.data ?? []).map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {(query.data ?? []).length === 0 && <p className="text-xs text-muted-foreground">Nog geen leveranciers — voeg er een toe via Leveranciers.</p>}
-          </div>
+          <SubhireSupplierSelect
+            value={supplierId}
+            onChange={changeSupplier}
+            suppliers={query.data ?? []}
+            current={target.mode === "edit" && target.supplierId != null ? { id: target.supplierId, name: target.supplierName ?? "Huidige leverancier" } : null}
+          />
           {target.mode === "hire" && (
             <div className="space-y-1.5">
               <Label className="text-xs">Aantal in te huren (max. {target.quantity})</Label>

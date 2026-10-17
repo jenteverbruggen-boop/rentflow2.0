@@ -25,7 +25,7 @@ export interface SubhireArgs {
   costOverride?: number | null;
 }
 
-async function loadRow(tx: PrismaClient, shortageId: number, periodId: number) {
+export async function loadRow(tx: PrismaClient, shortageId: number, periodId: number) {
   const row = await tx.periodMaterialShortage.findUnique({
     where: { id: shortageId },
     include: { material: true },
@@ -34,7 +34,7 @@ async function loadRow(tx: PrismaClient, shortageId: number, periodId: number) {
   return row;
 }
 
-async function assertUsableSupplier(tx: PrismaClient, supplierId: number) {
+export async function assertUsableSupplier(tx: PrismaClient, supplierId: number) {
   const supplier = await tx.supplier.findUnique({ where: { id: supplierId } });
   if (!supplier || supplier.archived) throw new SubhireError("BAD_SUPPLIER", "Kies een leverancier die nog actief is");
 }
@@ -82,30 +82,6 @@ export async function subhireShortage(
         periodId: row.periodId, materialId: row.materialId, bundleBookingId: row.bundleBookingId, quantity,
         dayPriceSnapshot: row.dayPriceSnapshot, setupCostSnapshot: row.setupCostSnapshot,
         discountPct: row.discountPct, discountAmount: row.discountAmount, ...resolved,
-      },
-    });
-  });
-}
-
-/** Change a hired-in row's supplier or cost. */
-export async function updateSubhire(
-  periodId: number,
-  shortageId: number,
-  patch: Partial<Omit<SubhireArgs, "quantity">>,
-  client: PrismaClient = defaultPrisma,
-) {
-  return client.$transaction(async (tx) => {
-    const txClient = tx as unknown as PrismaClient;
-    const row = await loadRow(txClient, shortageId, periodId);
-    if (row.supplierId == null) throw new SubhireError("NOT_SUBHIRED", "Dit is niet ingehuurd");
-    if (patch.supplierId !== undefined) await assertUsableSupplier(txClient, patch.supplierId);
-    return txClient.periodMaterialShortage.update({
-      where: { id: row.id },
-      data: {
-        supplierId: patch.supplierId,
-        subhireCostBasis: patch.basis,
-        subhireUnitCost: patch.unitCost,
-        subhireCostOverride: patch.costOverride,
       },
     });
   });

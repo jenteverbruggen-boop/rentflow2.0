@@ -53,7 +53,7 @@ export function ProjectSubhireList({ project }: { project: Project }) {
               <Button size="sm" variant="ghost" className="h-7 px-2 text-xs"
                 onClick={() => setEditing({
                   mode: "edit", periodId: period.id, shortageId: s.id, materialName: s.material.name, quantity: s.quantity,
-                  supplierId: s.supplierId ?? null, basis: s.subhireCostBasis ?? "per_huur", unitCost: s.subhireUnitCost ?? null,
+                  supplierId: s.supplierId ?? null, supplierName: s.supplier?.name, defaults: s.material, basis: s.subhireCostBasis ?? "per_huur", unitCost: s.subhireUnitCost ?? null,
                   costOverride: s.subhireCostOverride ?? null,
                 })}>
                 Wijzig

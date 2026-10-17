@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireModule, forbidden, badRequest, notFound, conflict, serverError } from "@/lib/api-auth";
-import { subhireShortage, updateSubhire, undoSubhire, SubhireError } from "@/lib/subhire";
+import { subhireShortage, undoSubhire, SubhireError } from "@/lib/subhire";
+import { updateSubhire } from "@/lib/subhire-update";
 import { moneyWritable, redactMoney } from "@/lib/redact";
 import { toNumberOrNull } from "@/lib/serialize";
 
