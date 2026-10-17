@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { setProjectMaterialPrice, clearProjectMaterialPrice } from "@/lib/project-material-price";
 import { requireModule, forbidden, badRequest, serverError } from "@/lib/api-auth";
 import { toNumber, toNumberOrNull } from "@/lib/serialize";
 
@@ -17,16 +17,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     if (dayPrice == null || Number(dayPrice) < 0) return badRequest("dayPrice >= 0 is verplicht");
 
     const price = toNumber(dayPrice);
-    const override = await prisma.projectMaterialPrice.upsert({
-      where: { projectId_materialId: { projectId, materialId: matId } },
-      create: { projectId, materialId: matId, dayPrice: price },
-      update: { dayPrice: price },
-      include: { material: true },
-    });
-    await prisma.periodStockItem.updateMany({
-      where: { period: { projectId }, stockItem: { materialId: matId } },
-      data: { dayPriceSnapshot: price },
-    });
+    const override = await setProjectMaterialPrice(projectId, matId, price);
     return NextResponse.json({
       ...override,
       dayPrice: toNumber(override.dayPrice),
@@ -50,16 +41,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     const { id, materialId } = await params;
     const projectId = parseInt(id);
     const matId = parseInt(materialId);
-    await prisma.projectMaterialPrice.deleteMany({
-      where: { projectId, materialId: matId },
-    });
-    const material = await prisma.material.findUnique({ where: { id: matId } });
-    if (material) {
-      await prisma.periodStockItem.updateMany({
-        where: { period: { projectId }, stockItem: { materialId: matId } },
-        data: { dayPriceSnapshot: toNumber(material.dayPrice) },
-      });
-    }
+    await clearProjectMaterialPrice(projectId, matId);
     return NextResponse.json({ success: true });
   } catch (err) {
     return serverError((err as Error).message);
