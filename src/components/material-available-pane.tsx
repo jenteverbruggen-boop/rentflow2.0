@@ -5,6 +5,8 @@ import { AdhocSubhireDialog } from "@/components/adhoc-subhire-dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MaterialAvailableRow } from "@/components/material-available-row";
+import { useAuthMe } from "@/hooks/use-auth-me";
+import { hasAccess } from "@/lib/me-access";
 import type { MaterialAvailability } from "@/types";
 
 interface Props {
@@ -46,6 +48,9 @@ export function MaterialAvailablePane({
   projectId,
 }: Props) {
   const [adhocOpen, setAdhocOpen] = useState(false);
+  const { data: me } = useAuthMe();
+  // The ad-hoc item creates a catalogue material, so it needs materialen: wijzigen.
+  const canCreateMaterial = hasAccess(me, "materialen", "wijzigen");
   return (
     <section className="rounded-lg border border-border overflow-hidden md:rounded-none md:border-0 md:overflow-visible md:space-y-2">
       <div className="bg-muted/60 px-3 py-2.5 border-b border-border md:hidden">
@@ -60,9 +65,11 @@ export function MaterialAvailablePane({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />
-        <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAdhocOpen(true)}>
-          <Plus className="h-3.5 w-3.5" /> Inhuur-item
-        </Button>
+        {canCreateMaterial && (
+          <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAdhocOpen(true)}>
+            <Plus className="h-3.5 w-3.5" /> Inhuur-item
+          </Button>
+        )}
         <AdhocSubhireDialog
           periodId={periodId} projectId={projectId} open={adhocOpen} onOpenChange={setAdhocOpen}
           onUseExisting={(materialId, quantity) => onAdd({ materialId, quantity, allowOverbook: false })}

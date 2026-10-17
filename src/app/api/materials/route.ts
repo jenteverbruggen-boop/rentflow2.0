@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { nextCodeForCategory } from "@/lib/material-code-db";
 import { prisma } from "@/lib/prisma";
 import {
   requireModule,
@@ -83,29 +84,19 @@ export async function POST(req: NextRequest) {
     if (findRejectedMoneyWrite(body, access)) return forbidden();
     const { name, category, categoryId, code: manualCode, notes, initialStock } = body;
     if (!name) return badRequest("naam is verplicht");
+    // Inhuur-only and own stock exclude each other; a set has no inhuur flag.
+    if (body.subhireOnly === true && (parseInt(initialStock) || 0) > 0) {
+      return badRequest("Een inhuur-item heeft geen eigen voorraad — zet de beginvoorraad op 0");
+    }
+    if (body.subhireOnly === true && body.isBundle === true) {
+      return badRequest("Een set kan niet enkel inhuur zijn");
+    }
     const subhireError = subhireFieldsError(body);
     if (subhireError) return badRequest(subhireError);
     const badSupplier = await supplierError(prisma, body);
     if (badSupplier) return badRequest(badSupplier);
 
-    let code: string | null = manualCode ?? null;
-    if (!code && categoryId) {
-      const cat = await prisma.category.findUnique({
-        where: { id: categoryId },
-      });
-      if (cat) {
-        const existing = await prisma.material.findMany({
-          where: { code: { not: null } },
-          select: { code: true },
-        });
-        const codes = existing.map((m) => m.code as string);
-        try {
-          code = nextCode(cat.prefix, codes);
-        } catch {
-          code = null;
-        }
-      }
-    }
+    const code: string | null = manualCode ?? (await nextCodeForCategory(prisma, categoryId));
 
     // Money-blind caller: a redacted-to-0/null echo must not be written —
     // materialMoneyData omits the key so Material's own schema default

@@ -56,9 +56,9 @@ export function MaterialFormSubhire({ value, onChange }: Props) {
       {value.only && (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label className="text-xs">Leverancier *</Label>
+            <Label htmlFor="new-subhire-supplier" className="text-xs">Leverancier *</Label>
             <Select value={value.supplierId} onValueChange={(v) => set({ supplierId: v })}>
-              <SelectTrigger><SelectValue placeholder="Kies een leverancier" /></SelectTrigger>
+              <SelectTrigger id="new-subhire-supplier"><SelectValue placeholder="Kies een leverancier" /></SelectTrigger>
               <SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent>
             </Select>
             {suppliers.length === 0 && <p className="text-xs text-muted-foreground">Voeg eerst een leverancier toe via Leveranciers.</p>}
@@ -66,8 +66,8 @@ export function MaterialFormSubhire({ value, onChange }: Props) {
           {money && (
             <>
               <div className="space-y-1">
-                <Label className="text-xs">Inkoopprijs per unit (€)</Label>
-                <Input type="number" step="0.01" min={0} value={value.unitCost} onChange={(e) => set({ unitCost: e.target.value })} />
+                <Label htmlFor="new-subhire-cost" className="text-xs">Inkoopprijs per unit (€)</Label>
+                <Input id="new-subhire-cost" type="number" step="0.01" min={0} value={value.unitCost} onChange={(e) => set({ unitCost: e.target.value })} />
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <Label className="text-xs">Verrekening leverancier</Label>

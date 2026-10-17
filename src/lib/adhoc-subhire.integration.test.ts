@@ -56,6 +56,8 @@ describe("createAdhocSubhire (E5)", () => {
     const b = await period("concept");
     await createAdhocSubhire(b.periodId, { name: "Glas (Funrent)", supplierId, quantity: 1 }, client);
     expect(await client.category.count({ where: { name: "Inhuur" } })).toBe(1);
+    expect(result.material.code).toBe("9990-001");
+    expect((await client.material.findFirstOrThrow({ where: { name: "Glas (Funrent)" } })).code).toBe("9990-002");
     expect((await client.material.findFirstOrThrow({ where: { name: "Glas (Funrent)" } })).dayPrice).toBe(0);
   });
 

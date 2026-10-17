@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import { bookFlatMaterialTx } from "@/lib/booking";
+import { nextCodeForCategory } from "@/lib/material-code-db";
 import type { PriceBasis, SubhireCostBasis } from "@/types";
 
 export const ADHOC_CATEGORY = "Inhuur";
@@ -48,6 +49,7 @@ export async function createAdhocSubhire(
   if (!name) throw new AdhocSubhireError("BAD_INPUT", "Naam is verplicht");
   if (!Number.isInteger(input.quantity) || input.quantity < 1) throw new AdhocSubhireError("BAD_INPUT", "Aantal moet minstens 1 zijn");
 
+  const category = await findOrCreateCategory(client);
   return client.$transaction(async (tx) => {
     const txClient = tx as unknown as PrismaClient;
     const period = await txClient.period.findUnique({ where: { id: periodId } });
@@ -57,16 +59,14 @@ export async function createAdhocSubhire(
     const clash = await txClient.material.findFirst({ where: { name, archived: false }, select: { id: true } });
     if (clash) throw new AdhocSubhireError("NAME_TAKEN", `Er bestaat al een materiaal met de naam "${name}"`, clash.id);
 
-    const category =
-      (await txClient.category.findFirst({ where: { name: ADHOC_CATEGORY } })) ??
-      (await txClient.category.create({ data: { name: ADHOC_CATEGORY, prefix: ADHOC_CATEGORY_PREFIX } }));
+    const code = await nextCodeForCategory(txClient, category.id);
     const priceBasis = input.priceBasis ?? "per_huur";
     const costBasis = input.costBasis ?? "per_huur";
     const dayPrice = input.dayPrice ?? 0;
     const unitCost = input.unitCost ?? null;
     const material = await txClient.material.create({
       data: {
-        name, category: category.name, categoryId: category.id, dayPrice, priceBasis,
+        name, code, category: category.name, categoryId: category.id, dayPrice, priceBasis,
         subhireOnly: true, defaultSupplierId: supplier.id, subhireUnitCost: unitCost, subhireCostBasis: costBasis,
       },
     });
@@ -79,4 +79,21 @@ export async function createAdhocSubhire(
     });
     return { material, warnings: booked.warnings };
   });
+}
+
+/** Outside the transaction on purpose: a unique clash inside one would abort
+ * it on Postgres. Two people creating the first ad-hoc item race here. */
+async function findOrCreateCategory(client: PrismaClient) {
+  const find = () => client.category.findFirst({ where: { name: ADHOC_CATEGORY } });
+  const existing = await find();
+  if (existing) return existing;
+  try {
+    return await client.category.create({ data: { name: ADHOC_CATEGORY, prefix: ADHOC_CATEGORY_PREFIX } });
+  } catch (err) {
+    if ((err as { code?: string }).code === "P2002") {
+      const again = await find();
+      if (again) return again;
+    }
+    throw err;
+  }
 }
