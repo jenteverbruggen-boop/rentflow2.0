@@ -1,5 +1,4 @@
 import { LogoutButton } from "./logout-button";
-import { ThemeToggle } from "./theme-toggle";
 import { Separator } from "./ui/separator";
 import { resolveCurrentAccess } from "@/lib/api-auth";
 import { visibleNavLinks } from "@/lib/nav-links";
@@ -25,7 +24,6 @@ export async function Sidebar() {
       <Separator className="bg-sidebar-border" />
       <div className="p-3 space-y-1">
         <ProfileLink />
-        <ThemeToggle className="w-full justify-start px-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground" />
         <LogoutButton />
       </div>
     </aside>

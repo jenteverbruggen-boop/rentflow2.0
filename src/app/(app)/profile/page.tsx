@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { satisfies } from "@/lib/modules";
 import { AccountSecurity } from "@/components/account-security";
 import { CalendarFeedLinks } from "@/components/calendar-feed-links";
+import { ThemeSettings } from "@/components/theme-settings";
 
 // Server Component. Open to every authenticated user — the account block
 // has no module gate. The agenda-feed section keeps the O1.4/B2d gate
@@ -32,6 +33,7 @@ export default async function ProfilePage() {
         <dt className="text-muted-foreground">Rol</dt>
         <dd>{user?.roleRel.label}</dd>
       </dl>
+      <ThemeSettings />
       <AccountSecurity />
       {showFeeds && <CalendarFeedLinks />}
     </div>

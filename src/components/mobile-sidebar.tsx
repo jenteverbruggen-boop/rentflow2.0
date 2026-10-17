@@ -6,7 +6,6 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuthMe } from "@/hooks/use-auth-me";
 import { visibleNavLinks } from "@/lib/nav-links";
 import { NavLinkList } from "@/components/nav-link-list";
@@ -57,10 +56,6 @@ export function MobileTopBar() {
         </SheetContent>
       </Sheet>
       <span className="text-base font-bold text-primary">RentFlow</span>
-      <ThemeToggle
-        iconOnly
-        className="ml-auto text-sidebar-foreground hover:bg-sidebar-accent"
-      />
     </header>
   );
 }
