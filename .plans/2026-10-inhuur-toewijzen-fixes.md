@@ -407,3 +407,28 @@ new routes (README endpoints). Advisory-lock races can't be reproduced on
 SQLite: reason about them in review, as in C3.
 
 Effort: A ≈ M, B ≈ M, C ≈ M, D ≈ L, E ≈ L (E1 touches every price path).
+
+---
+
+## Follow-up after implementation + QA
+
+### Decision (grilled 2026-10-17)
+- **Prod catalogue prices are repaired (done 2026-10-17).** Fourteen `Material.dayPrice` values were reset to the latest Rentman export. Ten were ×10/×100 from the import decimal bug (Showtec 16 Led Bar, Guirlande 11,5/12,5 m, Nap rond, Ligger 0.4m, Tafel rond, Luxestoel, Plooistoel, Vorken ×2). Four were ÷10 (Soeplepel, Messen, Dessertlepel 0,30; Koffiekan 1,50). This was one guarded transaction (only rows still holding the wrong value), and a backup of the `Material` data was taken first. No booking, shortage or invoice line used those prices. The root cause is fixed in `fccf661`.
+- **Funrent/Rent-men items keep their current price as selling price after the deploy.** Prod holds the Rentman (= purchase) price as `dayPrice`. Marking the items inhuur-only (re-import or checkbox) keeps that `dayPrice`, because re-import never overwrites a price > 0. The "verkoop ≤ inkoop" warning then shows until the PO enters real selling prices. They are never billed at €0.
+- **A project price also reprices open and hired-in rows.** `PUT/DELETE /api/projects/[id]/prices/material/[materialId]` updates `PeriodMaterialShortage.dayPriceSnapshot` (open and hired) next to `PeriodStockItem`. It never touches set components (`bundleBookingId != null`, snapshot €0).
+- **The ad-hoc name check ignores case.** "Beamer" and "beamer" count as the same name, so the 409 "Bestaand item gebruiken" path triggers. It is done in code (lowercase compare), so it works on SQLite and Postgres.
+- **Inhuur-only vs own stock is checked atomically.** The stock-item add (single + bulk) and the `subhireOnly` toggle check and write under one lock or transaction on the material.
+- **The bookings export gets a "per dag / per huur" column** next to the unit price.
+- **An "Inhuur <leverancier>" row onto a material with own units is not an error.** Such a material (e.g. "bier bank", 9998-702, 3 units) stays a normal material with that supplier as default supplier. It fills `subhireUnitCost` from the file price only when empty, keeps its `dayPrice` and does not become inhuur-only. The same applies to a *new* inhuur row with quantity > 0: it becomes a normal material with stock + default supplier. This replaces the E2/item-27 row error, and preview and apply stay identical.
+- **Permissions are tested live before the push.** On the QA build (never prod): create a freelancer (scope own) and a planner without Kosten/Facturen. Then click through every inhuur screen (picker, banner + stock hints, Ingehuurd card, subhire dialog, + Inhuur-item, materials detail, Cijfers) and look for leaked prices, purchase costs or other projects' names.
+- **No push yet.** Youri clicks through himself first.
+
+### Current state (verified)
+- Prod runs image 1.11.0, which predates round 4 (no `Supplier` table, no `subhireOnly`). The deploy brings round 4 + this follow-up together.
+- Prod has no cancelled projects, so there is no backfill for stock held by old cancellations.
+- Prod `Material`: 110 rows. After the repair, 99 match the export exactly. The rest are deliberate RentFlow edits (Witte wijnglazen 0,20; purchase prices 400/240) or RentFlow-only items.
+- The project price override reprices only `PeriodStockItem` — `src/app/api/projects/[id]/prices/material/[materialId]/route.ts`.
+
+### Open points for the PM (default chosen)
+- **Real selling prices for the 23 Funrent/Rent-men items.** Until they are entered, the selling price equals the purchase price and a warning is shown.
+- **Was "Witte wijnglazen" €0,20 (Rentman €0,19) deliberate?** It is left as is.
