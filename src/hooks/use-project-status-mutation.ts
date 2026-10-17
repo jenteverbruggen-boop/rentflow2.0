@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Project, ProjectStatus } from "@/types";
+import type { Project, ProjectReleaseSummary, ProjectStatus } from "@/types";
 
 /** Shape of the 409 the PUT route returns when the project still has
  * overbooked material — mirrors ProjectShortage in material-shortage-db.ts
@@ -29,6 +29,7 @@ export function useProjectStatusMutation(project: Project) {
   const queryClient = useQueryClient();
   const [blocked, setBlocked] = useState<BlockingShortage[] | null>(null);
   const [error, setError] = useState("");
+  const [released, setReleased] = useState<ProjectReleaseSummary | null>(null);
 
   const mutation = useMutation({
     mutationFn: async (newStatus: ProjectStatus) => {
@@ -80,6 +81,10 @@ export function useProjectStatusMutation(project: Project) {
       if (err.shortages?.length) setBlocked(err.shortages);
       else setError(err.message);
     },
+    onSuccess: (data: { release?: ProjectReleaseSummary }) => {
+      if (data.release) setReleased(data.release);
+      queryClient.invalidateQueries({ queryKey: ["available"] });
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({
@@ -94,5 +99,7 @@ export function useProjectStatusMutation(project: Project) {
     dismissBlocked: () => setBlocked(null),
     error,
     dismissError: () => setError(""),
+    released,
+    dismissReleased: () => setReleased(null),
   };
 }

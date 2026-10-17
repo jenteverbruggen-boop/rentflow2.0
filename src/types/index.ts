@@ -392,6 +392,13 @@ export interface ProjectPersonPrice {
   person: Person;
 }
 
+/** Returned by PUT /api/projects/:id when the project was just cancelled. */
+export interface ProjectReleaseSummary {
+  released: number;
+  keptShipped: { material: string; quantity: number; period: string }[];
+  hired: { supplier: string; material: string; quantity: number; period: string }[];
+}
+
 export interface Project {
   id: number;
   name: string;

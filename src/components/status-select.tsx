@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OverbookBlockDialog } from "@/components/overbook-block-dialog";
+import { CancelReleaseDialog } from "@/components/cancel-release-dialog";
 import { useProjectStatusMutation } from "@/hooks/use-project-status-mutation";
 import { statusVariant } from "@/lib/utils";
 import type { Project, ProjectStatus } from "@/types";
@@ -25,7 +26,7 @@ interface StatusSelectProps {
 }
 
 export function StatusSelect({ project }: StatusSelectProps) {
-  const { mutation, blocked, dismissBlocked, error, dismissError } =
+  const { mutation, blocked, dismissBlocked, error, dismissError, released, dismissReleased } =
     useProjectStatusMutation(project);
 
   return (
@@ -62,6 +63,7 @@ export function StatusSelect({ project }: StatusSelectProps) {
           dismissError();
         }}
       />
+      <CancelReleaseDialog summary={released} onClose={dismissReleased} />
     </>
   );
 }

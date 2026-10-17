@@ -14,6 +14,8 @@ import { serializeProject } from "@/lib/serialize-project";
 import { redactMoney } from "@/lib/redact";
 import { scopeFilter } from "@/lib/scope-filter";
 import { canOverbook } from "@/lib/material-shortage";
+import type { PrismaClient } from "@/generated/prisma/client";
+import { releaseProjectStock } from "@/lib/release-cancelled-stock";
 import { fillShortages, assertNoShortages } from "@/lib/material-shortage-db";
 
 type Params = { params: Promise<{ id: string }> };
@@ -87,21 +89,29 @@ export async function PUT(req: NextRequest, { params }: Params) {
       }
     }
 
-    const project = await prisma.project.update({
-      where: { id: projectId },
-      data: {
-        name,
-        client,
-        clientId: clientId ?? null,
-        location,
-        locationId: locationId ?? null,
-        status,
-        notes,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-      },
+    // Cancelling frees the project's owned stock: the status write and the
+    // release are one transaction (a half-released project would hold units
+    // for a project nobody is going to run).
+    const cancelling = existing.status !== "geannuleerd" && status === "geannuleerd";
+    const { project, release } = await prisma.$transaction(async (tx) => {
+      const updated = await tx.project.update({
+        where: { id: projectId },
+        data: {
+          name,
+          client,
+          clientId: clientId ?? null,
+          location,
+          locationId: locationId ?? null,
+          status,
+          notes,
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+        },
+      });
+      const summary = cancelling ? await releaseProjectStock(projectId, tx as unknown as PrismaClient) : null;
+      return { project: updated, release: summary };
     });
-    return NextResponse.json(project);
+    return NextResponse.json(release ? { ...project, release } : project);
   } catch (err) {
     return serverError((err as Error).message);
   }
