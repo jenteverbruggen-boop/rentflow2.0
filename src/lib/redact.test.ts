@@ -239,3 +239,14 @@ describe("redactMoney — hired-in material (C3)", () => {
     expect(redactMoney(payload(), access("lezen"))).toEqual(payload());
   });
 });
+
+describe("redactMoney keeps non-plain values intact", () => {
+  it("passes a Date through unchanged for a money-blind caller (was turned into {})", () => {
+    const when = new Date("2026-10-08T00:00:00.000Z");
+    const out = redactMoney({ startDate: when, periods: [{ endDate: when, dayPriceSnapshot: 5 }] }, access("geen"));
+    expect(out.startDate).toBeInstanceOf(Date);
+    expect(out.startDate.toISOString()).toBe(when.toISOString());
+    expect(out.periods[0].endDate).toBeInstanceOf(Date);
+    expect(out.periods[0].dayPriceSnapshot).toBeNull();
+  });
+});

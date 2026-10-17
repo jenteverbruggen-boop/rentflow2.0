@@ -107,8 +107,17 @@ const BOOLEAN_DENYLIST = new Set(["hasOverride"]);
 // closed to them.
 const OWN_SCOPE_HIDDEN = new Set(["supplier", "supplierId", "subhiredAt", "defaultSupplierId", "subhireOnly", "subhireCostBasis"]);
 
+function isPlainObject(value: object): boolean {
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
 function redactValue(value: unknown, own = false): unknown {
   if (Array.isArray(value)) return value.map((v) => redactValue(v, own));
+  // Only walk plain objects: a Date (or any class instance) has no own
+  // enumerable fields, so copying it field by field turned every date into
+  // `{}` for a money-blind caller and crashed date formatting client-side.
+  if (value !== null && typeof value === "object" && !isPlainObject(value)) return value;
   if (value !== null && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
