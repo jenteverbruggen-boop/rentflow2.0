@@ -3,7 +3,7 @@ import { satisfies } from "@/lib/modules";
 import { toNumber } from "@/lib/serialize";
 import { moneyVisible } from "@/lib/redact";
 
-const MONEY_WRITE_FIELDS = ["dayPrice", "setupCost", "bundlePriceOverride", "costPrice", "listPrice", "revenueBefore", "subhireUnitCost"] as const;
+const MONEY_WRITE_FIELDS = ["dayPrice", "setupCost", "bundlePriceOverride", "costPrice", "listPrice", "revenueBefore", "subhireUnitCost", "priceBasis"] as const;
 
 /**
  * Normalises one side of a money-field comparison — a raw request-body
@@ -77,6 +77,14 @@ export function findRejectedField(
     // of money visibility, and there is no write-side stripping to fall
     // back on for these callers.
     if (current === undefined) return field;
+    // priceBasis is a text field that decides what the client is billed. It
+    // is never redacted, so a money-blind caller echoes the true value and
+    // the diff stays meaningful for everyone: only a real change is refused.
+    if (field === "priceBasis") {
+      const base = current && field in current ? current[field] : defaults[field] ?? "per_dag";
+      if (body[field] !== base) return field;
+      continue;
+    }
     // Diff-aware mode: skip the diff for a money-blind caller (doc
     // comment above) — moneyFieldsToIgnore keeps it off the write.
     if (!moneyVisible(access)) continue;
@@ -120,7 +128,9 @@ export function findRejectedMoneyWrite(
   access: ResolvedAccess,
   current?: Record<string, unknown> | null,
 ): string | null {
-  return findRejectedField(body, access, MONEY_WRITE_FIELDS, current ?? null, MONEY_WRITE_DEFAULTS);
+  // A new inhuur-only item is priced per rental unless said otherwise.
+  const defaults = current == null && body.subhireOnly === true ? { ...MONEY_WRITE_DEFAULTS, priceBasis: "per_huur" } : MONEY_WRITE_DEFAULTS;
+  return findRejectedField(body, access, MONEY_WRITE_FIELDS, current ?? null, defaults);
 }
 
 /**

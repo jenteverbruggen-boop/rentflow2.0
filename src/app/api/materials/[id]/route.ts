@@ -78,6 +78,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
         listPrice: true,
         revenueBefore: true,
         subhireUnitCost: true,
+        priceBasis: true,
         defaultSupplierId: true,
         subhireOnly: true,
         isBundle: true,

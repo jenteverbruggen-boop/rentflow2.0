@@ -2,6 +2,8 @@
 
 import { InlineEditField } from "@/components/inline-edit-field";
 import { PriceBasisSelect } from "@/components/price-basis-select";
+import { useAuthMe } from "@/hooks/use-auth-me";
+import { canWriteMoney } from "@/lib/me-access";
 import { formatEUR } from "@/lib/pricing";
 import type { EditableMaterialField } from "@/hooks/use-material-update";
 import type { Material } from "@/types";
@@ -12,6 +14,8 @@ interface MaterialSummaryGridProps {
 }
 
 export function MaterialSummaryGrid({ material, onSave }: MaterialSummaryGridProps) {
+  const { data: me } = useAuthMe();
+  const writeMoney = canWriteMoney(me);
   if (material.isBundle) {
     return (
       <div className="grid grid-cols-2 gap-3 text-sm">
@@ -42,7 +46,11 @@ export function MaterialSummaryGrid({ material, onSave }: MaterialSummaryGridPro
       />
       <div className="space-y-1 rounded-md border border-border p-3">
         <p className="text-xs text-muted-foreground">Prijs gerekend per</p>
-        <PriceBasisSelect value={material.priceBasis ?? "per_dag"} onChange={(v) => onSave("priceBasis", v)} />
+        {writeMoney ? (
+          <PriceBasisSelect value={material.priceBasis ?? "per_dag"} onChange={(v) => onSave("priceBasis", v)} />
+        ) : (
+          <p className="font-medium">{material.priceBasis === "per_huur" ? "per huur (eenmalig)" : "per dag"}</p>
+        )}
       </div>
       <div className="rounded-md border border-border p-3">
         <p className="text-xs text-muted-foreground">Totale voorraad</p>

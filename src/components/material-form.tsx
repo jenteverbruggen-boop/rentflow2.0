@@ -87,7 +87,7 @@ export function MaterialForm({ open, onOpenChange, defaultValues, onSubmit, isPe
             <FormField control={form.control} name="dayPrice" render={({ field }) => (
               <FormItem><FormLabel>Prijs (€)</FormLabel><FormControl><Input type="number" step="0.01" min={0} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            {!defaultValues && (
+            {!defaultValues && canWriteMoney(me) && (
               <div className="space-y-2">
                 <Label>Prijs gerekend per</Label>
                 <PriceBasisSelect value={basis ?? (subhire.only ? "per_huur" : "per_dag")} onChange={setBasis} />
