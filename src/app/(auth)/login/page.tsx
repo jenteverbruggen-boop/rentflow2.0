@@ -65,12 +65,13 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form key={mode} onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
               <div className="space-y-1.5">
                 <Label htmlFor="name">Naam</Label>
                 <Input
                   id="name"
+                name="name"
                   autoComplete="name"
                   autoCapitalize="words"
                   autoCorrect="off"
@@ -84,8 +85,12 @@ export default function LoginPage() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
-                autoComplete="email"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={form.email}
                 onChange={set("email")}
                 required
@@ -95,6 +100,7 @@ export default function LoginPage() {
               <Label htmlFor="password">Wachtwoord</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
                 autoComplete={mode === "register" ? "new-password" : "current-password"}
                 value={form.password}
