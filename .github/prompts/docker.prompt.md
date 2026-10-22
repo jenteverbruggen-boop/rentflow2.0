@@ -3,7 +3,7 @@
 When generating or reviewing the Dockerfile and docker-compose.yml for RentFlow 2.0, follow these rules. This is a **single Next.js app image** (no separate backend/frontend/nginx split) built with a multi-stage Dockerfile and run with a two-service `docker-compose.yml` (`app` + `db`).
 
 ## Base image
-- All stages: `node:22-alpine` (deps → builder → runner). Keep every stage pinned to the same major version.
+- All stages: `node:24-alpine` (deps → builder → prisma-cli → runner), matching CI's Node 24. Keep every stage pinned to the same major version.
 
 ## Dockerfile best practices
 - Copy `package*.json` first and run `npm ci` before copying source code to maximise layer caching.

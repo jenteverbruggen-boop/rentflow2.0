@@ -9,216 +9,182 @@ allowed-tools: Read Grep Bash(find *)
 
 ## Stack
 
-- **shadcn/ui** components (Radix UI primitives) — never build raw custom components if a shadcn one covers the need
-- **Tailwind CSS v4** with OKLCH CSS variables defined in `src/app/globals.css`
-- **Dark-first** — the app runs exclusively in dark mode (`<html class="dark">`)
+- **shadcn/ui** (Radix) components from `@/components/ui/*`. Don't build a
+  custom component when shadcn covers it, and don't install a Radix primitive
+  that shadcn already wraps.
+- **Tailwind v4**, OKLCH tokens in `src/app/globals.css`.
+- **Light and dark theme.** Dark is the default. `localStorage.theme = "light"`
+  removes the `dark` class from `<html>` (see the script in
+  `src/app/layout.tsx`). **Always review both themes.**
+- **Dutch UI.** Labels, buttons and messages are in Dutch.
 
-## Core principles
+## 1. Colors: semantic tokens
 
-### 1. Use semantic tokens, never raw colors
-
-Always reach for semantic CSS variable tokens. Never hardcode hex, rgb, or named Tailwind palette colors for anything that should adapt to the theme.
-
-**Wrong:**
-```tsx
-<div className="bg-gray-900 text-white border border-gray-800">
-```
-
-**Right:**
-```tsx
-<div className="bg-card text-card-foreground border border-border">
-```
-
-Available semantic tokens (from `globals.css`):
+Use tokens, never raw `bg-gray-900` / `text-white` / hex:
 
 | Token | Use for |
 |---|---|
-| `background` / `foreground` | Page background, primary text |
+| `background` / `foreground` | Page, primary text |
 | `card` / `card-foreground` | Card surfaces |
 | `muted` / `muted-foreground` | Subtle backgrounds, secondary text |
-| `primary` / `primary-foreground` | CTAs, active states, brand blue |
+| `primary` / `primary-foreground` | CTAs, active states |
 | `secondary` / `secondary-foreground` | Secondary actions |
 | `accent` / `accent-foreground` | Hover states |
-| `destructive` | Errors, delete actions |
-| `border` | All borders |
-| `input` | Input field backgrounds |
-| `ring` | Focus rings |
-| `sidebar` / `sidebar-*` | Sidebar-specific surfaces |
+| `destructive` / `destructive-foreground` | Errors, delete |
+| `border` · `input` · `ring` | Borders, inputs, focus rings |
+| `sidebar` / `sidebar-*` | Sidebar surfaces |
 
-### 2. Contrast — WCAG AA minimum
+- Every `text-*-foreground` class needs a token in `:root`, `.dark` **and**
+  `@theme inline`. A missing `--destructive-foreground` once gave black-on-red
+  badges in light mode.
+- **Borders:** a base layer in `globals.css` sets `border-color: var(--border)`.
+  Without it, Tailwind v4 draws a bare `border` in `currentColor`. Never remove
+  that layer, and never use `border-white` / `border-black`.
+- **Exception: status tints.** Status pills are the only place raw palette
+  colors are allowed, as soft tints:
+  `border-x-600/30 bg-x-600/10 text-x-700 dark:text-x-300`. Never use a solid
+  saturated fill, because a list where every item has the same status must not
+  turn into a wall of red. Project statuses: `statusVariant()` in
+  `src/lib/utils.ts`. Invoice and quote statuses: `InvoiceStatusBadge`. Add new
+  statuses to those maps, not inline.
 
-- Normal text on background: ≥ 4.5:1
-- Large text / UI elements: ≥ 3:1
-- `muted-foreground` on `background`: use only for truly secondary info (labels, hints), never for primary content
-- Never put `muted-foreground` text on a `muted` background — contrast is too low
+## 2. Contrast: WCAG AA
 
-### 3. shadcn/ui component usage
+- Body text ≥ 4.5:1. Large text and UI elements ≥ 3:1. Check in both themes.
+- `muted-foreground` is for secondary info only, and never on a `muted`
+  background.
 
-Use the right component for the job:
+## 3. Components
 
-| Need | Component |
+| Need | Use |
 |---|---|
-| Modal with a form | `Dialog` + `DialogContent` + `DialogHeader` |
+| Page title + actions | `PageHeader` (`src/components/page-header.tsx`) |
+| Secondary page actions (export, import, labels, manage) | `PageActionsMenu` (the ⋯ next to the single primary button) |
+| Secondary print/export on a detail page | `DropdownMenu` ("Afdrukken ▾") |
+| Modal form | `Dialog` + `DialogContent` + `DialogHeader` |
+| Mobile drawer | `Sheet` |
 | Inline error | `Alert variant="destructive"` |
-| Status pill | `Badge` with `statusVariant()` from `@/lib/utils` |
-| Action button | `Button` with appropriate `variant` |
-| Sidebar drawer (mobile) | `Sheet` |
+| Status | `Badge` + `statusVariant()` / `InvoiceStatusBadge` |
+| Dropdown | `Select` (not native `<select>`) |
 | Data grid | `Table` |
-| Dropdown selector | `Select` (not native `<select>`) |
-| Form field wrapper | `Form` + `FormField` + `FormItem` + `FormLabel` + `FormControl` + `FormMessage` |
+| Form field | `Form` + `FormField` + `FormItem` + `FormLabel` + `FormControl` + `FormMessage` |
+| Icon in running text | `<InlineIcon icon={Users} />` (`src/components/inline-icon.tsx`) |
+| Print documents | `PrintLayout` + `DocumentHeader` |
 
-Always import from `@/components/ui/*`. Never install a new Radix primitive manually if shadcn already wraps it.
+**One primary button per page.** Don't put a row of equal-weight outline
+buttons next to it.
 
-### 4. Spacing and layout rhythm
+**Icons are `lucide-react`, never emoji.** Use `h-4 w-4` (`h-3.5 w-3.5` in
+dense rows). Icon-only buttons need an `aria-label`. Arrows and ✓/✕ as
+typography are fine.
 
-- Use Tailwind spacing scale in multiples of 4 (4, 8, 12, 16, 24, 32…)
-- Page padding: `p-6` on `<main>`, `p-5` inside cards
-- Stack vertical space with `space-y-6` between sections, `space-y-4` within a section, `space-y-1.5` within a form field
-- Use `gap-3` or `gap-4` in grids
-- Cards use `rounded-xl` (the default `--radius` + `xl` modifier)
+## 4. Spacing and typography
 
-### 5. Typography
+- Spacing in multiples of 4. `<main>` has `p-4 md:p-6` (set in the layout, so
+  don't repeat it on a page). Use `p-5` inside cards.
+- `space-y-6` between sections, `space-y-4` within a section, `space-y-1.5`
+  within a field. `gap-3` / `gap-4` in grids. Cards are `rounded-xl`. No custom
+  radius values.
+- Page title: `text-2xl font-bold`, via `PageHeader`.
+- Card titles: `text-base font-semibold` (`CardTitle` defaults to `text-2xl`,
+  so override it). Never repeat the page title as the first card title.
+- Secondary text: `text-sm text-muted-foreground`. Meta and timestamps:
+  `text-xs text-muted-foreground`. Numbers in tiles and tables: `tabular-nums`.
 
-- Page title: `text-2xl font-bold`
-- Section heading: `text-base font-semibold` inside a `CardTitle`
-- Body: default (no explicit class)
-- Helper / secondary: `text-sm text-muted-foreground`
-- Meta / timestamps: `text-xs text-muted-foreground`
+## 5. Interactive states
 
-### 6. Interactive states
+Every clickable element needs a hover state, a focus ring
+(`focus-visible:ring-2 focus-visible:ring-ring`; shadcn components already have
+one) and a disabled state while `isPending`. Don't rely on hover alone.
 
-Every clickable element must have:
-- A visible hover state (`hover:bg-accent` or `hover:opacity-80`)
-- A focus ring (`focus-visible:ring-2 focus-visible:ring-ring` — shadcn components do this automatically)
-- A disabled state when `isPending` / `isLoading`
+## 6. Mobile-first layout (required)
 
-### 7. Status badges
-
-Use `statusVariant(status)` from `@/lib/utils` to get the correct class string, then apply it to a `<Badge>`:
-
-```tsx
-import { Badge } from "@/components/ui/badge";
-import { statusVariant } from "@/lib/utils";
-
-<Badge className={statusVariant(project.status)}>{project.status}</Badge>
-```
-
-The mapping lives in `src/lib/utils.ts`. If new statuses are added, update the map there first.
-
-### 8. Don't mix paradigms
-
-- Don't add raw `bg-gray-*` to elements that already use `bg-card` — pick one
-- Don't mix `text-white` with `text-foreground` in the same component
-- Don't add custom border-radius values; use Tailwind's `rounded-*` with `--radius` driving the base
-
-### 9. Mobile-first layout (required)
-
-The app must be fully usable on a phone. Every layout decision needs a mobile answer.
-
-**Breakpoints in use:**
-
-| Prefix | Min-width | Meaning |
+| Prefix | Min width | Meaning |
 |---|---|---|
-| _(none)_ | 0px | Mobile default |
-| `sm:` | 640px | Large phone / small tablet |
-| `md:` | 768px | Tablet portrait — content only, **no sidebar yet** |
-| `lg:` | 1024px | Sidebar appears; desktop |
-| `xl:` | 1280px | Wide grids (7-col week planner) |
+| _(none)_ | 0 | Phone |
+| `sm:` | 640 | Large phone |
+| `md:` | 768 | Tablet. Content only, **no sidebar yet** |
+| `lg:` | 1024 | Sidebar appears (752px content) |
+| `xl:` | 1280 | Wide grids (7-col week planner) |
 
-**Sidebar:**
-- Desktop (`lg+`): always-visible `aside` — `hidden lg:flex` (not `md`: at 768px a 224px sidebar leaves only 544px of content)
-- Mobile: hidden; accessible via `MobileTopBar` hamburger → `Sheet` from `src/components/mobile-sidebar.tsx`
-- Never show both at once; never duplicate nav logic outside these two components
+**Shell** (`src/app/(app)/layout.tsx`): `Sidebar` (`hidden lg:flex`) and
+`MobileTopBar` (`lg:hidden`, which opens a `Sheet` from `mobile-sidebar.tsx`).
+Both render the same `NavLinkList`. Nav items are grouped (Werk / Gegevens /
+Financieel / Beheer) in `src/lib/nav-links.ts`, and a new page gets a `group`
+there. The full sidebar has to fit in a 768px-high window without an inner
+scrollbar.
 
-**Layout structure:**
-```tsx
-// AppLayout — the wrapper in src/app/(app)/layout.tsx
-<div className="flex h-screen bg-background">
-  <Sidebar />   {/* hidden lg:flex */}
-  <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-    <MobileTopBar />   {/* lg:hidden */}
-    <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
-  </div>
-</div>
-```
+**Grids**
+- Stat grids: `grid-cols-1 sm:grid-cols-3`, or `grid-cols-2 md:grid-cols-4`
+  when labels are long. Never a bare `grid-cols-3`.
+- Calendar grids need a column floor of about 120px. The week planner is
+  `grid-cols-1 md:grid-cols-4 xl:grid-cols-7`.
 
-**Grids:**
-- Stat/summary grids: `grid-cols-1 sm:grid-cols-3` — never bare `grid-cols-3`
-- Card lists stay single-column on all screen sizes (already mobile-friendly)
-- Calendar-like grids (`grid-cols-7`) need a column floor ≈ 120px: week planner is `grid-cols-1 md:grid-cols-4 xl:grid-cols-7`. Never `grid-cols-7` bare below `xl` for cards with text
-- Stat grids with long labels ("Materiaalboekingen"): `grid-cols-2 md:grid-cols-4`, not `sm:`
+**Rows with text + actions**
+- Text side: `min-w-0` plus `truncate` on the text.
+- Actions: `flex flex-wrap gap-2`, and at most `sm:shrink-0`. A bare `shrink-0`
+  pushes buttons off a 360px screen.
+- Text + 2 or more buttons: `flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between`.
+- Phone rows with name + badge + actions: the name goes on its own full-width
+  line, and badge / amount / actions on a second line (`basis-full sm:basis-0`).
+  Never truncate the name to make room for buttons.
+- Hide secondary info on small screens with `hidden sm:block`.
 
-**Flex rows with text + actions:**
-- Text side: always add `min-w-0` + `truncate` on inner text elements
-- Action side: `flex flex-wrap gap-2`; add `sm:shrink-0` only. A bare `shrink-0` on a row of 2–3 buttons is what pushed "Verwijderen"/"Intrekken" off 360px screens
-- Cards with text + 2 or more buttons: stack on mobile — `flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between`
-- **Page title + actions: always `<PageHeader title="…">` (`src/components/page-header.tsx`)** — never hand-roll `flex justify-between` + `flex gap-2` (non-wrapping rows made 6 pages slide sideways)
-- De-prioritise secondary info on small screens: `hidden sm:block` for dates, counts, etc.
+**Tables:** wrap every bare `<table>` in `overflow-x-auto` (shadcn `Table`
+already does this). Hide low-priority columns with `hidden sm:table-cell`. Wide
+card tables get `table-sticky-first`. Scrolling tab strips get `fade-edge-r`.
+Fixed-width content (an A4 label sheet) gets its own
+`overflow-x-auto print:overflow-visible` wrapper.
 
-**Tables:**
-- Wrap in `overflow-x-auto` so they scroll horizontally rather than overflowing — **every** bare `<table>` (including print views like `/kosten`), shadcn `Table` already does this
-- Fixed-width content (A4 label sheet, `210mm`) goes in its own `overflow-x-auto print:overflow-visible` wrapper so it never widens `<main>`
-- Hide low-priority columns on mobile with `hidden sm:table-cell`
+**Touch:** tap targets at least 44×44px (`size="icon"` or `min-h-[44px]`).
 
-**Touch targets:**
-- Minimum 44×44px tap area — use `size="icon"` buttons (h-10 w-10) or add `min-h-[44px]` padding
-- Never rely on hover-only affordances; active states must be visible
+**Dialogs and sheets:** `max-h-[90dvh] overflow-y-auto`. Labels go above
+fields.
 
-**Forms and dialogs:**
-- `Dialog`/`Sheet` content: add `max-h-[90dvh] overflow-y-auto` so long forms scroll on mobile
-- Form labels and fields stack vertically by default (no horizontal label/field pairs)
+**Long lists** that grow with history default to the working set, with search
+and status chips (`ProjectsToolbar` + the pure `filterProjects`). When a search
+has matches that the filter hides, say so and offer "Toon alles".
 
-### 10. Scrollbars — one per page
+## 7. Scrolling: one scroller per page
 
-`<main>` is the page scroller (`overflow-y-auto`), so a second vertical scroller inside it is a scroll-trap, especially on touch.
-- Never `max-h-[Nvh] overflow-y-auto` on lists below `lg`; let content flow
-- Master-detail lists (e.g. materials) may be bounded at `lg+` only, as a sticky pane: `lg:sticky lg:top-0 lg:self-start` + inner `lg:max-h-[calc(100vh-Xrem)] lg:overflow-y-auto`
-- `<main>` must never scroll sideways. If it does, something inside lacks `min-w-0`, `flex-wrap`, or an `overflow-x-auto` wrapper
+`<main>` is the page scroller.
+- Below `lg`, never put `max-h-[…] overflow-y-auto` on a list.
+- A master-detail list may be bounded at `lg+` as a sticky pane:
+  `lg:sticky lg:top-0 lg:self-start` plus an inner
+  `lg:max-h-[calc(100vh-Xrem)] lg:overflow-y-auto`.
+- `<main>` must never scroll sideways. If it does, something is missing
+  `min-w-0`, `flex-wrap` or an `overflow-x-auto` wrapper.
 
-### 11. Responsive audit (run after any layout change)
+## 8. Responsive audit (after any layout change)
 
-`.claude/skills/design/scripts/responsive-audit.mjs` drives Playwright across 21 routes × 7 widths (360, 390, 768, 1024, 1280, 1440, 1920) and reports pages where `<main>` scrolls sideways, nested vertical scrollers, and elements past the right edge.
+`scripts/responsive-audit.mjs` loads every `(app)` route at 7 widths (360 to
+1920) and reports a sideways-scrolling `<main>`, nested vertical scrollers and
+elements past the right edge. Run it against the QA server (fresh seed, so the
+ids are stable):
 
 ```bash
-# throwaway dir outside the repo (playwright is not a project dependency)
-mkdir -p /tmp/rf-audit/shots && cd /tmp/rf-audit && npm init -y && npm i playwright && npx playwright install chromium
-npm run dev -- -p 3100          # in the repo; seeded login admin@rentflow.dev / admin123
-cp <repo>/.claude/skills/design/scripts/responsive-audit.mjs . && node responsive-audit.mjs /tmp/rf-audit   # writes audit.json + shots/
+npx playwright install chromium                     # once
+bash qa/serve.sh &                                   # fresh seeded build on :3100
+node .claude/skills/design/scripts/responsive-audit.mjs /tmp/rf-audit   # → audit.json + shots/
 ```
 
-Target: zero entries with `H main`, zero `off`, and only the documented nested scrollers (materials list at lg+, label picker). Add new routes to the `routes` array. Look at the 390 and 768 screenshots too — metrics don't catch squashed or truncated content (the planning grid passed numerically while unreadable).
+Target: no `docH`, no `off`, and only the expected nested scrollers (the
+materials list at lg+ and the label picker). When you add a page, add it to the
+`routes` array. Also look at the 390 and 768 screenshots, because the numbers
+don't catch squashed or unreadable content.
 
-Baseline (2026-10-16): before fixes 10 pages slid sideways at 360–390 and 3 at 768; after, 0. Report: `.plans/ui-responsive-audit.pdf`.
+- **Radix `ScrollArea` clips wide rows:** its viewport wraps children in a `display: table` div that grows to the widest nowrap content and pushes right-hand action buttons out of view. Always add `[&>[data-radix-scroll-area-viewport]>div]:block!` to the `ScrollArea` className (done in all pickers).
+- **Editable cost tables** (`.cost-table` in Kosten tab) turn into one card per line below `md` via CSS in `globals.css` (screen only, print keeps the table); keep the cell order (icon, name, berekening, korting, projectprijs, subtotaal) when adding columns.
+- **Timelines** (`components/timeline.tsx`) use a `--tl-lw` label column (96px on phones, 180px from `sm`) and show every second tick label on phones; labels in the last 15% hang left of their tick so the frame never clips them.
+- **Audit every tab, not just the page:** a detail page with tabs must be checked tab by tab at 360/390/768/1024/1280 (Kosten was the worst offender and only showed on its own tab).
+- **Dev-server gotcha:** CSS edited outside the editor (scripts) is sometimes not picked up by Turbopack; if a new rule "does nothing", `rm -rf .next` and restart before debugging the CSS.
 
-### 12. Both themes, icons, navigation (learned in UI round 2)
+## Checklist before finishing a UI change
 
-- **Always review light AND dark.** Toggle via `localStorage.theme = "light" | "dark"` (the `dark` class on `<html>`); the audit scripts can set it with `addInitScript`. The app is not dark-only.
-- **Borders:** `globals.css` has a base layer setting `border-color: var(--border)`. Tailwind v4 otherwise draws bare `border` / `border-b` in `currentColor` (full white in dark, black in light). Never remove that layer; never add `border-white` / `border-black`.
-- **Every `text-*-foreground` class needs a token** defined in `:root`, `.dark` and `@theme inline`. `--destructive-foreground` was missing, which gave black-on-red badges in light mode.
-- **Icons are lucide, not emoji** (`lucide-react`, `h-4 w-4`; `h-3.5 w-3.5` in dense rows). Emoji render differently per OS and can't be themed. Icon-only buttons need `aria-label`. Nav icons are string keys in `src/lib/nav-links.ts` mapped in `nav-link-list.tsx` (server → client boundary).
-- **Navigation:** one renderer, `NavLinkList`, for sidebar and mobile sheet: grouped (Werk / Gegevens / Financieel / Beheer), current page highlighted via `aria-current`. New pages get a `group` in `nav-links.ts`. Keep the full sidebar within a 768px-high window (no inner scrollbar) — re-run the audit when adding items.
-- **Project actions:** primary action visible, secondary print/export actions in a `DropdownMenu` (e.g. "Afdrukken ▾") instead of a row of equal-weight buttons.
-- **Dashboard tiles:** `lucide` icon top-right of the header, `tabular-nums` value; group related tiles into rows (counts / money).
-
-- **One primary button per page.** Export / import / labels / "manage" actions go in `PageActionsMenu` (the ⋯ next to the primary button, `src/components/page-actions-menu.tsx`), not as a row of equal-weight outline buttons.
-- **Inline icons in running text** (counters, warnings, "shared with…"): `<InlineIcon icon={Users} />` from `components/inline-icon.tsx`. Pictographic emoji are not used anywhere in the UI; arrows and ✓/✕ typography are fine.
-- **Status pills** (invoices etc.): soft tints (`border-x/30 bg-x/10 text-x-700 dark:text-x-300`), never solid saturated fills — a list full of one status must not be a wall of red.
-- **Card titles** inside pages are `text-base` (CardTitle defaults to `text-2xl`); never repeat the page `<h2>` as the first card title.
-- **Wide tables** on cards get `className="table-sticky-first"` (first column stays visible while scrolling sideways below `lg`). **Scrolling tab strips** get `fade-edge-r`.
-- **Long lists** (projects, and any list that grows with history) default to the working set and offer search + status chips: see `ProjectsToolbar` + `filterProjects` (pure, unit-tested). When a search has matches hidden by the filter, say so and offer "Toon alles".
-- **Phone rows** with name + badge + actions: name on its own full-width line, badge/amount/actions on a second line (`flex-wrap`, `basis-full sm:basis-0`), never truncate the name to make room for buttons.
-
-## Checklist before finishing any UI change
-
-- [ ] All colors use semantic tokens (no raw palette colors)
-- [ ] Text contrast passes WCAG AA on its background
-- [ ] Used the correct shadcn/ui component (not a DIY alternative)
-- [ ] Interactive elements have hover + focus + disabled states
-- [ ] Spacing follows the 4pt rhythm
-- [ ] Status indicators use `statusVariant()`
-- [ ] No new Radix dependencies installed when shadcn already covers it
-- [ ] Tested (or reasoned through) at 375px width — no horizontal overflow, grids collapse, text truncates
-- [ ] Looked at it in **both** light and dark theme
-- [ ] Also checked 768px (content-only, no sidebar) and 1024px (sidebar, 752px content)
-- [ ] Page title row uses `PageHeader`; action groups wrap
-- [ ] No new nested vertical scroller below `lg`; `main` does not scroll sideways (run responsive-audit for layout changes)
+- [ ] Semantic tokens only (status tints excepted); AA contrast
+- [ ] Looked at it in **light and dark**
+- [ ] Correct shadcn component; `PageHeader`; one primary button; lucide icons
+- [ ] Hover, focus and disabled states
+- [ ] 360/390px: no horizontal overflow, grids collapse, action rows wrap
+- [ ] 768px (no sidebar) and 1024px (sidebar, 752px content)
+- [ ] No new nested scroller below `lg`; responsive audit run for layout changes

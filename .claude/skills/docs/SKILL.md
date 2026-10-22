@@ -18,13 +18,13 @@ Run this skill any time a change touches one of these surfaces — the docs-trig
 | Area | Watched paths | README section that may need updating |
 |---|---|---|
 | API surface | `src/app/api/**` | **API Overview** table |
-| Data model | `prisma/schema.prisma`, `prisma/schema.dev.prisma` | **Tech Stack**, **API Overview** (if endpoints change) |
+| Data model | `prisma/schema.prisma`, `prisma/schema.dev.prisma`, `prisma/migrations/**`, `prisma.config.ts` | **Tech Stack**, **Docker Compose** (migrations at startup), **API Overview** (if endpoints change) |
 | Shared types | `src/types/index.ts` | **API Overview** (response shapes) |
-| Env / config | `.env.example`, `.env.local.example`, `next.config.*` | **Environment Variables** |
+| Env / config | `.env.example`, `.env.local.example`, `src/lib/env.ts`, `next.config.*` | **Environment Variables** |
 | Scripts | `package.json` (scripts only) | **Local Development**, **Docker Compose** |
 | Project structure | new top-level dirs under `src/app/(app)/`, `src/components/`, `src/lib/`, `src/hooks/` | **Project Structure** tree |
 | CI/CD | `.github/workflows/**` | **CI/CD** table |
-| Docker | `Dockerfile`, `docker-compose.yml` | **Docker Compose** |
+| Docker | `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh` | **Docker Compose** |
 | Auth | `src/proxy.ts`, `src/lib/auth.ts`, `src/lib/api-auth.ts` | **API Overview** intro paragraph |
 
 If no section is affected, say so explicitly and skip the edit — no churn just to look busy.
@@ -49,15 +49,15 @@ If no section is affected, say so explicitly and skip the edit — no churn just
 - Code blocks are language-tagged (` ```bash `, ` ```typescript `, ` ```dockerfile `).
 - Paths and filenames in backticks.
 - No emojis. No marketing copy. No "we" / "our" — keep it neutral and instructional.
-- British/European Dutch context in the app, but the README itself is **English only**.
-- Keep the README under ~250 lines. If a section is growing past ~30 lines, push detail into `CLAUDE.md` instead.
+- The app UI is Dutch; the README is **English only**.
+- Keep the README under ~350 lines. The **API Overview** table may be long; any other section growing past ~30 lines pushes detail into `CLAUDE.md`.
 - Never link to non-existent files or routes.
 
 ## What NOT to document here
 
 - Internal Claude/agent guidance → that's `CLAUDE.md` / `AGENTS.md` / `.claude/skills/`.
 - Per-component implementation details → live in the code, not the README.
-- TODOs, roadmap, changelogs → not in README. Git history is the changelog.
+- TODOs and changelogs → not in README. Git history is the changelog. The one exception is the short **Future plan list** at the end: a few bullets of agreed direction, not a backlog (detailed plans live in `.plans/`).
 - Anything copied verbatim from `CLAUDE.md` — link the concept, don't duplicate the prose.
 
 ## Verify before finishing

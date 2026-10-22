@@ -1,9 +1,9 @@
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -30,7 +30,7 @@ RUN npm run build
 # ~1.5GB. Installing `prisma` fresh in an empty directory instead lets npm
 # resolve exactly its own dependency closure (@prisma/config, effect, the
 # schema-engine binary, …), without any of that.
-FROM node:22-alpine AS prisma-cli
+FROM node:24-alpine AS prisma-cli
 WORKDIR /app
 # Copied under a different name so it's never treated as *this* directory's
 # own package.json — `npm install prisma@x` in a directory whose
@@ -44,10 +44,10 @@ RUN PRISMA_VERSION=$(node -p "require('./main-package.json').dependencies.prisma
   && npm init -y >/dev/null \
   && npm install "prisma@${PRISMA_VERSION}" --omit=dev
 
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-# node:22-alpine ships a built-in `node` user/group (uid 1000); every COPY
+# node:24-alpine ships a built-in `node` user/group (uid 1000); every COPY
 # below is --chown=node:node so the app can run as that user, not root.
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static

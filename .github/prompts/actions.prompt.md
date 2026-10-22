@@ -51,7 +51,7 @@ if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.co
   ```
 
 ## Security
-- Store Docker Hub credentials in repository secrets (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`).
+- Push to GHCR with the built-in `GITHUB_TOKEN` (`packages: write`); no extra registry secrets.
 - Never hardcode credentials or tokens in workflow files.
 
 ## Tags

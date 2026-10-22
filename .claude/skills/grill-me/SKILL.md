@@ -3,7 +3,7 @@ name: grill-me
 description: Grill the user on a vague feature request, PM feedback bullet or plan section until every decision that changes the implementation is made — grounded in the RentFlow code, never in guesses. Use when a request is ambiguous, when PM feedback needs "uitdikken", or before a plan section is written. Triggers on: "grill me", "grill-me", "vraag me uit", "uitdikken", "wat bedoelt de PM", "maak dit duidelijk".
 when_to_use: A PM bullet or feature ask is too terse to plan; a plan section has open questions; answers so far contradict each other. Not for asks that are already unambiguous — then go straight to the `expand` skill or the plan.
 argument-hint: "[PM bullet | feature | plan section, e.g. 'C3' or 'offertes']"
-allowed-tools: Read Grep Glob Bash(git *) Bash(ls *) Bash(grep *) Bash(sed *) Agent AskUserQuestion
+allowed-tools: Read Grep Bash(git *) Bash(ls *) Bash(grep *) Bash(sed *) Agent AskUserQuestion
 ---
 
 # Grill-me — RentFlow
@@ -58,8 +58,8 @@ Use `AskUserQuestion`. Rules:
   terms, for example "needs a migration", "reuses InvoiceLine", or "hidden
   from scope own".
 - Use `multiSelect` only when the options really are independent.
-- Ask in the user's language. Youri writes Dutch, so ask in Dutch, but keep
-  code identifiers in English.
+- Ask in the language the request was written in. Keep code identifiers in
+  English.
 - **Read the answers adversarially.**
   - "Other" text often adds a requirement that wasn't in the options. Restate
     it in one line so the user can correct you.

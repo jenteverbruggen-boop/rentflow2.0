@@ -14,6 +14,9 @@ file_path="$(printf '%s' "$payload" | jq -r '.tool_input.file_path // .tool_inpu
 if printf '%s' "$file_path" | grep -Eq \
   -e '/src/app/api/.*/route\.ts$' \
   -e '/prisma/schema(\.dev)?\.prisma$' \
+  -e '/prisma/migrations/.*\.sql$' \
+  -e '/prisma\.config\.ts$' \
+  -e '/docker-entrypoint\.sh$' \
   -e '/src/types/index\.ts$' \
   -e '/\.env(\.local)?\.example$' \
   -e '/next\.config\.(ts|js|mjs)$' \
@@ -22,7 +25,7 @@ if printf '%s' "$file_path" | grep -Eq \
   -e '/Dockerfile$' \
   -e '/docker-compose\.ya?ml$' \
   -e '/src/proxy\.ts$' \
-  -e '/src/lib/(auth|api-auth|prisma)\.ts$' \
+  -e '/src/lib/(auth|api-auth|prisma|env)\.ts$' \
 ; then
   jq -n --arg fp "$file_path" '{
     hookSpecificOutput: {

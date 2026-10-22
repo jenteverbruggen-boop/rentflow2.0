@@ -12,10 +12,10 @@ RentFlow 2.0 is a rental/planning tool for managing **projects**, **people**, **
 | UI | React 19, shadcn/ui, Tailwind CSS v4 |
 | Data fetching | TanStack Query v5 |
 | Forms | React Hook Form + Zod |
-| ORM | Prisma 5 |
+| ORM | Prisma 7 |
 | Auth | JWT in httpOnly cookie (`jose` at Edge, `jsonwebtoken` in Node routes) |
 | Containerisation | Docker multi-stage standalone build |
-| CI/CD | GitHub Actions → Docker Hub (`thewizard2026/rentflow`) |
+| CI/CD | GitHub Actions → GHCR (`ghcr.io/jenteverbruggen-boop/rentflow2.0`) |
 
 ## Repository Layout
 
@@ -36,7 +36,7 @@ rentflow2.0/
 │   └── types/index.ts        # All domain types
 ├── Dockerfile
 ├── docker-compose.yml
-└── .github/workflows/        # ci.yml, builds.yml, release.yml
+└── .github/workflows/        # ci.yml, release.yml
 ```
 
 ## Critical Rules
@@ -53,11 +53,11 @@ rentflow2.0/
 ## API Route Handler Pattern
 
 ```typescript
-import { requireAuth, unauthorized, badRequest, serverError } from "@/lib/api-auth";
+import { requireModule, forbidden, serverError } from "@/lib/api-auth";
 
 export async function GET() {
-  const user = await requireAuth().catch(() => null);
-  if (!user) return unauthorized();
+  const access = await requireModule("materialen", "lezen").catch(() => null);
+  if (!access) return forbidden();
   try {
     const data = await prisma.entity.findMany();
     return NextResponse.json(data);

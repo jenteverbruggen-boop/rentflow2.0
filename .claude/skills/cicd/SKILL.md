@@ -1,7 +1,7 @@
 ---
 name: cicd
 description: Manage GitHub Actions workflows, Docker builds, and deployment pipelines for this project. Use when changing CI/CD, updating workflows, fixing build failures, optimising Docker images, or changing deployment strategy. Triggers on: "update CI", "fix pipeline", "deploy", "docker", "workflow", "actions".
-when_to_use: Any change to .github/workflows/, Dockerfile, or docker-compose.yml.
+when_to_use: Any change to .github/workflows/, Dockerfile, docker-entrypoint.sh, or docker-compose.yml.
 allowed-tools: Read Bash(find *) Bash(git *)
 ---
 
@@ -9,107 +9,93 @@ allowed-tools: Read Bash(find *) Bash(git *)
 
 ## Architecture
 
-**Single app, single image.** RentFlow is one Next.js 16 app. There is no separate frontend/backend image.
+One Next.js app, one image.
 
-| Artifact | Value |
+| Item | Value |
 |---|---|
-| GHCR image | `ghcr.io/jenteverbruggen-boop/rentflow2.0` |
-| Tags on semver release | `:latest` + `:<semver>` + `:sha-<sha>` |
-| Tags on non-release push | `:sha-<sha>` only |
-| Container port | `3000` |
-| Startup command | `prisma migrate deploy && node server.js` |
-| Auth for registry | `GITHUB_TOKEN` (built-in, no extra secrets needed) |
+| Image | `ghcr.io/jenteverbruggen-boop/rentflow2.0` (workflow uses `ghcr.io/${{ github.repository }}`) |
+| Tags on a semver release | `:latest` + `:<version>` + `:sha-<sha>` |
+| Tags on other `main` pushes | `:sha-<sha>` only |
+| Node | **24** everywhere (CI, release, `node:24-alpine` in the Dockerfile). Keep them in sync |
+| Port / user | `3000`, runs as the built-in `node` user |
+| Startup | `docker-entrypoint.sh`: `prisma migrate deploy`; if that fails, resolve `0001_init` as applied (DBs from before migration history) and retry; then `node server.js` |
+| Registry auth | built-in `GITHUB_TOKEN` |
+| Production | the PO's own server/VPS pulls `:latest` via `docker-compose.yml` |
 
-## Workflows (`/.github/workflows/`)
+## Workflows
 
-### `ci.yml` — runs on every push to any branch
+### `ci.yml`: every push, every branch
 
 ```
-checkout → node 20 (with npm cache) → npm ci → prisma generate → tsc --noEmit → next build
+checkout → node 24 (npm cache) → npm ci
+→ prisma generate (Postgres)  → tsc --noEmit        # Decimal-drift guard
+→ prisma generate (SQLite)    → npm test            # integration tests use SQLite
+→ prisma generate (Postgres)  → npm run build
 ```
 
-- Provides placeholder `DATABASE_URL` and `JWT_SECRET` env vars (Next.js needs them to satisfy Prisma at build time)
-- **Gate**: `release.yml` only runs when this passes on `main`
+The order matters. `tsc` runs against the **Postgres** client because that's
+the only place CI sees `Decimal` money types (see the money rule in
+CLAUDE.md). Don't move `tsc` after the SQLite generate, and don't drop it.
+Tests and the build get placeholder `DATABASE_URL` / `JWT_SECRET`, because
+`src/lib/env.ts` validates both when a module is imported.
 
-### `release.yml` — runs when CI passes on `main`
+### `release.yml`: `workflow_run` after CI succeeds on `main`
 
-Two jobs:
+1. **`semver`**: `cycjimmy/semantic-release-action@v6` with `.releaserc.json`
+   (commit-analyzer, release-notes, github). Needs `fetch-depth: 0`.
+   `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major, anything else →
+   no release.
+2. **`docker`**: `docker/build-push-action@v7` with the `type=gha` cache
+   (`mode=max`). It always pushes `:sha-<sha>`, and also pushes `:latest` and
+   `:<version>` when a release was published. `DOCKER_BUILD_RECORD_RETENTION_DAYS: 7`
+   keeps the build-record artifacts from filling the Actions quota.
+   **Rollback:** if the push fails after a release was published, the GitHub
+   release and its tag are deleted, so a version never exists without an image.
 
-1. **`semver`** — runs `cycjimmy/semantic-release-action@v4` using `.releaserc.json`:
-   - Analyzes commits since last tag (conventional commits format)
-   - If a release is warranted: creates a GitHub release + git tag, outputs version + published=true
-   - If no release: outputs published=false, no GitHub release created
+## Dockerfile: 4 stages, in this order
 
-2. **`docker`** — always runs after semver (needs: semver):
-   - Pushes `:sha-<sha>` on every main push
-   - Additionally pushes `:<version>` + `:latest` when published=true
+| Stage | Does |
+|---|---|
+| `deps` | `npm ci` (all deps; the builder needs the devDeps) |
+| `builder` | `prisma generate` + `npm run build` with placeholder `DATABASE_URL` / `JWT_SECRET` (`env.ts` validates at import) |
+| `prisma-cli` | installs **only** `prisma@<version from package.json>` in an empty dir, for `migrate deploy` at startup |
+| `runner` | `.next/standalone` + `static` + `public` + `prisma/` + `prisma.config.ts` + the prisma-cli `node_modules` merged in + the entrypoint |
 
-### Semantic Release (`.releaserc.json`)
+Things that matter:
 
-Uses conventional commits to determine version bumps:
-- `feat:` → minor bump
-- `fix:` → patch bump
-- `BREAKING CHANGE:` footer → major bump
-- Other types (chore, docs, style, refactor, test) → no release
+- `next.config.ts` needs `output: "standalone"` and `serverExternalPackages`
+  must list `@prisma/client`, `prisma`, `@prisma/adapter-pg`, `pg`,
+  `@prisma/adapter-libsql` and `@libsql/client`.
+- Never copy the builder's full `node_modules` into the runner. That's what
+  made the image ~1.5 GB. If you need a runtime-only tool, give it its own
+  isolated stage, the way `prisma-cli` does it.
+- The image is published for **amd64 only**. `docker compose run app` fails on
+  Apple Silicon. A local `docker build .` is fine.
 
-## Dockerfile — multi-stage standalone
+## docker-compose.yml
 
-The Dockerfile has three stages. Keep them exactly in this order:
-
-```dockerfile
-# Stage 1: deps — install only production node_modules
-FROM node:20-alpine AS deps
-
-# Stage 2: builder — generate Prisma client + next build
-FROM node:20-alpine AS builder
-
-# Stage 3: runner — minimal image with .next/standalone output
-FROM node:20-alpine AS runner
-```
-
-Critical details:
-- `next.config.ts` must have `output: "standalone"` — otherwise `.next/standalone` is not generated
-- `serverExternalPackages: ["@prisma/client", "prisma"]` must be in `next.config.ts` — Prisma native binaries must not be bundled by webpack
-- The runner stage must copy `node_modules/.prisma` and `node_modules/@prisma` from the builder — the standalone output does not include them
-- `prisma/` must be copied to the runner so `prisma migrate deploy` can run at startup
-
-## Docker Compose (`docker-compose.yml`)
-
-Local dev compose has **2 services**:
-
-```yaml
-services:
-  db:    # postgres:15, env_file: .env
-  app:   # ghcr.io/jenteverbruggen-boop/rentflow2.0:latest, ports 3000:3000
-```
-
-- No separate backend or frontend service
-- `app` depends on `db`
-- Both use `env_file: .env` — secrets are never hardcoded in the compose file
-
-## Local dev — no Docker
-
-For local dev, SQLite is used (no Docker needed):
-- `.env.local` sets `DATABASE_URL=file:./prisma/dev.db`
-- `npm run db:dev:migrate` creates/migrates the SQLite DB
-- `npm run dev` starts the Next.js dev server (Turbopack)
+`db` (postgres:15, `pg_isready` healthcheck, `pgdata` volume) and `app` (GHCR
+`:latest`, `3000:3000`, `depends_on: db: service_healthy`, healthcheck
+`wget /login`, because that's the only route that answers without
+authentication). Both read `env_file: .env`. Never hardcode secrets.
 
 ## Rules
 
-- **Never** hardcode secrets in workflow files — use `${{ secrets.VARIABLE }}`
-- **Never** push directly to `main` from a workflow — CI builds images, humans merge PRs
-- **Always** use `cache: "npm"` in `actions/setup-node@v4` to cache the npm install layer
-- **Always** use `docker/build-push-action@v6` with GHA layer cache (`type=gha`)
-- **Never** run `npm run build` without setting `DATABASE_URL` and `JWT_SECRET` env vars — Prisma and auth code reference them at build time (even if not used at static generation time)
-- **Always** use `fetch-depth: 0` when checking out for semantic-release — it needs full git history to determine version
-- Keep workflows under 50 lines each — extract complexity into Makefile targets or npm scripts if needed
+- Secrets only via `${{ secrets.* }}`. Never echo them.
+- Workflows never push to `main`.
+- `actions/setup-node` always has `cache: "npm"`. `build-push-action` always
+  uses the GHA layer cache.
+- Any `next build` needs `DATABASE_URL` and `JWT_SECRET` set (placeholders are
+  fine).
+- When you bump an action major, check its changelog for changed inputs or
+  outputs (semantic-release-action's outputs feed the docker job).
+- Commits on `main` follow conventional commits, otherwise semver won't release.
 
-## Checklist for any CI/CD change
+## Checklist
 
-- [ ] `ci.yml` still passes with `DATABASE_URL` + `JWT_SECRET` placeholder vars
-- [ ] Docker image builds with `docker build .` locally
-- [ ] `docker compose up` starts the app on port 3000
-- [ ] No secrets are committed or echoed in logs
-- [ ] Workflow trigger conditions (`branches`, `on`) are correct
-- [ ] Layer cache directives are present on all `build-push-action` steps
-- [ ] Commit messages follow conventional commits format for semver to work
+- [ ] CI step order still: Postgres-generate → tsc → SQLite-generate → test → Postgres-generate → build
+- [ ] `docker build .` succeeds and the image starts (entrypoint runs `migrate deploy`)
+- [ ] Node version identical in `ci.yml`, `release.yml` and the `Dockerfile`
+- [ ] Every `build-push-action` has `cache-from`/`cache-to`
+- [ ] No secrets committed or logged; triggers (`on`, `branches`) correct
+- [ ] New migration? It was authored and validated per CLAUDE.md "Authoring Postgres migrations"
