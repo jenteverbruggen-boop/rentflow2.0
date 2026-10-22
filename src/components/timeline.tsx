@@ -63,16 +63,27 @@ export function Timeline({
   }
 
   return (
-    <div className="border rounded-md overflow-hidden">
+    <div
+      className="border rounded-md overflow-hidden [--tl-lw:96px] sm:[--tl-lw:var(--tl-lw-desktop)]"
+      style={{ "--tl-lw-desktop": `${labelWidth}px` } as React.CSSProperties}
+    >
       <div className="flex bg-muted/40 border-b text-xs text-muted-foreground" style={{ height: 28 }}>
-        <div className="shrink-0 border-r px-3 flex items-center" style={{ width: labelWidth }}>
-          {format(start, "d MMM", { locale: nl })} – {format(end, "d MMM yyyy", { locale: nl })}
+        <div className="shrink-0 border-r px-3 flex items-center w-(--tl-lw)">
+          <span className="truncate max-sm:hidden">
+            {format(start, "d MMM", { locale: nl })} – {format(end, "d MMM yyyy", { locale: nl })}
+          </span>
         </div>
         <div className="relative flex-1">
           {ticks.map((t, i) => (
             <div
               key={i}
-              className="absolute top-0 bottom-0 border-l border-border/40 pl-1 text-[10px]"
+              className={cn(
+                "absolute top-0 bottom-0 border-border/40 text-[10px] whitespace-nowrap",
+                // Labels in the last stretch hang to the left of their tick so the
+                // overflow-hidden frame never cuts them off.
+                t.left > 85 ? "-translate-x-full border-r pr-1" : "border-l pl-1",
+                i % 2 === 1 && "max-sm:hidden",
+              )}
               style={{ left: `${t.left}%` }}
             >
               {format(t.date, "d MMM", { locale: nl })}
@@ -85,15 +96,14 @@ export function Timeline({
         {showToday && todayWithinRange && (
           <div
             className="absolute top-0 bottom-0 w-px bg-primary z-10 pointer-events-none"
-            style={{ left: `calc(${labelWidth}px + ${pct(today, start, totalDays) / 100} * (100% - ${labelWidth}px))` }}
+            style={{ left: `calc(var(--tl-lw) + ${pct(today, start, totalDays) / 100} * (100% - var(--tl-lw)))` }}
             title={`Vandaag: ${format(today, "d MMM yyyy", { locale: nl })}`}
           />
         )}
         {rows.map((row) => (
           <div key={row.id} className="flex border-b last:border-b-0" style={{ height: rowHeight }}>
             <div
-              className="shrink-0 border-r px-3 flex items-center text-xs font-medium truncate"
-              style={{ width: labelWidth }}
+              className="shrink-0 border-r px-3 flex items-center text-xs font-medium truncate w-(--tl-lw)"
             >
               {row.label}
             </div>

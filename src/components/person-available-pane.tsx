@@ -36,7 +36,7 @@ export function PersonAvailablePane({
       <h4 className="hidden md:block text-xs font-semibold uppercase text-muted-foreground">Beschikbaar</h4>
       <div className="p-3 space-y-2 md:p-0">
       <Input placeholder="Zoeken op naam of functie..." value={search} onChange={(e) => onSearchChange(e.target.value)} />
-      <ScrollArea className="h-[400px] pr-2">
+      <ScrollArea className="h-[400px] pr-2 [&>[data-radix-scroll-area-viewport]>div]:block!">
         <div className="space-y-2">
           {byRole.map(([role, items]) => {
             const isCollapsed = collapsed.has(role);

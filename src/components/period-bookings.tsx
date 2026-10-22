@@ -58,8 +58,8 @@ export function PeriodBookings({ period, project }: Props) {
                 const groupCost = materialGroupCost(g, days);
                 const override = project.materialPrices.find((p) => p.materialId === g.material.id);
                 return (
-                  <div key={g.key} className="flex items-center gap-2 bg-muted/40 rounded-md px-3 py-1.5 text-sm">
-                    <div className="flex-1 min-w-0">
+                  <div key={g.key} className="flex flex-wrap items-center gap-x-2 gap-y-1 bg-muted/40 rounded-md px-3 py-1.5 text-sm">
+                    <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
                       <div className="font-medium truncate flex items-center gap-1.5">
                         <span className="truncate">
                           {g.material.name}{" "}
@@ -94,7 +94,7 @@ export function PeriodBookings({ period, project }: Props) {
                         {formatEUR(g.dayPriceSnapshot)}{basisSuffix(g.priceBasis)}
                       </span>
                     )}
-                    <span className="text-xs text-muted-foreground tabular-nums">
+                    <span className="ml-auto sm:ml-0 text-xs text-muted-foreground tabular-nums">
                       {formatEUR(groupCost)}
                     </span>
                     <Button

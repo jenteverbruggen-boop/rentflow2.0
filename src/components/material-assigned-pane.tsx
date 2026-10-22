@@ -46,7 +46,7 @@ export function MaterialAssignedPane({
       </h4>
       <div className="hidden md:block h-9" aria-hidden />
       <div className="p-3 md:p-0">
-        <ScrollArea className="h-[400px] pr-2">
+        <ScrollArea className="md:h-[400px] pr-2 [&>[data-radix-scroll-area-viewport]>div]:block!">
           <div className="space-y-2">
             {groupsByCategory.map(([cat, items]) => {
               const isCollapsed = collapsed.has(cat);

@@ -74,7 +74,7 @@ export function MaterialAvailablePane({
           periodId={periodId} projectId={projectId} open={adhocOpen} onOpenChange={setAdhocOpen}
           onUseExisting={(materialId, quantity) => onAdd({ materialId, quantity, allowOverbook: false })}
         />
-        <ScrollArea className="h-[400px] pr-2">
+        <ScrollArea className="h-[400px] pr-2 [&>[data-radix-scroll-area-viewport]>div]:block!">
           <div className="space-y-2">
             {byCategory.map(([cat, items]) => {
               const isCollapsed = collapsed.has(cat);

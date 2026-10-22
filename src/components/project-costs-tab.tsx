@@ -33,12 +33,12 @@ export function ProjectCostsTab({ project }: Props) {
   return (
     <>
       <div className="space-y-6 print-root">
-        <div className="flex justify-between items-center no-print">
-          <p className="text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3 no-print">
+          <p className="text-xs text-muted-foreground sm:max-w-md">
             Klik op een prijs om een projectprijs in te stellen. Klik op het
             kortingsveld voor korting per regel.
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               disabled={createQuote.isPending}

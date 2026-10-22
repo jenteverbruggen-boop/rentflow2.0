@@ -51,7 +51,7 @@ export function CostPeriodSection({ period, project }: Props) {
       </div>
       <PeriodSubtotals period={period} />
       <div className="border rounded-lg overflow-x-auto bg-card">
-        <table className="w-full min-w-[560px] cost-table">
+        <table className="w-full md:min-w-[560px] cost-table">
           <colgroup>
             <col className="w-9" />
             <col />

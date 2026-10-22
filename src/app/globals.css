@@ -51,6 +51,49 @@
   }
 }
 
+/* Kosten tab: below md the 6-column cost table becomes one card per line
+   (name + subtotal on top, calculation, then the editable korting and
+   projectprijs) instead of a 560px table that hides the subtotal. Screen
+   only — printing keeps the table. Cell order: 1 icon, 2 name,
+   3 berekening, 4 korting, 5 projectprijs, 6 subtotaal. */
+@media screen and (max-width: 767px) {
+  .cost-table,
+  .cost-table tbody { display: block; min-width: 0 !important; }
+  .cost-table colgroup,
+  .cost-table thead { display: none; }
+  .cost-table tr {
+    display: grid;
+    grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+    column-gap: 0.5rem;
+    row-gap: 0.25rem;
+    align-items: center;
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .cost-table tr:last-child { border-bottom: 0; }
+  .cost-table td { display: block; padding: 0 !important; text-align: left !important; min-width: 0; }
+  .cost-table td:empty { display: none; }
+  .cost-table tr:has(> td:only-child:empty) { display: none; }
+  .cost-table td[colspan] { grid-column: 1 / -1; }
+  .cost-table td:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .cost-table td:nth-child(2) { grid-column: 2; grid-row: 1; }
+  .cost-table td:nth-child(6) { grid-column: 3; grid-row: 1; text-align: right !important; }
+  .cost-table td:nth-child(3) { grid-column: 2 / -1; grid-row: 2; white-space: normal !important; }
+  .cost-table td:nth-child(4),
+  .cost-table td:nth-child(5) {
+    grid-row: 3;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.6875rem;
+    color: var(--muted-foreground);
+  }
+  .cost-table td:nth-child(4) { grid-column: 2; }
+  .cost-table td:nth-child(5) { grid-column: 3; justify-content: flex-end; }
+  .cost-table td:nth-child(4)::before { content: "Korting"; }
+  .cost-table td:nth-child(5)::before { content: "Prijs"; }
+}
+
 /* Keep the first column (name / number) visible while a wide table scrolls
    sideways on narrow screens. Use on tables that sit on a card surface. */
 @media (max-width: 1023px) {

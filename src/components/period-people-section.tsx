@@ -40,8 +40,8 @@ export function PeriodPeopleSection({ period, project, days }: Props) {
             const override = project.personPrices.find((p) => p.personId === pp.personId);
             return (
               <div key={pp.id} className="rounded-md bg-muted/40 px-3 py-1.5">
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                  <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
                     <p className="font-medium truncate flex items-center gap-1.5">
                       {pp.person.name}
                       {pp.overlapAck && <Badge variant="destructive" className="text-[10px]">dubbel geboekt</Badge>}
@@ -59,7 +59,7 @@ export function PeriodPeopleSection({ period, project, days }: Props) {
                     entityName={pp.person.name}
                     invalidateKey={projectKey}
                   />
-                  <span className="text-xs text-muted-foreground tabular-nums">
+                  <span className="ml-auto sm:ml-0 text-xs text-muted-foreground tabular-nums">
                     {formatEUR(personLineCost(pp, days))}
                   </span>
                   <Button

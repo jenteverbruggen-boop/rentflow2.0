@@ -117,7 +117,7 @@ export function AssignmentDaysPopover({ periodId, assignmentId, period, days, in
             Wissen
           </Button>
         </div>
-        <ScrollArea className="h-56 pr-2">
+        <ScrollArea className="h-56 pr-2 [&>[data-radix-scroll-area-viewport]>div]:block!">
           <div className="space-y-0.5">
             {options.map((option) => (
               <AssignmentDayRow key={option.key} option={option} onChange={(next) => update(option.key, next)} />
